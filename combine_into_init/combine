@@ -1,0 +1,7 @@
+#!/bin/bash
+rm init.js combined.js &> /dev/null
+cat *.js >> combined.js
+echo "// automatically generated file, do not edit; edit the corresponding files instead" > init.js
+cat combined.js >> init.js
+rm combined.js
+mv init.js ..

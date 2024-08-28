@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Emulator</title>
+        <style>
+            .tty {
+                font-family: 'Courier New', Courier, monospace;
+                background: black;
+                color: white;
+                cursor: none;
+                word-break: break-all;
+                white-space: pre-wrap;
+            }
+            
+            .fullcontainer {
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                overflow: hidden;
+            }
+
+            .nopad-nomarg {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <pre class="fullcontainer tty nopad-nomarg" id="tty_bios"></pre>
+        <script>
+            (async function() {
+                let flash = localStorage.getItem("runtime_flash");
+                if (!flash) {
+                    try {
+                        flash = await fetch("init.js");
+                        flash = await flash.text();
+                        localStorage.setItem("runtime_flash", flash);
+                    } catch (e) {
+                        console.error(e);
+                        tty_bios.innerText += "Failed to obtain new flash.\n";
+                    }
+                }
+                try {
+                    return eval(flash);
+                } catch (e) {
+                    console.error(e);
+                    tty_bios.innerText += "Runtime failure";
+                }
+            })();
+        </script>
+    </body>
+</html>
