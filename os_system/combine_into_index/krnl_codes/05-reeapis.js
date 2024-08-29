@@ -218,10 +218,10 @@ function reeAPIs() {
                     }
                 },
                 fs_unmount: async function(arg) {
-                    let {mount, token} = arg;
+                    let {mount, token, force} = arg;
                     if (!privileges.includes("FS_UNMOUNT")) throw new Error("UNAUTHORIZED_ACTION");
                     try {
-                        return await modules.fs.unmount(mount, token || processToken);
+                        return await modules.fs.unmount(mount, token || processToken, force);
                     } catch (e) {
                         if (e.name == "Error") throw e;
                         throw new Error("FS_ACTION_FAILED");

@@ -37,13 +37,13 @@ function loadFs() {
         lsmounts: function() {
             return Object.keys(this.mounts);
         },
-        unmount: async function(mount, sessionToken) {
+        unmount: async function(mount, sessionToken, force) {
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
             try {
-                if (!this.mounts[mount].read_only) await this.sync(mount, sessionToken);
+                if (!this.mounts[mount].read_only && !force) await this.sync(mount, sessionToken);
             } catch {}
             try {
-                await this.mounts[mount].unmount(sessionToken);
+                if (!force) await this.mounts[mount].unmount(sessionToken);
             } catch {}
             delete this.mounts[mount];
         },
@@ -93,7 +93,9 @@ function loadFs() {
         },
         sync: async function(mount, sessionToken) {
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
-            if (!this.mounts[mount].read_only || modules.core.bootMode == "readonly") return await this.mounts[mount].sync(sessionToken);
+            try {
+                if (!this.mounts[mount].read_only || modules.core.bootMode == "readonly") return await this.mounts[mount].sync(sessionToken);
+            } catch {}
         },
         mounts: {}
     }
@@ -948,6 +950,88 @@ function loadFs() {
             ...serverData
         };
     };
+
+    async function IPCMount(options) { // ChatGPT code below
+        if (!options.inputPipeId || !options.outputPipeId) throw new Error("PIPE_IDS_REQUIRED");
+    
+        const inputPipeId = options.inputPipeId;
+        const outputPipeId = options.outputPipeId;
+        let lock = false;
+    
+        async function acquireLock() {
+            return new Promise((resolve) => {
+                const tryLock = () => {
+                    if (!lock) {
+                        lock = true;
+                        resolve();
+                    } else {
+                        setTimeout(tryLock, 10); // retry after 10ms
+                    }
+                };
+                setTimeout(tryLock, 10);
+            });
+        }
+    
+        async function releaseLock() {
+            lock = false;
+        }
+    
+        // Function to send request and receive response
+        async function ipcRequest(action, payload = {}) {
+            await acquireLock();
+            return new Promise((resolve, reject) => {
+                modules.ipc.listenFor(outputPipeId).then((response) => {
+                    releaseLock();
+                    if (response.error) return reject(new Error(response.error));
+                    return resolve(response.data);
+                });
+                modules.ipc.send(inputPipeId, { action, ...payload });
+            });
+        }
+    
+        // Initial request to get filesystem properties
+        const filesystemData = await ipcRequest("properties", { data: options });
+    
+        return {
+            read: async function(key) {
+                return ipcRequest("read", { key: String(key) });
+            },
+            write: async function(key, value) {
+                return ipcRequest("write", { key: String(key), value: String(value) });
+            },
+            rm: async function(key) {
+                return ipcRequest("rm", { key: String(key) });
+            },
+            ls: async function(directory) {
+                return ipcRequest("ls", { directory: String(directory) });
+            },
+            mkdir: async function(directory) {
+                return ipcRequest("mkdir", { directory: String(directory) });
+            },
+            permissions: async function(file) {
+                return ipcRequest("permissions", { file: String(file) });
+            },
+            chown: async function(file, owner) {
+                return ipcRequest("chown", { file: String(file), owner: String(owner) });
+            },
+            chgrp: async function(file, group) {
+                return ipcRequest("chgrp", { file: String(file), group: String(group) });
+            },
+            chmod: async function(file, permissions) {
+                return ipcRequest("chmod", { file: String(file), permissions: String(permissions) });
+            },
+            isDirectory: async function(key) {
+                return ipcRequest("isDirectory", { key: String(key) });
+            },
+            sync: async function() {
+                return ipcRequest("sync");
+            },
+            unmount: async function() {
+                return ipcRequest("unmount");
+            },
+            ...filesystemData
+        };
+    } // ChatGPT code ends here
     
     fs.mounts["ram"] = ramMount({
         type: "run"
@@ -956,7 +1040,8 @@ function loadFs() {
         PCFSiDBMount,
         PCFSiDBAESCryptMount,
         ramMount,
-        SFSPMount
+        SFSPMount,
+        IPCMount
     };
     modules.fs = fs;
     modules.defaultSystem = "ram";

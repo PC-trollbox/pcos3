@@ -1,4 +1,4 @@
-# up-to-date for build 772
+# up-to-date for build 784
 ./init_bkup.js
 ./readme.md
 ./os.js
@@ -145,6 +145,7 @@
 ./os_system/history/build691.js
 ./os_system/history/build683.js
 ./os_system/history/build545.js
+./os_system/history/build782.js
 ./os_system/history/build587.js
 ./os_system/history/build759.js
 ./os_system/history/build725.js
@@ -165,6 +166,7 @@
 ./os_system/history/build573.js
 ./os_system/history/build610.js
 ./os_system/history/build615.js
+./os_system/history/build779.js
 ./os_system/history/build421.js
 ./os_system/history/build747.js
 ./os_system/history/build758.js
@@ -184,6 +186,7 @@
 ./os_system/history/build585.js
 ./os_system/history/build638.js
 ./os_system/history/build648.js
+./os_system/history/build777.js
 ./os_system/history/build668.js
 ./os_system/history/build605.js
 ./os_system/history/build551.js
@@ -228,6 +231,7 @@
 ./os_system/history/build515.js
 ./os_system/history/build697.js
 ./os_system/history/build534.js
+./os_system/history/build778.js
 ./os_system/history/build678.js
 ./os_system/history/build704.js
 ./os_system/history/build718.js
@@ -242,14 +246,17 @@
 ./os_system/history/build578.js
 ./os_system/history/build373.js
 ./os_system/history/build456.js
+./os_system/history/build776.js
 ./os_system/history/build500.js
 ./os_system/history/build666.js
 ./os_system/history/build750.js
 ./os_system/history/build584.js
 ./os_system/history/build703.js
+./os_system/history/build775.js
 ./os_system/history/build543.js
 ./os_system/history/build495troll.js
 ./os_system/history/build670.js
+./os_system/history/build780.js
 ./os_system/history/build684.js
 ./os_system/history/build597.js
 ./os_system/history/build624.js
@@ -267,6 +274,7 @@
 ./os_system/history/build727.js
 ./os_system/history/build649.js
 ./os_system/history/build690.js
+./os_system/history/build784.js
 ./os_system/history/build736.js
 ./os_system/history/build606.js
 ./os_system/history/build604.js
@@ -323,6 +331,7 @@
 ./os_system/history/build748.js
 ./os_system/history/build738.js
 ./os_system/history/build632.js
+./os_system/history/build781.js
 ./os_system/history/build641.js
 ./os_system/history/build514.js
 ./os_system/history/build555.js
@@ -334,6 +343,7 @@
 ./os_system/history/build647.js
 ./os_system/history/build520.js
 ./os_system/history/build462.js
+./os_system/history/build783.js
 ./os_system/history/build540.js
 ./os_system/history/build713.js
 ./os_system/history/build580.js

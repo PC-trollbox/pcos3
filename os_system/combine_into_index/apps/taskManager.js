@@ -61,6 +61,10 @@
             tdArgs.innerText = "[" + (taskInfo.arg || []).map(a => JSON.stringify(a)).join(", ") + "]";
             terminateBtn.innerText = await availableAPIs.lookupLocale("TERMINATE_TASK");
             terminateBtn.addEventListener("click", async function() {
+                await availableAPIs.signalTask({ taskId: task, signal: 15 });
+                refresh();
+            });
+            terminateBtn.addEventListener("dblclick", async function() {
                 await availableAPIs.signalTask({ taskId: task, signal: 9 });
                 refresh();
             });
