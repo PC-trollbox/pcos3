@@ -1,4 +1,4 @@
-async function authui(ses = modules.session.active, user, token) {
+async function authui(ses = modules.session.active, user, token, isLogonScreen) {
     // @pcos-app-mode native
     if (modules.shuttingDown) return { hook: _ => _ };
     let appToken;
@@ -10,7 +10,9 @@ async function authui(ses = modules.session.active, user, token) {
     let hook = new Function();
     let ipc = await modules.ipc.create();
     modules.ipc.declareAccess(ipc, { owner: "authui", group: "authui", world: false });
-    await modules.tasks.exec(modules.defaultSystem + "/apps/authui.js", [ ipc, user || "" ], modules.window(ses), appToken);
+    let windowObject = modules.window(ses);
+    await modules.tasks.exec(modules.defaultSystem + "/apps/authui.js", [ ipc, user || "" ], windowObject, appToken);
+    if (isLogonScreen) windowObject.closeButton.classList.toggle("hidden", true);
     async function waitForIt() {
         let msg = await modules.ipc.listenFor(ipc);
         delete modules.ipc._ipc[ipc];

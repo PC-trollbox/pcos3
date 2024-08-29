@@ -128,6 +128,7 @@
 ./os_system/history/build757.js
 ./os_system/history/build633.js
 ./os_system/history/build636.js
+./os_system/history/build786live.js
 ./os_system/history/build581.js
 ./os_system/history/build711.js
 ./os_system/history/build767.js
@@ -295,6 +296,7 @@
 ./os_system/history/build722.js
 ./os_system/history/build761.js
 ./os_system/history/build723.js
+./os_system/history/build786.js
 ./os_system/history/build739.js
 ./os_system/history/build535.js
 ./os_system/history/build590.js

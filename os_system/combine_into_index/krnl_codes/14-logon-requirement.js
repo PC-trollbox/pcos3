@@ -55,7 +55,7 @@ async function requireLogon() {
         modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
         let logon, resolvedLogon;
         while (!modules.shuttingDown) {
-            logon = await modules.authui(modules.session.systemSession, defaultUser);
+            logon = await modules.authui(modules.session.systemSession, defaultUser, undefined, true);
             resolvedLogon = await waitForLogon(logon);
             if (resolvedLogon.success) break;
         }
@@ -350,7 +350,7 @@ async function requireLogon() {
             let button = document.createElement("button");
             button.innerText = modules.locales.get("LOG_IN_INVITATION");
             newWindow.content.appendChild(button);
-            newWindow.closeButton.disabled = true;
+            newWindow.closeButton.classList.toggle("hidden", true);
             await hookButtonClick(button);
             newWindow.windowDiv.remove();
         }
