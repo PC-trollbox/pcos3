@@ -5,7 +5,7 @@ function secondstage() {
     let isProvisioned = false;
     let provisionSettings = { username: "root", allowDuplicate: true };
     windowDiv.title.innerText = modules.locales.get("SET_UP_PCOS");
-    windowDiv.closeButton.disabled = true;
+    windowDiv.closeButton.classList.toggle("hidden", true);
     windowDiv.content.style.padding = "8px";
     let header = document.createElement("b");
     let postHeader = document.createElement("br");
@@ -146,7 +146,7 @@ function secondstage() {
             description.innerHTML = modules.locales.get("INSTALLING_PCOS").replace("%s", modules.locales.get("PATCHING_LOGON"));
             await modules.fs.write(modules.defaultSystem + "/boot/14-logon-requirement-enforce.js", "requireLogon();\n");
             description.innerHTML = modules.locales.get("SETUP_SUCCESSFUL");
-            windowDiv.closeButton.disabled = false;
+            windowDiv.closeButton.classList.toggle("hidden", false);
             windowDiv.closeButton.onclick = async function() {
                 windowDiv.windowDiv.remove();
                 requireLogon();

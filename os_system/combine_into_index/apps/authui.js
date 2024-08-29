@@ -6,6 +6,7 @@
 let ipc = exec_args[0];
 (async function() {
     // @pcos-app-mode isolatable
+    await availableAPIs.closeability(false);
     if (!ipc) return availableAPIs.terminate();
     let user = exec_args[1];
     await availableAPIs.windowTitleSet("AuthUI");

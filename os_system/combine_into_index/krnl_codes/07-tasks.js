@@ -243,7 +243,7 @@ function loadTasks() {
                         windowObject.windowDiv.classList.toggle("fullscreen", apiArg.arg);
                     }
                 });
-                ree.exportAPI("closeability", (apiArg) => windowObject.closeButton.disabled = !apiArg.arg);
+                ree.exportAPI("closeability", (apiArg) => windowObject.closeButton.classList.toggle("hidden", !apiArg.arg));
                 ree.exportAPI("critical", function(apiArg) {
                     if (reeAPIInstance.public.getPrivileges().includes("SYSTEM_STABILITY")) {
                         that.tracker[taskId].critical = !!apiArg.arg;

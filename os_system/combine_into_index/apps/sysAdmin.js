@@ -30,6 +30,7 @@
             extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
             return;
         }
+        await availableAPIs.closeability(false);
         container.hidden = true;
         extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING");
         let osArchive;
@@ -39,6 +40,7 @@
                 init: {}
             });
         } catch (e) {
+            await availableAPIs.closeability(true);
             console.error(e);
             extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOAD_FAILED");
             container.hidden = false;
@@ -63,6 +65,7 @@
             extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
             return;
         }
+        await availableAPIs.closeability(false);
         container.hidden = true;
         extraActivities.innerText = await availableAPIs.lookupLocale("SETTING_FSCK_FLAG");
         try {
@@ -86,6 +89,7 @@
             extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
             return;
         }
+        await availableAPIs.closeability(false);
         container.hidden = true;
         extraActivities.innerText = await availableAPIs.lookupLocale("SETTING_FSCK_FLAG");
         try {
@@ -110,6 +114,7 @@
             return;
         }
         container.hidden = true;
+        await availableAPIs.closeability(false);
         extraActivities.innerText = await availableAPIs.lookupLocale("WIPING_SYSTEM");
         try {
             await availableAPIs.runKlvlCode(`(async function() {
@@ -133,6 +138,7 @@ for (let key of idb_keys) {
 modules.restart();
 })();`);
         } catch (e) {
+            await availableAPIs.closeability(true);
             console.error(e);
             extraActivities.innerText = await availableAPIs.lookupLocale("WIPING_SYSTEM_FAILED");
             container.hidden = false;
@@ -145,6 +151,7 @@ modules.restart();
             extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
             return;
         }
+        await availableAPIs.closeability(false);
         container.hidden = true;
         extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING");
         let osArchive;
@@ -154,6 +161,7 @@ modules.restart();
                 init: {}
             });
         } catch (e) {
+            await availableAPIs.closeability(true);
             console.error(e);
             extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOAD_FAILED");
             container.hidden = false;
@@ -216,6 +224,7 @@ modules.restart();
                     data: content
                 });
             } catch {
+                await availableAPIs.closeability(true);
                 extraActivities.innerText = await availableAPIs.lookupLocale("UPDATE_BOOT_FAIL");
                 container.hidden = false;
                 return;
@@ -263,6 +272,7 @@ modules.restart();
             }
         }
         async function reparse() {
+            await availableAPIs.closeability(false);
             cmponents = {};
             container.innerText = await availableAPIs.lookupLocale("PARSING_COMPONENTS");
             rawComponentFile = rawComponentFile.split("\n");
@@ -298,6 +308,7 @@ modules.restart();
                 };
             }
             rawComponentFile = rawComponentFile.join("\n");
+            await availableAPIs.closeability(true);
         }
         async function showFullList() {
             container.innerText = "";
@@ -335,6 +346,7 @@ modules.restart();
                     });
                     actionButton.innerText = cmponents[component].isInstalled ? (await availableAPIs.lookupLocale("REMOVE_BTN")) : (await availableAPIs.lookupLocale("INSTALL_BUTTON"));
                     actionButton.addEventListener("click", async function() {
+                        await availableAPIs.closeability(false);
                         let executedFnName = cmponents[component].isInstalled ? "remover" : "installer";
                         let ipcPipe = await availableAPIs.createPipe();
                         container.hidden = true;
@@ -354,6 +366,7 @@ modules.restart();
                         extraActivities.innerText = result ? (await availableAPIs.lookupLocale("MODIFYING_SUCCESS")) : (await availableAPIs.lookupLocale("MODIFYING_FAILED"));
                         await availableAPIs.closePipe(ipcPipe);
                         container.hidden = false;
+                        await availableAPIs.closeability(true);
                         if (result) {
                             await reparse();
                             await showFullList();

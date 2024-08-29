@@ -58,7 +58,7 @@ function step(to, n) {
         term.write("Run: coreExports.disk.partition(\"data\").setData({files:{},permissions:{},id:prevId});\r\n");
         term.write("Then come back to the manual with step(to, 3);\r\n");
     } else if (n == 3) {
-        windowtty.closeButton.disabled = true;
+        windowDiv.closeButton.classList.toggle("hidden", true);
         term.write("After you've formatted the data partition, it's time to create a boot one.\r\n");
         term.write("Notice that quitting at this point is not possible. Restarting would lead to an unbootable system!\r\n");
         term.write("Run: coreExports.disk.partition(\"boot\").setData(\"_ce=coreExports;_af=(async ()=>{}).constructor;_di=_ce.disk.partition(\\\"data\\\").getData();_m=_di.files[coreExports.bootSection||\\\"boot\\\"];_s=\\\"\\\";for(module of Object.keys(_m).sort((a,b)=>a<b?-1:(a>b?1:0)))_s+=await _ce.idb.readPart(_di.id+'-'+_m[module]);await _af(_s)();\");\r\n");
@@ -84,11 +84,11 @@ function step(to, n) {
         term.write("Run: modules.fs.write(\"storage/boot/01-fsboot.js\", \"modules.fs.mounts.storage=await modules.mounts.PCFSiDBMount({partition:\\\"data\\\"});modules.defaultSystem=\\\"storage\\\";\");\r\n");
         term.write("Then, go see the next point with step(to, 9);\r\n");
     } else if (n == 9) {
-        windowtty.closeButton.disabled = false;
+        windowDiv.closeButton.classList.toggle("hidden", false);
         term.write("Break! Now, you can boot to a working system. To do so, run modules.restart(); or close the window.\r\n");
         term.write("If you're willing to continue, run step(to, 10);\r\n");
     } else if (n == 10) {
-        windowtty.closeButton.disabled = true;
+        windowDiv.closeButton.classList.toggle("hidden", true);
         term.write("Alright, let's set up the whole OS with the command line. Make the system think it is booted from the data partition.\r\n");
         term.write("Notice that quitting at this point is not possible. Restarting could lead to an unbootable system.\r\n");
         term.write("Run: modules.defaultSystem = \"storage\";\r\n");
@@ -165,7 +165,7 @@ function step(to, n) {
         term.write("Run: modules.fs.write(modules.defaultSystem + \"/boot/14-logon-requirement-enforce.js\", \"requireLogon();\\n\");\r\n");
         term.write("Go on, use step(to, 25);\r\n");
     } else if (n == 25) {
-        windowtty.closeButton.disabled = false;
+        windowDiv.closeButton.classList.toggle("hidden", false);
         term.write("Break! Now you can boot to an actual system.\r\n");
         term.write("Want extra stuff? Do step(to, 26);\r\n");
         term.write("If you don't, reboot with modules.restart(), close the window or use requireLogon(); step(to, 30);\r\n");
