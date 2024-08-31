@@ -681,6 +681,20 @@ function reeAPIs() {
                 checkBootMode: async function() {
                     if (!privileges.includes("GET_BOOT_MODE")) throw new Error("UNAUTHORIZED_ACTION");
                     return modules.core.bootMode || "normal";
+                },
+                getScreenInfo: async function() {
+                    if (!privileges.includes("GET_SCREEN_INFO")) throw new Error("UNAUTHORIZED_ACTION");
+                    return {
+                        width: screen.availWidth,
+                        height: screen.availHeight,
+                        colorDepth: screen.colorDepth,
+                        orientation: {
+                            type: screen.orientation.type,
+                            angle: screen.orientation.angle
+                        },
+                        fullWidth: screen.width,
+                        fullHeight: screen.height
+                    }
                 }
             }
         }

@@ -140,6 +140,7 @@
 ./os_system/history/build517.js
 ./os_system/history/build669.js
 ./os_system/history/build639.js
+./os_system/history/build787live.js
 ./os_system/history/build724.js
 ./os_system/history/build685.js
 ./os_system/history/build634.js
@@ -315,6 +316,7 @@
 ./os_system/history/build539.js
 ./os_system/history/build420.js
 ./os_system/history/build635.js
+./os_system/history/build787.js
 ./os_system/history/build531.js
 ./os_system/history/build564.js
 ./os_system/history/build618nqgui.js

@@ -1,5 +1,5 @@
 // @pcos-app-mode native
-const pcos_version = "786";
+const pcos_version = "787";
  
 let modules = {
     core: coreExports
