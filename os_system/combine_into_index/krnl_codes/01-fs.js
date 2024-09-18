@@ -7,6 +7,8 @@ function loadFs() {
             return await this.mounts[mount].read(file.split("/").slice(1).join("/"), sessionToken);
         },
         write: async function(file, data, sessionToken) {
+            let filePath = file.split("/").slice(1);
+            if (filePath.includes("")) throw new Error("PATH_INCLUDES_EMPTY");
             let mount = file.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
             if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
@@ -21,6 +23,8 @@ function loadFs() {
             return await this.mounts[mount].rm(file.split("/").slice(1).join("/"), sessionToken);
         },
         mkdir: async function(folder, sessionToken) {
+            let filePath = folder.split("/").slice(1);
+            if (filePath.includes("")) throw new Error("PATH_INCLUDES_EMPTY");
             let mount = folder.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
             if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
@@ -48,6 +52,8 @@ function loadFs() {
             delete this.mounts[mount];
         },
         chown: async function(file, owner, sessionToken) {
+            let filePath = file.split("/").slice(1);
+            if (filePath.includes("")) throw new Error("PATH_INCLUDES_EMPTY");
             let mount = file.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
             if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
@@ -56,6 +62,8 @@ function loadFs() {
             return await this.mounts[mount].chown(file.split("/").slice(1).join("/"), owner, sessionToken);
         },
         chgrp: async function(file, group, sessionToken) {
+            let filePath = file.split("/").slice(1);
+            if (filePath.includes("")) throw new Error("PATH_INCLUDES_EMPTY");
             let mount = file.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
             if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
@@ -64,6 +72,8 @@ function loadFs() {
             return await this.mounts[mount].chgrp(file.split("/").slice(1).join("/"), group, sessionToken);
         },
         chmod: async function(file, permissions, sessionToken) {
+            let filePath = file.split("/").slice(1);
+            if (filePath.includes("")) throw new Error("PATH_INCLUDES_EMPTY");
             let mount = file.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
             if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");

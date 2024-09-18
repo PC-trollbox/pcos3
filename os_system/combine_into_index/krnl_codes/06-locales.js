@@ -315,7 +315,8 @@ function localization() {
             "CRYPTO_VERIFIED_CHECKBOX": "Verified successfully",
             "CRYPTO_SALT_FIELD": "Salt (hex): ",
             "CRYPTO_DERIVEOUT_FIELD": "Derived bits (hex): ",
-            "CRYPTO_ITERATIONS_FIELD": "Iterations: "
+            "CRYPTO_ITERATIONS_FIELD": "Iterations: ",
+            "PATH_INCLUDES_EMPTY": "The specified path includes an object with an empty name."
         },
         ru: {
             "UNTITLED_APP": "Безымянная программа",
@@ -630,7 +631,8 @@ function localization() {
             "CRYPTO_VERIFIED_CHECKBOX": "Проверено успешно",
             "CRYPTO_SALT_FIELD": "Соль (шестнадцатиричная): ",
             "CRYPTO_DERIVEOUT_FIELD": "Преобразование (шестнадцатиричное): ",
-            "CRYPTO_ITERATIONS_FIELD": "Итераций: "
+            "CRYPTO_ITERATIONS_FIELD": "Итераций: ",
+            "PATH_INCLUDES_EMPTY": "В указанном пути есть объект с пустым именем."
         },
         defaultLocale: "en",
         get: function(key, lang) {
