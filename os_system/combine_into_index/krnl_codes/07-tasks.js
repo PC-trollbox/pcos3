@@ -167,12 +167,15 @@ function loadTasks() {
                     let signup = () => new Promise((resolve) => registrations.push(resolve));
                     ree.iframe.hidden = true;
                     let termDiv = document.createElement("div");
+                    termDiv.style = "position: absolute; top: 0; left: 0; width: 100%; height: 100%;";
+                    let fitAddon = new FitAddon.FitAddon();
                     let termInstance = new Terminal();
+                    termInstance.loadAddon(fitAddon);
                     termInstance.open(termDiv);
                     windowObject.content.appendChild(termDiv);
                     that.tracker[taskId].cliio.attached = true;
                     that.tracker[taskId].cliio.xtermInstance = termInstance;
-                    let onresizeFn = () => termInstance.resize(Math.floor(windowObject.content.clientWidth / 9), Math.floor(windowObject.content.clientHeight / 16));
+                    let onresizeFn = () => fitAddon.fit();
                     onresizeFn();
                     let robs = new ResizeObserver(onresizeFn);
                     that.tracker[taskId].cliio.robsInstance = robs;
@@ -181,13 +184,15 @@ function loadTasks() {
                     termInstance.clear();
                     return true;  
                 });
-                ree.exportAPI("toMyCLI", function(apiArg) {
+                ree.exportAPI("toMyCLI", async function(apiArg) {
                     if (that.tracker[taskId].cliio.attached) {
+                        await new Promise((resolve) => setTimeout(resolve, 5));
                         that.tracker[taskId].cliio.xtermInstance.write(apiArg.arg);
                         for (let registered in registrations) {
-                            registrations[registered]({ type: "write", data: apiArg.arg });
+                            await registrations[registered]({ type: "write", data: apiArg.arg });
                             registrations.splice(registered, 1);
                         }
+                        await new Promise((resolve) => setTimeout(resolve, 5));
                     }
                 });
                 ree.exportAPI("fromMyCLI", function() {
@@ -200,12 +205,14 @@ function loadTasks() {
                         });
                     });
                 });
-                ree.exportAPI("clearMyCLI", function() {
+                ree.exportAPI("clearMyCLI", async function() {
+                    await new Promise((resolve) => setTimeout(resolve, 5));
                     if (that.tracker[taskId].cliio.attached) that.tracker[taskId].cliio.xtermInstance.clear();
                     for (let registered in registrations) {
-                        registrations[registered]({ type: "consoleClear" });
+                        await registrations[registered]({ type: "consoleClear" });
                         registrations.splice(registered, 1);
                     }
+                    await new Promise((resolve) => setTimeout(resolve, 5));
                 });
                 ree.exportAPI("cliSize", function() {
                     if (!that.tracker[taskId].cliio.attached) return [ 0, 0 ];
@@ -301,6 +308,10 @@ function loadTasks() {
             }
         },
         listPublicTasks: () => Object.keys(tasks.tracker),
+        waitTermination: async function(taskId) {
+            if (!this.tracker.hasOwnProperty(taskId)) return;
+            return new Promise((resolve) => this.tracker[taskId].ree.beforeCloseDown(() => resolve()));
+        },
         taskInfo: async function(taskId) {
             if (!this.tracker.hasOwnProperty(taskId)) return null;
             let info = await modules.tokens.info(this.tracker[taskId].apis.public.getProcessToken());

@@ -559,7 +559,7 @@ function reeAPIs() {
                     if (!taskInfo) throw new Error("TASK_NOT_FOUND");
                     if (taskInfo.user != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
                     if (!taskInfo.cliio) throw new Error("NO_CLI_ATTACHED");
-                    return modules.tasks.tracker[arg.taskId].cliio.signup();
+                    return await modules.tasks.tracker[arg.taskId].cliio.signup();
                 },
                 lldaRead: async function(arg) {
                     if (!privileges.includes("LLDISK_READ")) throw new Error("UNAUTHORIZED_ACTION");
@@ -695,7 +695,11 @@ function reeAPIs() {
                         fullWidth: screen.width,
                         fullHeight: screen.height
                     }
-                }
+                },
+                waitTermination: async function(arg) {
+                    if (!privileges.includes("LIST_TASKS")) throw new Error("UNAUTHORIZED_ACTION");
+                    return modules.tasks.waitTermination(arg);
+                },
             }
         }
         let customAPIs = modules.customAPIs;

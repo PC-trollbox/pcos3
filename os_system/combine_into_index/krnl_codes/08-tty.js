@@ -7,11 +7,11 @@ async function js_terminal() {
     }
     windowtty.content.style.padding = "0px";
     windowtty.content.style.margin = "0px";
-    let termDiv = document.createElement("div");
-    windowtty.content.appendChild(termDiv);
     let term = new Terminal();
-    term.open(termDiv);
-    let onresizeFn = () => term.resize(Math.floor(windowtty.content.clientWidth / 9), Math.floor(windowtty.content.clientHeight / 16));
+    let fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(windowtty.content);
+    let onresizeFn = () => fitAddon.fit();
     onresizeFn();
     let robs = new ResizeObserver(onresizeFn);
     robs.observe(windowtty.windowDiv);

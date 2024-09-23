@@ -45,6 +45,7 @@ let newBuild = "// This is a generated file. Please modify the corresponding fil
 newBuild += "// (c) Copyright 2024 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
 let appFiles = fs.readdirSync(__dirname + "/apps");
 let buildFiles = fs.readdirSync(__dirname + "/krnl_codes");
+let appFns = [];
 for (let buildFile of buildFiles) {
     if (buildFile == path.basename(__filename)) continue;
     if (buildFile.startsWith("out")) continue;
@@ -61,6 +62,7 @@ for (let buildFile of buildFiles) {
     if (buildFile == "15-apps.js") {
         let sharedAS = structuredClone(keypair.automaticSigner);
         delete sharedAS.key.d;
+        appFns.push("keypairInstaller");
         bfc = bfc + `
         // dynamically inserted
         async function keypairInstaller(target, token) {
@@ -115,6 +117,7 @@ for (let buildFile of buildFiles) {
             let link = (manifestStats.filter(x => x.lineType == "link") || [])[0]?.data;
             let lrn = (link || "").includes("lrn:") ? link.replace("lrn:", "") : "";
             let name = (link || "").includes("name:") ? link.replace("name:", "") : "";
+            appFns.push(fnName);
             bfc = bfc + `// ../apps/${appFile}
             async function ${fnName}(target, token) {
                 let neededApps = await modules.fs.ls(target + "/", token);
@@ -172,5 +175,6 @@ for (let buildFile of buildFiles) {
     }
     newBuild += bfc;
 }
+newBuild = newBuild.replace("let appFns = [ _generated?._automatically?._by?._combine?.js ];", "let appFns = [ " + appFns.join(", ") + " ];");
 fs.writeFileSync(args.values.output, newBuild);
 if (!args.values["no-history-preserve"]) fs.writeFileSync(__dirname + "/../history/build" + version + ".js", newBuild);

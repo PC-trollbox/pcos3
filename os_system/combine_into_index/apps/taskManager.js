@@ -64,9 +64,10 @@
                 await availableAPIs.signalTask({ taskId: task, signal: 15 });
                 refresh();
             });
-            terminateBtn.addEventListener("dblclick", async function() {
+            terminateBtn.addEventListener("contextmenu", async function() {
                 await availableAPIs.signalTask({ taskId: task, signal: 9 });
                 refresh();
+                return false;
             });
             tdTerminate.appendChild(terminateBtn);
             tr.appendChild(tdBasename);

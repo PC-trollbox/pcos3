@@ -268,6 +268,9 @@ async function recursiveRemove(path, progressSet) {
 }
 
 function setupbase() {
+    let _generated = null;
+    let appFns = [ _generated?._automatically?._by?._combine?.js ];
+    let appFnCode = appFns.map(a => a.toString()).join("\n");
     let fsmount = {
         read: async function (key) {
             let pathParts = key.split("/");
@@ -363,7 +366,7 @@ function setupbase() {
                     "13-authui.js": authui.toString() + "\nmodules.authui = authui;\n",
                     "14-logon-requirement.js": requireLogon.toString() + "\n" + waitForLogon.toString() + "\n" + hookButtonClick.toString() + "\n" + serviceLogon.toString() + "\n",
                     "14-logon-requirement-enforce.js": "/* no-op */",
-                    "15-apps.js": keypairInstaller.toString() + "\n" + videoPlayerInstaller.toString() + "\n" + pictureInstaller.toString() + "\n" + terminalInstaller.toString() + "\n" + explorerInstaller.toString() + "\n" + filePickerInstaller.toString() + "\n" + taskMgrInstaller.toString() + "\n" + sysadminInstaller.toString() + "\n" + networkInstaller.toString() + "\n" + networkdInstaller.toString() + "\n" + textEditorInstaller.toString() + "\n" + personalSecurityInstaller.toString() + "\n" + systemSecurityInstaller.toString() + "\n" + authuiInstaller.toString() + cryptoInstaller.toString() + "\n",
+                    "15-apps.js": appFnCode + "\n",
                     "15-optional.js": opt.toString() + "\nopt();\n",
                     "16-wallpaper.js": installWallpapers.toString() + "\n",
                     "16-sfxpack.js": installSfx.toString() + "\n",
