@@ -549,7 +549,7 @@ function reeAPIs() {
                     if (!privileges.includes("CLI_MODIFICATIONS")) throw new Error("UNAUTHORIZED_ACTION");
                     let taskInfo = await modules.tasks.taskInfo(arg.taskId);
                     if (!taskInfo) throw new Error("TASK_NOT_FOUND");
-                    if (taskInfo.user != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
+                    if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
                     if (!taskInfo.cliio) throw new Error("NO_CLI_ATTACHED");
                     return await modules.tasks.tracker[arg.taskId].cliio.xtermInstance.input(arg.text, arg.human);
                 },
@@ -557,7 +557,7 @@ function reeAPIs() {
                     if (!privileges.includes("CLI_MODIFICATIONS")) throw new Error("UNAUTHORIZED_ACTION");
                     let taskInfo = await modules.tasks.taskInfo(arg.taskId);
                     if (!taskInfo) throw new Error("TASK_NOT_FOUND");
-                    if (taskInfo.user != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
+                    if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
                     if (!taskInfo.cliio) throw new Error("NO_CLI_ATTACHED");
                     return await modules.tasks.tracker[arg.taskId].cliio.signup();
                 },

@@ -1,8 +1,9 @@
 // =====BEGIN MANIFEST=====
-// allow: GET_LOCALE, FS_LIST_PARTITIONS, FS_READ, MANAGE_TOKENS, ELEVATE_PRIVILEGES, FS_BYPASS_PERMISSIONS, START_TASK, START_BACKGROUND_TASK, CLI_MODIFICATIONS, GET_BUILD, LIST_TASKS, TASK_BYPASS_PERMISSIONS, SWITCH_USERS_AUTOMATICALLY
+// allow: GET_LOCALE, FS_LIST_PARTITIONS, FS_READ, MANAGE_TOKENS, ELEVATE_PRIVILEGES, FS_BYPASS_PERMISSIONS, START_TASK, START_BACKGROUND_TASK, CLI_MODIFICATIONS, GET_BUILD, LIST_TASKS, TASK_BYPASS_PERMISSIONS
 // link: lrn:REAL_TERMINAL_NAME
 // signer: automaticSigner
 // =====END MANIFEST=====
+let user_spawn_token = null;
 (async function() {
     // @pcos-app-mode isolatable
     await window.availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("REAL_TERMINAL_NAME"));
@@ -41,7 +42,6 @@
     let default_user = await window.availableAPIs.getUser();
     let defaultPath = await availableAPIs.getSystemMount() + "/apps";
     let pathsForBinaries = [ defaultPath ];
-    let user_spawn_token = null;
     let otherProcessAttached = false;
     let graphic = false;
     let su_stage = -1;
@@ -85,7 +85,9 @@
                         su_stage = -1;
                         if (prompt.success) {
                             user_spawn_token = prompt.token;
+                            let processToken = await availableAPIs.getProcessToken();
                             await availableAPIs.setProcessToken(await availableAPIs.forkToken(user_spawn_token));
+                            await availableAPIs.revokeToken(processToken);
                             await availableAPIs.automatedLogonDelete(suSession);
                         }
                     }
@@ -116,7 +118,9 @@
                 let authui = await availableAPIs.getNewToken(cmdline[1]);
                 if (authui) {
                     user_spawn_token = authui;
+                    let processToken = await availableAPIs.getProcessToken();
                     await availableAPIs.setProcessToken(await availableAPIs.forkToken(user_spawn_token));
+                    await availableAPIs.revokeToken(processToken);
                 } else await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("AUTH_FAILED") + "\r\n");
                 otherProcessAttached = false;
             } else if (cmdline[0] == "su") {
@@ -190,7 +194,7 @@
                         } catch (e) {
                             await availableAPIs.toMyCLI(runFile + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
                         }
-                    } else await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_LOGON_REQUIRED").replace("%s", default_user) + "\r\n");
+                    } else await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("REAL_TERMINAL_LOGON_REQUIRED")).replace("%s", default_user) + "\r\n");
                 } else await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("TERM_COMMAND_NOT_FOUND")).replace("%s", cmdline[0]) + "\r\n");
             }
             try {
@@ -218,5 +222,6 @@ async function onTermData(listener) {
     }
 }
 addEventListener("signal", async function(e) {
+    await availableAPIs.revokeToken(user_spawn_token);
     if (e.detail == 15) await window.availableAPIs.terminate();
 }); null;
