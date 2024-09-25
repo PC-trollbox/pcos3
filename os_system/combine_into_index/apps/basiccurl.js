@@ -22,8 +22,8 @@
         await availableAPIs.fs_write({ path: exec_args[1], data: downloadedFile });
     } catch (e) {
         await availableAPIs.toMyCLI("basiccurl: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
-        return await availableAPIs.terminate();
     }
+    await availableAPIs.terminate();
 })();
 
 addEventListener("signal", async function(e) {

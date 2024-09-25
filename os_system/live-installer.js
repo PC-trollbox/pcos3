@@ -27,21 +27,9 @@ await modules.fs.write("ram/etc/security/automaticLogon", "root");
 let int = setInterval(async function() {
     if (modules.killSystem) {
         clearInterval(int);
-        await keypairInstaller("ram");
-        await videoPlayerInstaller("ram");
-        await pictureInstaller("ram");
-        await terminalInstaller("ram");
-        await explorerInstaller("ram");
-        await filePickerInstaller("ram");
-        await taskMgrInstaller("ram");
-        await sysadminInstaller("ram");
-        await networkInstaller("ram");
-        await networkdInstaller("ram");
-        await textEditorInstaller("ram");
-        await personalSecurityInstaller("ram");
-        await systemSecurityInstaller("ram");
-        await authuiInstaller("ram");
-        await cryptoInstaller("ram");
+        let _generated = null;
+        let appFns = [ _generated?._automatically?._by?._combine?.js ];
+        for (let app of appFns) await app("ram");
         await modules.fs.write("ram/root/.darkmode", "true");
         await installSfx("ram");
         await installWallpapers("ram");

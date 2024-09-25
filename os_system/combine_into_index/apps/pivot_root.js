@@ -13,7 +13,6 @@
         return availableAPIs.terminate();
     }
     await availableAPIs.setSystemMount(exec_args[0]);
-    await availableAPIs.toMyCLI("\r\n");
     await availableAPIs.terminate();
 })();
 

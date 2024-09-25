@@ -98,11 +98,6 @@ let user_spawn_token = null;
                         return;
                     }
                     if (su_stage != -1) await availableAPIs.toMyCLI("\r\n");
-                    if (prompt.type == "promise") {
-                        otherProcessAttached = true;
-                        await availableAPIs.automatedLogonInput({ session: suSession });
-                        return otherProcessAttached = false;
-                    }
                 }
             }
             let cmdline = [];
@@ -141,6 +136,13 @@ let user_spawn_token = null;
                 else {
                     graphic = cmdline[1] == "true" || cmdline[1] == "on" || cmdline[1] == "1" || cmdline[1] == "yes" || cmdline[1] == "enable";
                 }
+            } else if (cmdline[0] == "pushpath") {
+                if (cmdline[1]) pathsForBinaries.push(cmdline[1]);
+            } else if (cmdline[0] == "resetpath") {
+                pathsForBinaries = [ defaultPath ];
+            } else if (cmdline[0] == "lspath") {
+                await availableAPIs.toMyCLI(pathsForBinaries.map(a => JSON.stringify(a)).join(", ") + "\r\n");
+                await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("REAL_TERMINAL_DEFAULT_PATH_FIELD")).replace("%s", JSON.stringify(defaultPath)) + "\r\n");
             } else if (cmdline[0] == "clear") {
                 await availableAPIs.clearMyCLI();
             } else if (cmdline[0] == "exit") {
@@ -152,6 +154,9 @@ let user_spawn_token = null;
                 await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_SUGRAPH_USEDESC") + "\r\n");
                 await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_SU_USEDESC") + "\r\n");
                 await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_GRAPHIC_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_PUSHPATH_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_RESETPATH_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_LSPATH_USEDESC") + "\r\n");
                 await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_EXIT_USEDESC") + "\r\n");
             } else if (!cmdline.length) {} else {
                 let runFile;

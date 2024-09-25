@@ -30,7 +30,6 @@
             await availableAPIs.toMyCLI("rm: " + exec_args[0] + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
         }
     }
-    await availableAPIs.toMyCLI("\r\n");
     await availableAPIs.terminate();
 })();
 
@@ -38,8 +37,13 @@ async function recursiveRemove(target, force) {
     try {
         for (let targetFile of await availableAPIs.fs_ls({ path: target })) {
             targetFile = target + "/" + targetFile;
-            if (await availableAPIs.fs_isDirectory({ path: targetFile })) await recursiveRemove(targetFile, force);
-            await availableAPIs.fs_rm({ path: targetFile });
+            try {
+                if (await availableAPIs.fs_isDirectory({ path: targetFile })) await recursiveRemove(targetFile, force);
+                await availableAPIs.fs_rm({ path: targetFile });
+            } catch (e) {
+                await availableAPIs.toMyCLI("rm: " + targetFile + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+                if (!force) return await availableAPIs.terminate();
+            }
         }
     } catch (e) {
         await availableAPIs.toMyCLI("rm: " + target + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");

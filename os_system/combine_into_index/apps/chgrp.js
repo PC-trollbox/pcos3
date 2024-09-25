@@ -15,9 +15,8 @@
     try {
         await availableAPIs.fs_chgrp({ path: exec_args[1], newGrp: exec_args[0] });
     } catch (e) {
-        await availableAPIs.toMyCLI("chgrp: " + exec_args[1] + ": " + await availableAPIs.lookupLocale(e.message));
+        await availableAPIs.toMyCLI("chgrp: " + exec_args[1] + ": " + await availableAPIs.lookupLocale(e.message)) + "\r\n";
     }
-    await availableAPIs.toMyCLI("\r\n");
     await availableAPIs.terminate();
 })();
 addEventListener("signal", async function(e) {

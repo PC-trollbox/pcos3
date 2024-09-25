@@ -17,9 +17,8 @@
     try {
         await availableAPIs.fs_chmod({ path: exec_args[1], newPermissions: exec_args[0] });
     } catch (e) {
-        await availableAPIs.toMyCLI("chmod: " + exec_args[1] + ": " + await availableAPIs.lookupLocale(e.message));
+        await availableAPIs.toMyCLI("chmod: " + exec_args[1] + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
     }
-    await availableAPIs.toMyCLI("\r\n");
     await availableAPIs.terminate();
 })();
 addEventListener("signal", async function(e) {

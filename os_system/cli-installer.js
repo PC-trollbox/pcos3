@@ -1,3 +1,5 @@
+let _generated = null;
+let appFns = [ _generated?._automatically?._by?._combine?.js ];
 async function installer() {
     // @pcos-app-mode native
     let windowtty = await modules.window(modules.session.active);
@@ -137,20 +139,7 @@ function step(to, n) {
     } else if (n == 21) {
         term.write("Install the base apps.\r\n");
         term.write("In quick succession, we'll run the app installers.\r\n");
-        term.write("Run: keypairInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: videoPlayerInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: pictureInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: terminalInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: explorerInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: filePickerInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: taskMgrInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: sysadminInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: networkInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: networkdInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: textEditorInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: personalSecurityInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: systemSecurityInstaller(modules.defaultSystem);\r\n");
-        term.write("Run: authuiInstaller(modules.defaultSystem);\r\n");
+        term.write("Run: " + appFns.map(a => a.name + "(modules.defaultSystem)").join(";\r\n") + ";\r\n");
         term.write("Once you installed all that, do step(to, 22);\r\n");
     } else if (n == 22) {
         term.write("Remove the second-stage installer; we did its task already!\r\n");
@@ -330,7 +319,7 @@ function setupbase() {
                     "13-authui.js": authui.toString() + "\nmodules.authui = authui;\n",
                     "14-logon-requirement.js": requireLogon.toString() + "\n" + waitForLogon.toString() + "\n" + hookButtonClick.toString() + "\n" + serviceLogon.toString() + "\n",
                     "14-logon-requirement-enforce.js": "/* no-op */",
-                    "15-apps.js": keypairInstaller.toString() + "\n" + videoPlayerInstaller.toString() + "\n" + pictureInstaller.toString() + "\n" + terminalInstaller.toString() + "\n" + explorerInstaller.toString() + "\n" + filePickerInstaller.toString() + "\n" + taskMgrInstaller.toString() + "\n" + sysadminInstaller.toString() + "\n" + networkInstaller.toString() + "\n" + networkdInstaller.toString() + "\n" + textEditorInstaller.toString() + "\n" + personalSecurityInstaller.toString() + "\n" + systemSecurityInstaller.toString() + "\n" + authuiInstaller.toString() + cryptoInstaller.toString() + "\n",
+                    "15-apps.js": appFnCode + "\n",
                     "15-optional.js": opt.toString() + "\nopt();\n",
                     "16-wallpaper.js": installWallpapers.toString() + "\n",
                     "16-sfxpack.js": installSfx.toString() + "\n",
