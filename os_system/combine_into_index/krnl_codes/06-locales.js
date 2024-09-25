@@ -42,7 +42,7 @@ function localization() {
             "CREATING_BOOT_PARTITION": "Creating boot partition",
             "MOUNTING_DATA_PARTITION": "Mounting data partition as 'target'",
             "CHANGING_ROOT_PERMISSIONS": "Changing / permissions",
-            "COPYING_FOLDERS": "Copying folders",
+            "COPYING_FOLDERS": "Copying directories",
             "PREPARING_FOR_COPY": "Preparing for copying",
             "CHANGING_BOOT_PERMISSIONS": "Changing /boot permissions",
             "PATCHING_FS": "Patching for data mount",
@@ -242,7 +242,7 @@ function localization() {
             "CLIPBOARD_CUT": "Cut",
             "CLIPBOARD_PASTE": "Paste",
             "CLIPBOARD_SOURCE_GONE": "The source no longer exists or is no longer a file.",
-            "CLIPBOARD_CONFLICT": "The destination folder already has a file or directory with the same name.",
+            "CLIPBOARD_CONFLICT": "The destination directory already has a file or directory with the same name.",
             "SAFE_MODE_MSG": "Safe mode",
             "INSTALLING_SFX": "Installing sound effects",
             "APP_OR_KEY_SIGNATURE_VERIFICATION_FAILED": "Signature verification for the program or the key signing the program failed.",
@@ -371,6 +371,8 @@ function localization() {
             "REAL_TERMINAL_PUSHPATH_USEDESC": "pushpath [path] - Add a new path to explore to find commands.",
             "REAL_TERMINAL_RESETPATH_USEDESC": "resetpath - Reset the list of paths to explore to the default path.",
             "REAL_TERMINAL_LSPATH_USEDESC": "lspath - See the current list of paths to explore and the default path.",
+            "MKDIR_USAGE": "Usage: mkdir [directory]",
+            "MKDIR_DESCRIPTION": "Creates a new directory in the specified path."
         },
         ru: {
             "UNTITLED_APP": "Безымянная программа",
@@ -413,7 +415,7 @@ function localization() {
             "CREATING_BOOT_PARTITION": "Создание раздела загрузки",
             "MOUNTING_DATA_PARTITION": "Монтирование раздела данных как 'target'",
             "CHANGING_ROOT_PERMISSIONS": "Изменение разрешений /",
-            "COPYING_FOLDERS": "Копирование папок",
+            "COPYING_FOLDERS": "Копирование каталогов",
             "PREPARING_FOR_COPY": "Подготовка к копированию",
             "CHANGING_BOOT_PERMISSIONS": "Изменение разрешений /boot",
             "PATCHING_FS": "Изменение для монтирования раздела данных",
@@ -741,6 +743,8 @@ function localization() {
             "REAL_TERMINAL_PUSHPATH_USEDESC": "pushpath [path] - Добавить новый путь для просмотра команд.",
             "REAL_TERMINAL_RESETPATH_USEDESC": "resetpath - Сбросить список путей для просмотра команд к значению пути по умолчанию.",
             "REAL_TERMINAL_LSPATH_USEDESC": "lspath - Просмотреть текущие пути для просмотра команд и путь по умолчанию.",
+            "MKDIR_USAGE": "Использование: mkdir [каталог]",
+            "MKDIR_DESCRIPTION": "Создаёт новый каталог в указанном пути."
         },
         defaultLocale: "en",
         get: function(key, lang) {
