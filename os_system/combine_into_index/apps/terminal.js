@@ -1,12 +1,12 @@
 // =====BEGIN MANIFEST=====
-// link: lrn:API_TEST_TERM
+// allow: GET_LOCALE, FS_LIST_PARTITIONS, FS_READ, MANAGE_TOKENS, ELEVATE_PRIVILEGES, FS_BYPASS_PERMISSIONS, START_TASK, START_BACKGROUND_TASK, CLI_MODIFICATIONS, GET_BUILD, LIST_TASKS, TASK_BYPASS_PERMISSIONS
+// link: lrn:REAL_TERMINAL_NAME
 // signer: automaticSigner
 // =====END MANIFEST=====
+let user_spawn_token = null;
 (async function() {
     // @pcos-app-mode isolatable
-    await window.availableAPIs.windowTitleSet(await window.availableAPIs.lookupLocale("API_TEST_TERM"));
-    document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-    if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
+    await window.availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("REAL_TERMINAL_NAME"));
     await availableAPIs.attachCLI();
     
     function parse_cmdline(cmdline) {
@@ -40,12 +40,66 @@
 
     let str = "";
     let default_user = await window.availableAPIs.getUser();
+    let defaultPath = await availableAPIs.getSystemMount() + "/apps";
+    let pathsForBinaries = [ defaultPath ];
+    let otherProcessAttached = false;
+    let graphic = false;
+    let su_stage = -1;
+    let suSession = null;
+    let hideInputMask = "";
+    let hideInput = false;
     await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("TERMINAL_INVITATION")).replace("%s", (await window.availableAPIs.getVersion())) + "\r\n\r\n");
-    await availableAPIs.toMyCLI(default_user + "@localhost:~" + (default_user == "root" ? "#" : "$") + " ");
+    await availableAPIs.toMyCLI(default_user + (default_user == "root" ? "#" : "$") + " ");
     
-    onTermData(async function (e) {
+    onTermData(async function self(e, why) {
+        if (otherProcessAttached) return await availableAPIs.typeIntoOtherCLI({
+            taskId: otherProcessAttached,
+            text: e,
+            human: true
+        });
         if (e == "\r") {
-            await availableAPIs.toMyCLI("\r\n");
+            if (why != "su") await availableAPIs.toMyCLI("\r\n");
+            if (su_stage > -1) {
+                if (su_stage == 0) {
+                    try {
+                        suSession = await availableAPIs.automatedLogonCreate({ desiredUser: str });
+                        su_stage = 1;
+                    } catch {
+                        su_stage = -1;
+                        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("AUTH_FAILED") + "\r\n");
+                    }
+                    str = "";
+                }
+                while (su_stage >= 1) {
+                    otherProcessAttached = true;
+                    if (su_stage == 2) await availableAPIs.automatedLogonInput({ session: suSession, input: str });
+                    otherProcessAttached = false;
+                    str = "";
+                    hideInput = false;
+                    hideInputMask = "";
+                    let prompt = await availableAPIs.automatedLogonGet(suSession);
+                    await availableAPIs.toMyCLI(prompt.message);
+                    su_stage = 2;
+                    if (prompt.success != "intermediate") {
+                        await availableAPIs.toMyCLI("\r\n");
+                        su_stage = -1;
+                        if (prompt.success) {
+                            user_spawn_token = prompt.token;
+                            let processToken = await availableAPIs.getProcessToken();
+                            await availableAPIs.setProcessToken(await availableAPIs.forkToken(user_spawn_token));
+                            await availableAPIs.revokeToken(processToken);
+                            await availableAPIs.automatedLogonDelete(suSession);
+                        }
+                    }
+                    if (prompt.wantsUserInput || prompt.type == "informative") {
+                        if (prompt.wantsUserInput) await availableAPIs.toMyCLI(": ");
+                        hideInput = prompt.type == "password" || prompt.type == "informative";
+                        hideInputMask = prompt.type == "password" ? "*" : "";
+                        return;
+                    }
+                    if (su_stage != -1) await availableAPIs.toMyCLI("\r\n");
+                }
+            }
             let cmdline = [];
             try {
                 cmdline = parse_cmdline(str);
@@ -54,30 +108,108 @@
                 return;
             }
             str = "";
-            if (!cmdline.length) {} else if (window.availableAPIs.hasOwnProperty(cmdline[0])) {
-                try {
-                    await availableAPIs.toMyCLI(JSON.stringify(await window.availableAPIs[cmdline[0]](cmdline.length == 1 ? undefined : (cmdline.length == 2 ? cmdline[1] : [...cmdline.slice(1)]))) + "\r\n");
-                } catch (e) {
-                    await availableAPIs.toMyCLI(cmdline[0] + ": " + e.name + ": " + e.message + "\r\n");
+            if (cmdline[0] == "sugraph") {
+                otherProcessAttached = true;
+                let authui = await availableAPIs.consentGetToken({
+                    intent: await availableAPIs.lookupLocale("REAL_TERMINAL_INTENT"),
+                    name: await availableAPIs.lookupLocale("REAL_TERMINAL_NAME"),
+                    desiredUser: cmdline[1]
+                });
+                if (authui) {
+                    user_spawn_token = authui;
+                    let processToken = await availableAPIs.getProcessToken();
+                    await availableAPIs.setProcessToken(await availableAPIs.forkToken(user_spawn_token));
+                    await availableAPIs.revokeToken(processToken);
+                } else await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("AUTH_FAILED") + "\r\n");
+                otherProcessAttached = false;
+            } else if (cmdline[0] == "su") {
+                if (!cmdline[1]) {
+                    await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("USERNAME") + ": ");
+                    return su_stage = 0;
+                } else {
+                    try {
+                        suSession = await availableAPIs.automatedLogonCreate({ desiredUser: cmdline[1] });
+                        su_stage = 1;
+                        return self("\r", "su");
+                    } catch {
+                        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("AUTH_FAILED") + "\r\n");
+                    }
                 }
-            } else if (cmdline[0] == "js_ree") {
-                try {
-                    await availableAPIs.toMyCLI(JSON.stringify(eval(cmdline[1])) + "\r\n");
-                } catch (e) {
-                    await availableAPIs.toMyCLI("js_ree: " + e.name + ": " + e.message + "\r\n");
+            } else if (cmdline[0] == "graphic") {
+                if (!cmdline[1]) await availableAPIs.toMyCLI("graphic: " + graphic + "\r\n");
+                else {
+                    graphic = cmdline[1] == "true" || cmdline[1] == "on" || cmdline[1] == "1" || cmdline[1] == "yes" || cmdline[1] == "enable";
                 }
+            } else if (cmdline[0] == "pushpath") {
+                if (cmdline[1]) pathsForBinaries.push(cmdline[1]);
+            } else if (cmdline[0] == "resetpath") {
+                pathsForBinaries = [ defaultPath ];
+            } else if (cmdline[0] == "lspath") {
+                await availableAPIs.toMyCLI(pathsForBinaries.map(a => JSON.stringify(a)).join(", ") + "\r\n");
+                await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("REAL_TERMINAL_DEFAULT_PATH_FIELD")).replace("%s", JSON.stringify(defaultPath)) + "\r\n");
             } else if (cmdline[0] == "clear") {
                 await availableAPIs.clearMyCLI();
+            } else if (cmdline[0] == "exit") {
+                await availableAPIs.terminate();
             } else if (cmdline[0] == "help") {
-                await availableAPIs.toMyCLI(await window.availableAPIs.lookupLocale("HELP_TERMINAL_APITEST"));
-                for (let api in window.availableAPIs) await availableAPIs.toMyCLI(api + "\r\n");
-            } else {
-                await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("TERM_COMMAND_NOT_FOUND")).replace("%s", cmdline[0]) + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_BUILTIN_LIST") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_HELP_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_CLEAR_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_SUGRAPH_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_SU_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_GRAPHIC_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_PUSHPATH_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_RESETPATH_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_LSPATH_USEDESC") + "\r\n");
+                await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_EXIT_USEDESC") + "\r\n");
+            } else if (!cmdline.length) {} else {
+                let runFile;
+                try {
+                    if (!await availableAPIs.fs_isDirectory({ path: cmdline[0] })) runFile = cmdline[0];
+                } catch {}
+                for (let path of pathsForBinaries) {
+                    try {
+                        let ls = await availableAPIs.fs_ls({ path });
+                        if (ls.includes(cmdline[0]) || ls.includes(cmdline[0] + ".js")) {
+                            let extensioned = ls.includes(cmdline[0] + ".js")
+                            runFile = path + "/" + cmdline[0] + (extensioned ? ".js" : "");
+                            break;
+                        }
+                    } catch {}
+                }
+                if (runFile) {
+                    if (user_spawn_token) {
+                        let forkedToken = await availableAPIs.forkToken(user_spawn_token);
+                        try {
+                            let spawnedTask = await availableAPIs.startTask({
+                                file: runFile,
+                                argPassed: cmdline.slice(1),
+                                runInBackground: !graphic,
+                                silent: true,
+                                token: forkedToken
+                            });
+                            otherProcessAttached = spawnedTask;
+                            (async function() {
+                                while ((await availableAPIs.listTasks()).includes(spawnedTask)) {
+                                    try {
+                                        let otherData = await availableAPIs.getOtherCLIData({ taskId: spawnedTask });
+                                        if (otherData.type == "write") availableAPIs.toMyCLI(otherData.data);
+                                        else if (otherData.type == "consoleClear") availableAPIs.clearMyCLI();
+                                    } catch {}
+                                } 
+                            })();
+                            await availableAPIs.waitTermination(spawnedTask);
+                            otherProcessAttached = false;
+                        } catch (e) {
+                            await availableAPIs.toMyCLI(runFile + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+                        }
+                    } else await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("REAL_TERMINAL_LOGON_REQUIRED")).replace("%s", default_user) + "\r\n");
+                } else await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("TERM_COMMAND_NOT_FOUND")).replace("%s", cmdline[0]) + "\r\n");
             }
             try {
                 default_user = await window.availableAPIs.getUser();
             } catch {}
-            await availableAPIs.toMyCLI(default_user + "@localhost:~" + (default_user == "root" ? "#" : "$") + " ");
+            await availableAPIs.toMyCLI(default_user + (default_user == "root" ? "#" : "$") + " ");
             return;
         } else if (e == '\u007F') {
             if (str.length > 0) {
@@ -87,7 +219,7 @@
         } else {
             if (e >= String.fromCharCode(0x20) && e <= String.fromCharCode(0x7E) || e >= '\u00a0') {
                 str += e;
-                await availableAPIs.toMyCLI(e);
+                await availableAPIs.toMyCLI(hideInput ? hideInputMask : e);
             }
         }
     });
@@ -99,5 +231,6 @@ async function onTermData(listener) {
     }
 }
 addEventListener("signal", async function(e) {
+    await availableAPIs.revokeToken(user_spawn_token);
     if (e.detail == 15) await window.availableAPIs.terminate();
 }); null;

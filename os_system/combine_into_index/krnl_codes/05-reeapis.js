@@ -358,9 +358,32 @@ function reeAPIs() {
                 },
                 getNewToken: async function(desiredUser) {
                     if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
-                    let logonUI = await modules.authui(ses, desiredUser);
+                    if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
+                    let releaseLock;
+                    let lock = new Promise((resolve) => releaseLock = resolve);
+                    modules.session.attrib(ses, "secureLock", lock);
+                    let secureSession = await modules.session.mksession();
+
+                    let dom = modules.session.tracker[secureSession].html;
+                    let ogDom = modules.session.tracker[ses].html;
+                    let bgfx = document.createElement("div");
+                    bgfx.classList.add("session", "secure");
+                    dom.appendChild(bgfx);
+                    modules.session.attrib(secureSession, "dark", modules.session.attrib(ses, "dark"));
+                    dom.style.background = ogDom.style.background;
+                    dom.style.backgroundSize = "100% 100%";
+
+                    modules.session.muteAllSessions();
+                    modules.session.activateSession(secureSession);
+
+                    let logonUI = await modules.authui(secureSession, desiredUser);
                     return new Promise(function(resolve) {
                         logonUI.hook(async function(result) {
+                            releaseLock();
+                            modules.session.attrib(ses, "secureLock", null);
+                            modules.session.muteAllSessions();
+                            modules.session.rmsession(secureSession);
+                            modules.session.activateSession(ses);
                             if (result.success == false) return resolve(false);
                             return resolve(result.token);
                         });
@@ -700,6 +723,48 @@ function reeAPIs() {
                     if (!privileges.includes("LIST_TASKS")) throw new Error("UNAUTHORIZED_ACTION");
                     return modules.tasks.waitTermination(arg);
                 },
+                consentGetToken: async function(params) {
+                    if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
+                    let { desiredUser, intent } = params;
+                    if (!intent) throw new Error("INTENT_REQUIRED");
+                    let releaseLock;
+                    let lock = new Promise((resolve) => releaseLock = resolve);
+                    modules.session.attrib(ses, "secureLock", lock);
+                    let secureSession = await modules.session.mksession();
+
+                    let dom = modules.session.tracker[secureSession].html;
+                    let ogDom = modules.session.tracker[ses].html;
+                    let bgfx = document.createElement("div");
+                    bgfx.classList.add("session", "secure");
+                    dom.appendChild(bgfx);
+                    modules.session.attrib(secureSession, "dark", modules.session.attrib(ses, "dark"));
+                    dom.style.background = ogDom.style.background;
+                    dom.style.backgroundSize = "100% 100%";
+
+                    modules.session.muteAllSessions();
+                    modules.session.activateSession(secureSession);
+                    let task = await modules.tasks.taskInfo(taskId);
+
+                    let logonUI = await modules.consentui(secureSession, {
+                        user: desiredUser,
+                        path: task.file,
+                        args: task.arg,
+                        intent,
+                        name: params.name
+                    });
+                    return new Promise(function(resolve) {
+                        logonUI.hook(async function(result) {
+                            releaseLock();
+                            modules.session.attrib(ses, "secureLock", null);
+                            modules.session.muteAllSessions();
+                            modules.session.rmsession(secureSession);
+                            modules.session.activateSession(ses);
+                            if (result.success == false) return resolve(false);
+                            return resolve(result.token);
+                        });
+                    });
+                }
             }
         }
         let customAPIs = modules.customAPIs;

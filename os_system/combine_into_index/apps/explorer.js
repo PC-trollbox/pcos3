@@ -25,9 +25,14 @@ let globalToken;
             button.onclick = async function() {
                 button.disabled = true;
                 let currentToken = await availableAPIs.getProcessToken();
-                let newToken = await availableAPIs.getNewToken();
+                globalToken = await availableAPIs.consentGetToken({
+                    intent: await availableAPIs.lookupLocale("FILE_EXPLORER_FULL_INTENT"),
+                    name: await availableAPIs.lookupLocale("FILE_EXPLORER")
+                });
                 button.disabled = false;
-                if (!newToken) return;
+                if (!globalToken) return;
+                let newToken = globalToken;
+                if (privileges.includes("MANAGE_TOKENS")) newToken = await availableAPIs.forkToken(globalToken);
                 await availableAPIs.setProcessToken(newToken);
                 await availableAPIs.revokeToken(currentToken);
                 privileges = await availableAPIs.getPrivileges();
@@ -434,7 +439,11 @@ let globalToken;
                 await browse();
                 if (path.endsWith(".js")) {
                     if (privileges.includes("START_TASK") && privileges.includes("ELEVATE_PRIVILEGES") && privileges.includes("MANAGE_TOKENS")) {
-                        if (!globalToken) globalToken = await availableAPIs.getNewToken(await availableAPIs.getUser());
+                        if (!globalToken) globalToken = await availableAPIs.consentGetToken({
+                            intent: await availableAPIs.lookupLocale("FILE_EXPLORER_INTENT"),
+                            name: await availableAPIs.lookupLocale("FILE_EXPLORER"),
+                            desiredUser: await availableAPIs.getUser()
+                        });
                         if (globalToken) {
                             let newToken = await availableAPIs.forkToken(globalToken);
                             await availableAPIs.startTask({ file: path, token: newToken });
@@ -446,7 +455,11 @@ let globalToken;
                     let file = await availableAPIs.fs_read({ path: path });
                     file = JSON.parse(file);
                     if (privileges.includes("START_TASK")) {
-                        if (!globalToken) globalToken = await availableAPIs.getNewToken(await availableAPIs.getUser());
+                        if (!globalToken) globalToken = await availableAPIs.consentGetToken({
+                            intent: await availableAPIs.lookupLocale("FILE_EXPLORER_INTENT"),
+                            name: await availableAPIs.lookupLocale("FILE_EXPLORER"),
+                            desiredUser: await availableAPIs.getUser()
+                        });
                         if (globalToken) {
                             let newToken = await availableAPIs.forkToken(globalToken);
                             await availableAPIs.startTask({ file: file.path, argPassed: [ ...(file.args || []) ], token: newToken });
@@ -461,7 +474,11 @@ let globalToken;
                     let file = await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/apps/associations/" + fileType });
                     let fileLink = JSON.parse(file);
                     if (privileges.includes("START_TASK") && privileges.includes("ELEVATE_PRIVILEGES") && privileges.includes("MANAGE_TOKENS")) {
-                        if (!globalToken) globalToken = await availableAPIs.getNewToken(await availableAPIs.getUser());
+                        if (!globalToken) globalToken = await availableAPIs.consentGetToken({
+                            intent: await availableAPIs.lookupLocale("FILE_EXPLORER_INTENT"),
+                            name: await availableAPIs.lookupLocale("FILE_EXPLORER"),
+                            desiredUser: await availableAPIs.getUser()
+                        });
                         if (globalToken) {
                             let newToken = await availableAPIs.forkToken(globalToken);
                             await availableAPIs.startTask({ file: fileLink.path, argPassed: [ ...(fileLink.args || []), path ], token: newToken });

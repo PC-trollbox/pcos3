@@ -15,7 +15,11 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
     if (!checklist.every(p => privileges.includes(p))) {
         document.body.innerText = await availableAPIs.lookupLocale("CRYPTO_TOOLS_NOPERM");
         let currentToken = await availableAPIs.getProcessToken();
-        let newToken = await availableAPIs.getNewToken(await availableAPIs.getUser());
+        let newToken = await availableAPIs.consentGetToken({
+            intent: await availableAPIs.lookupLocale("CRYPTO_TOOLS_INTENT"),
+            name: await availableAPIs.lookupLocale("CRYPTO_TOOLS_TITLE"),
+            desiredUser: await availableAPIs.getUser()
+        });
         if (!newToken) return;
         await availableAPIs.setProcessToken(newToken);
         await availableAPIs.revokeToken(currentToken);

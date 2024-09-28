@@ -13,7 +13,11 @@
     if (!checklist.every(p => privileges.includes(p))) {
         document.body.innerText = await availableAPIs.lookupLocale("PERSONAL_SECURITY_DENY");
         let currentToken = await availableAPIs.getProcessToken();
-        let newToken = await availableAPIs.getNewToken(await availableAPIs.getUser());
+        let newToken = await availableAPIs.consentGetToken({
+            intent: await availableAPIs.lookupLocale("PERSONAL_SECURITY_INTENT"),
+            name: await availableAPIs.lookupLocale("PERSONAL_SECURITY_TITLE"),
+            desiredUser: await availableAPIs.getUser()
+        });
         if (!newToken) return;
         await availableAPIs.setProcessToken(newToken);
         await availableAPIs.revokeToken(currentToken);

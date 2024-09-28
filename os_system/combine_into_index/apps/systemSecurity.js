@@ -13,7 +13,10 @@
     if (!checklist.every(p => privileges.includes(p))) {
         document.body.innerText = await availableAPIs.lookupLocale("SYSTEM_SECURITY_DENY");
         let currentToken = await availableAPIs.getProcessToken();
-        let newToken = await availableAPIs.getNewToken(await availableAPIs.getUser());
+        let newToken = await availableAPIs.consentGetToken({
+            intent: await availableAPIs.lookupLocale("SYSTEM_SECURITY_INTENT"),
+            name: await availableAPIs.lookupLocale("SYSTEM_SECURITY_TITLE"),
+        });
         if (!newToken) return;
         await availableAPIs.setProcessToken(newToken);
         await availableAPIs.revokeToken(currentToken);

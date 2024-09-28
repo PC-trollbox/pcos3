@@ -8,7 +8,7 @@ let ipc = exec_args[0];
     // @pcos-app-mode isolatable
     if (!ipc) return availableAPIs.terminate();
     let user = exec_args[1];
-    await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("LOG_IN_INVITATION"));
+    await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("ACCESS_REQUEST_TITLE"));
     let checklist = [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES" ];
     let privileges = await availableAPIs.getPrivileges();
     if (!checklist.every(p => privileges.includes(p))) {
@@ -17,19 +17,38 @@ let ipc = exec_args[0];
     }
     document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
     if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
-    let describe = document.createElement("b");
+    let describe = document.createElement("span");
     let form = document.createElement("form");
     let input = document.createElement("input");
+    let decline = document.createElement("button");
     let submit = document.createElement("button");
+    let metadata = JSON.parse(exec_args[2]);
+    decline.type = "button";
+    submit.type = "submit";
     document.body.appendChild(describe);
-    document.body.appendChild(document.createElement("br"));
+    document.body.appendChild(document.createElement("hr"));
     document.body.appendChild(form);
     form.appendChild(input);
+    form.appendChild(document.createElement("br"));
+    form.appendChild(decline);
     form.appendChild(submit);
-    submit.innerText = await availableAPIs.lookupLocale("ENTER_BUTTON");
-    describe.innerText = await availableAPIs.lookupLocale("USERNAME_PROMPT");
+    describe.innerText = (await availableAPIs.lookupLocale("DESCRIBE_TEMPLATE")).replace("%s", metadata.path.split("/").pop()).replace("%s", metadata.submittedName || metadata.path.split("/").pop()).replace("%s", metadata.submittedIntent);
     input.placeholder = await availableAPIs.lookupLocale("USERNAME");
+    decline.innerText = await availableAPIs.lookupLocale("DECLINE");
+    submit.innerText = await availableAPIs.lookupLocale("NEXT");
+
+    async function extraData(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        e.stopPropagation();
+        describe.innerText = (await availableAPIs.lookupLocale("EXTRA_DESCRIBE_TEMPLATE")).replace("%s", metadata.path.split("/").pop()).replace("%s", metadata.submittedName || metadata.path.split("/").pop()).replace("%s", JSON.stringify(metadata.args)).replace("%s", metadata.submittedIntent);
+        describe.removeEventListener("contextmenu", extraData);
+    }
+
+    describe.addEventListener("contextmenu", extraData);
+
     async function userSubmit(e) {
+        describe.removeEventListener("contextmenu", extraData);
         e.stopImmediatePropagation();
         e.preventDefault();
         e.stopPropagation();
@@ -52,7 +71,6 @@ let ipc = exec_args[0];
         async function updateProgress() {
             submit.removeEventListener("click", userSubmit);
             input.value = "";
-            submit.innerText = await availableAPIs.lookupLocale("ENTER_BUTTON");
             if (userLogonSession.success != "intermediate") await availableAPIs.automatedLogonDelete(userLogonID);
             if (userLogonSession.success == true) {
                 await availableAPIs.sendToPipe({ pipe: ipc, data: userLogonSession });
@@ -85,8 +103,7 @@ let ipc = exec_args[0];
             if (userLogonSession.type == "informative") {
                 input.disabled = true;
                 submit.disabled = false;
-                submit.innerText = "OK";
-                input.placeholder = "--->";
+                input.placeholder = "";
             }
             submit.addEventListener("click", async function updater(e) {
                 e.stopImmediatePropagation();
@@ -106,10 +123,13 @@ let ipc = exec_args[0];
         return false;
     }
     submit.addEventListener("click", userSubmit);
+    decline.addEventListener("click", async function() {
+        await availableAPIs.sendToPipe({ pipe: ipc, data: { success: false, cancelled: true } });
+        await availableAPIs.terminate();
+    });
     if (user) {
         input.disabled = true;
         input.value = user;
-        userSubmit({ preventDefault: () => {}, stopImmediatePropagation: () => {}, stopPropagation: () => {} });
     }
 })();
 addEventListener("signal", async function(e) {

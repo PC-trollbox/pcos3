@@ -1,4 +1,4 @@
-async function authui(ses = modules.session.active, user, token, isLogonScreen) {
+async function consentui(ses = modules.session.active, config, token, isLogonScreen) {
     // @pcos-app-mode native
     if (modules.shuttingDown) return { hook: _ => _ };
     let appToken;
@@ -11,7 +11,7 @@ async function authui(ses = modules.session.active, user, token, isLogonScreen) 
     let ipc = await modules.ipc.create();
     modules.ipc.declareAccess(ipc, { owner: "authui", group: "authui", world: false });
     let windowObject = modules.window(ses);
-    let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/authui.js", [ ipc, user || "" ], windowObject, appToken);
+    let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/consentui.js", [ ipc, config.user || "", JSON.stringify({ path: config.path, args: config.args, submittedIntent: config.intent, submittedName: config.name }) ], windowObject, appToken);
     if (isLogonScreen) windowObject.closeButton.classList.toggle("hidden", true);
     async function waitForIt() {
         let msg = await modules.ipc.listenFor(ipc);
@@ -22,4 +22,4 @@ async function authui(ses = modules.session.active, user, token, isLogonScreen) 
     waitForIt();
     return { hook: (e) => hook = e };
 }
-modules.authui = authui;
+modules.consentui = consentui;

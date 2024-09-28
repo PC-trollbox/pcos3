@@ -120,6 +120,11 @@ function loadUi() {
         background: black;
         cursor: default;
     }
+
+    .session.secure {
+        background: none;
+        backdrop-filter: blur(8px) brightness(50%);
+    }
         
     .hidden {
         display: none;

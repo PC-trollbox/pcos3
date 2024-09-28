@@ -315,7 +315,7 @@ function loadTasks() {
         taskInfo: async function(taskId) {
             if (!this.tracker.hasOwnProperty(taskId)) return null;
             let info = await modules.tokens.info(this.tracker[taskId].apis.public.getProcessToken());
-            if (!info) info = { runBy: "root" };
+            if (!info) info = { user: "root" };
             return {
                 file: this.tracker[taskId].file,
                 arg: this.tracker[taskId].arg,

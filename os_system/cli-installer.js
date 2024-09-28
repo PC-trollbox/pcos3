@@ -317,6 +317,7 @@ function setupbase() {
                     "12-tokens.js": setupTokens.toString() + "\nsetupTokens();\n",
                     "12-users.js": setupUsers.toString() + "\nawait setupUsers();\n",
                     "13-authui.js": authui.toString() + "\nmodules.authui = authui;\n",
+                    "13-consentui.js": consentui.toString() + "\nmodules.consentui = consentui;\n",
                     "14-logon-requirement.js": requireLogon.toString() + "\n" + waitForLogon.toString() + "\n" + hookButtonClick.toString() + "\n" + serviceLogon.toString() + "\n",
                     "14-logon-requirement-enforce.js": "/* no-op */",
                     "15-apps.js": appFnCode + "\n",
