@@ -25,14 +25,13 @@ let globalToken;
             button.onclick = async function() {
                 button.disabled = true;
                 let currentToken = await availableAPIs.getProcessToken();
-                globalToken = await availableAPIs.consentGetToken({
+                let newToken = await availableAPIs.consentGetToken({
                     intent: await availableAPIs.lookupLocale("FILE_EXPLORER_FULL_INTENT"),
                     name: await availableAPIs.lookupLocale("FILE_EXPLORER")
                 });
                 button.disabled = false;
-                if (!globalToken) return;
-                let newToken = globalToken;
-                if (privileges.includes("MANAGE_TOKENS")) newToken = await availableAPIs.forkToken(globalToken);
+                if (!newToken) return;
+                if (privileges.includes("MANAGE_TOKENS")) globalToken = await availableAPIs.forkToken(newToken);
                 await availableAPIs.setProcessToken(newToken);
                 await availableAPIs.revokeToken(currentToken);
                 privileges = await availableAPIs.getPrivileges();

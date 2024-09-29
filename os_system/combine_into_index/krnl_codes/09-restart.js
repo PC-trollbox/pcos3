@@ -32,31 +32,31 @@ function restartLoad() {
         modules.session.muteAllSessions();
         modules.session.activateSession(modules.session.systemSession);
         let windowDiv = window(modules.session.systemSession, true);
-        windowDiv.closeButton.disabled = true;
+        windowDiv.closeButton.classList.toggle("hidden", true);
         windowDiv.title.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", "");
         windowDiv.content.style.padding = "8px";
         let description = document.createElement("p");
-        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s",  modules.locales.get("PLEASE_WAIT"));
+        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("PLEASE_WAIT"));
         windowDiv.content.appendChild(description);
-        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s",  modules.locales.get("POLITE_CLOSE_SIGNAL"));
+        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("POLITE_CLOSE_SIGNAL"));
         for (let taskId in tasks.tracker) tasks.sendSignal(taskId, 15);
         await Promise.race([
             timeout(5000),
             allProcessesClosed()
         ]);
-        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s",  modules.locales.get("ABRUPT_CLOSE_SIGNAL"));
+        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("ABRUPT_CLOSE_SIGNAL"));
         for (let taskId in tasks.tracker) tasks.sendSignal(taskId, 9, true);
         await allProcessesClosed();
-        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s",  modules.locales.get("UNMOUNTING_MOUNTS"));
+        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("UNMOUNTING_MOUNTS"));
         for (let mount in fs.mounts) await fs.unmount(mount, token);
-        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s",  modules.locales.get("RESTARTING"));
+        description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("RESTARTING"));
         modules.killSystem();
         if (!noAutomaticReload) return location.reload()
         description.innerText = modules.locales.get("SAFE_TO_CLOSE");
         let button = document.createElement("button");
         button.innerText = modules.locales.get("RESTART_BUTTON");
         button.onclick = function() {
-            description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s",  modules.locales.get("RESTARTING"));
+            description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("RESTARTING"));
             button.remove();
             location.reload();
         }

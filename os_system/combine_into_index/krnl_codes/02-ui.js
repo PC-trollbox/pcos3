@@ -252,7 +252,7 @@ function loadUi() {
     modules.startupWindow = modules.window(modules.session.systemSession);
     modules.startupWindow.title.innerText = "PCOS 3";
     modules.startupWindow.content.style.padding = "8px";
-    modules.startupWindow.closeButton.disabled = true;
+    modules.startupWindow.closeButton.classList.toggle("hidden", true);
     modules.startupWindow.content.innerText = "PCOS is starting...";
 }
 

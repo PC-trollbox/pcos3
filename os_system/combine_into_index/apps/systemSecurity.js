@@ -23,6 +23,7 @@
         privileges = await availableAPIs.getPrivileges();
         if (!checklist.every(p => privileges.includes(p))) return;
     }
+    document.body.innerText = "";
     let pageHeader = document.createElement("b");
     let actionSpecificField = document.createElement("div");
     document.body.appendChild(pageHeader);

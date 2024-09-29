@@ -158,10 +158,6 @@ function loadTasks() {
                 };
                 let registrations = [];
                 windowObject.closeButton.addEventListener("click", () => that.sendSignal(taskId, 15));
-                windowObject.closeButton.addEventListener("contextmenu", async function(e) {
-                    e.preventDefault();
-                    await that.sendSignal(taskId, 9);
-                });
                 ree.exportAPI("attachCLI", function() {
                     if (that.tracker[taskId].cliio.attached) return true;
                     let signup = () => new Promise((resolve) => registrations.push(resolve));

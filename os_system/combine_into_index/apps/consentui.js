@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES
+// allow: IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES, FS_READ, FS_LIST_PARTITIONS
 // =====END MANIFEST=====
 
 let ipc = exec_args[0];
@@ -8,6 +8,11 @@ let ipc = exec_args[0];
     // @pcos-app-mode isolatable
     if (!ipc) return availableAPIs.terminate();
     let user = exec_args[1];
+    try {
+        new Audio(await availableAPIs.fs_read({ path: (await availableAPIs.getSystemMount()) + "/etc/sounds/ask.aud" })).play();
+    } catch (e) {
+        console.error(e);
+    }
     await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("ACCESS_REQUEST_TITLE"));
     let checklist = [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES" ];
     let privileges = await availableAPIs.getPrivileges();

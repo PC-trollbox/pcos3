@@ -1,0 +1,107 @@
+// =====BEGIN MANIFEST=====
+// allow: GET_LOCALE, LLDISK_LIST_PARTITIONS, LLDISK_WRITE, LLDISK_REMOVE
+// signer: automaticSigner
+// =====END MANIFEST=====
+(async function() {
+    // @pcos-app-mode isolatable
+    await availableAPIs.windowVisibility(false);
+    await availableAPIs.attachCLI();
+    if (!exec_args.length) {
+        await availableAPIs.toMyCLI("Usage: format [filesystem_type] [partition] <overwrite>\r\n");
+        await availableAPIs.toMyCLI("Prepares the selected partition for use.\r\n");
+        await availableAPIs.toMyCLI("Filesystem types: pcfs (corresponds to mountpoint PCFSiDBMount), pcfs_crypt (PCFSiDBAESCryptMount), pcfs_crypt_monokey (PCFSiDBAESCryptMount), pcbm:<data_partition> (like code in boot partition), null (DELETE the partition)\r\n")
+        await availableAPIs.toMyCLI("format: " + await availableAPIs.lookupLocale("NO_ARGUMENTS") + "\r\n");
+        return availableAPIs.terminate();
+    }
+    if (exec_args.length < 2 || exec_args.length > 3) {
+        await availableAPIs.toMyCLI("format: " + await availableAPIs.lookupLocale("ARGUMENT_COUNT_MISMATCH") + "\r\n");
+        return await availableAPIs.terminate();
+    }
+    
+    let knownNames = await availableAPIs.lldaList();
+    if (knownNames.includes(exec_args[1]) && exec_args[2] != "overwrite") {
+        await availableAPIs.toMyCLI("format: The partition already contains data. Set the overwrite parameter to 'overwrite' to remove data anyway. In that case, ALL DATA ON THE PARTITION MAY BE REMOVED.\r\n");
+        return await availableAPIs.terminate();
+    }
+
+    if (exec_args[0] == "pcfs") {
+        let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+        let prevId = (await availableAPIs.lldaRead({ partition: exec_args[1] }))?.id || u8aToHex(await availableAPIs.cspOperation({
+            cspProvider: "basic",
+            operation: "random",
+            cspArgument: new Uint8Array(64)
+        }));
+        await availableAPIs.lldaWrite({
+            partition: exec_args[1],
+            data: {
+                files: {},
+                permissions: {},
+                id: prevId
+            }
+        });
+    } else if (exec_args[0].startsWith("pcfs_crypt")) {
+        let monokey = exec_args[0].endsWith("_monokey");
+        let prevId = (await availableAPIs.lldaRead({ partition: exec_args[1] }))?.id || u8aToHex(await availableAPIs.cspOperation({
+            cspProvider: "basic",
+            operation: "random",
+            cspArgument: new Uint8Array(64)
+        }));
+        let salt = u8aToHex(await availableAPIs.cspOperation({
+            cspProvider: "basic",
+            operation: "random",
+            cspArgument: new Uint8Array(32)
+        }));
+        await availableAPIs.lldaWrite({
+            partition: exec_args[1],
+            data: {
+                files: {},
+                permissions: {},
+                id: prevId,
+                cryptodata: {
+                    passwordLockingInitial: monokey,
+                    salt: salt
+                }
+            }
+        })
+    } else if (exec_args[0].startsWith("pcbm:")) {
+        let diskDataPartition = exec_args[0].split(":").slice(1).join(":");
+        await availableAPIs.lldaWrite({
+            partition: exec_args[1],
+            data: `try {
+                const AsyncFunction = (async () => {}).constructor;
+                let pre_boot_part = coreExports.disk.partition(${JSON.stringify(diskDataPartition)}).getData();
+                let pre_boot_modules = pre_boot_part?.files;
+                if (!pre_boot_modules) {
+                    coreExports.tty_bios_api.println("No files were found in the storage partition");
+                    throw new Error("No files were found in the storage partition");
+                }
+                pre_boot_modules = pre_boot_modules[coreExports.bootSection || "boot"];
+                if (!pre_boot_modules) {
+                    coreExports.tty_bios_api.println("No boot modules were found");
+                    throw new Error("No boot modules were found");
+                }
+                let pre_boot_module_list = Object.keys(pre_boot_modules);
+                pre_boot_module_list = pre_boot_module_list.sort((a, b) => a.localeCompare(b));
+                let pre_boot_module_script = "";
+                for (let module of pre_boot_module_list) pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
+                await new AsyncFunction(pre_boot_module_script)();
+            } catch (e) {
+                coreExports.tty_bios_api.println("Boot failed");
+                coreExports.tty_bios_api.println("Press Enter to continue and log this error locally");
+                await coreExports.tty_bios_api.inputLine();
+                throw e;
+            }`
+        });
+    } else if (exec_args[0] == "null") {
+        await availableAPIs.lldaRemove({
+            partition: exec_args[1]
+        });
+    } else {
+        await availableAPIs.toMyCLI("format: Unknown target formatting\r\n");
+    }
+    
+    await availableAPIs.terminate();
+})();
+addEventListener("signal", async function(e) {
+    if (e.detail == 15) await window.availableAPIs.terminate();
+}); null;
