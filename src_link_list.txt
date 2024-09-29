@@ -1,4 +1,4 @@
-# up-to-date for build 919
+# up-to-date for build 921
 ./init_bkup.js
 ./readme.md
 ./os.js
@@ -427,6 +427,7 @@
 ./os_system/history/build866live.js
 ./os_system/history/build535.js
 ./os_system/history/build590.js
+./os_system/history/build920.js
 ./os_system/history/build600.js
 ./os_system/history/build659.js
 ./os_system/history/build419.js
@@ -484,6 +485,7 @@
 ./os_system/history/build514.js
 ./os_system/history/build555.js
 ./os_system/history/build607.js
+./os_system/history/build921.js
 ./os_system/history/build577.js
 ./os_system/history/build741.js
 ./os_system/history/build664.js

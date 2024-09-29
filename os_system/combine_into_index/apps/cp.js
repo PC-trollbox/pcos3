@@ -65,7 +65,7 @@ async function recursiveCopy(source, destination, force, privileges) {
                     let originalPermissions = await availableAPIs.fs_permissions({ path: source + "/" + sourceFile });
                     await availableAPIs.fs_chmod({ path: destinationFile, newPermissions: originalPermissions.world });
                     await availableAPIs.fs_chgrp({ path: destinationFile, newGrp: originalPermissions.group });
-                    await availableAPIs.fs_chown({ path: destinationFile, newUser: originalPermissions.user });
+                    await availableAPIs.fs_chown({ path: destinationFile, newUser: originalPermissions.owner });
                 }
             } catch (e) {
                 await availableAPIs.toMyCLI("cp: " + source + "/" + sourceFile + " -> " + destinationFile + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");

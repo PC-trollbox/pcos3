@@ -1,5 +1,5 @@
 // =====BEGIN MANIFEST=====
-// allow: GET_LOCALE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS
+// allow: GET_LOCALE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, LLDISK_LIST_PARTITIONS, LLDISK_REMOVE
 // signer: automaticSigner
 // =====END MANIFEST=====
 (async function() {
@@ -7,30 +7,32 @@
     await availableAPIs.windowVisibility(false);
     await availableAPIs.attachCLI();
     if (!exec_args.length) {
-        await availableAPIs.toMyCLI("Usage: llda_tool [action] [parameters]\r\n");
-        await availableAPIs.toMyCLI("action export: [input partition] [output file]\r\n");
-        await availableAPIs.toMyCLI("action import: [input file] [output partition]\r\n");
-        await availableAPIs.toMyCLI("action copy: [input partition] [output partition]\r\n");
-        await availableAPIs.toMyCLI("When using this tool you may encounter LOSS OF DATA!\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_USAGE") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_EXPORT") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_IMPORT") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_COPY") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_REMOVE") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_LIST") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_DISCLAIMER") + "\r\n");
         await availableAPIs.toMyCLI("llda_tool: " + await availableAPIs.lookupLocale("NO_ARGUMENTS") + "\r\n");
         return availableAPIs.terminate();
-    }
-    if (exec_args.length != 3) {
-        await availableAPIs.toMyCLI("llda_tool: " + await availableAPIs.lookupLocale("ARGUMENT_COUNT_MISMATCH") + "\r\n");
-        return await availableAPIs.terminate();
     }
 
     if (exec_args[0] == "export") {
         await availableAPIs.fs_write({
             path: exec_args[2],
-            data: await availableAPIs.lldaRead({ partition: exec_args[1] })
+            data: JSON.stringify(await availableAPIs.lldaRead({ partition: exec_args[1] }))
         });
     } else if (exec_args[0] == "import") {
-        await availableAPIs.lldaWrite({ partition: exec_args[2], data: await availableAPIs.fs_read({ path: exec_args[1] }) });
+        await availableAPIs.lldaWrite({ partition: exec_args[2], data: JSON.parse(await availableAPIs.fs_read({ path: exec_args[1] })) });
     } else if (exec_args[0] == "copy") {
-        await availableAPIs.lldaWrite({ partition: exec_args[1], data: await availableAPIs.lldaRead({ partition: exec_args[2] }) });
+        await availableAPIs.lldaWrite({ partition: exec_args[2], data: await availableAPIs.lldaRead({ partition: exec_args[1] }) });
+    } else if (exec_args[0] == "remove") {
+        await availableAPIs.lldaRemove({ partition: exec_args[1] });
+    } else if (exec_args[0] == "list") {
+        await availableAPIs.toMyCLI(JSON.stringify(await availableAPIs.lldaList()) + "\r\n");
     } else {
-        await availableAPIs.toMyCLI("llda_tool: Unknown action\r\n");
+        await availableAPIs.toMyCLI("llda_tool: " + await availableAPIs.lookupLocale("LLDA_UNKNOWN_ACTION") + "\r\n");
     }
     
     await availableAPIs.terminate();

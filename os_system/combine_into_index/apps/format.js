@@ -7,9 +7,9 @@
     await availableAPIs.windowVisibility(false);
     await availableAPIs.attachCLI();
     if (!exec_args.length) {
-        await availableAPIs.toMyCLI("Usage: format [filesystem_type] [partition] <overwrite>\r\n");
-        await availableAPIs.toMyCLI("Prepares the selected partition for use.\r\n");
-        await availableAPIs.toMyCLI("Filesystem types: pcfs (corresponds to mountpoint PCFSiDBMount), pcfs_crypt (PCFSiDBAESCryptMount), pcfs_crypt_monokey (PCFSiDBAESCryptMount), pcbm:<data_partition> (like code in boot partition), null (DELETE the partition)\r\n")
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("FORMAT_USAGE") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("FORMAT_DESCRIPTION") + "\r\n");
+        await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("FORMAT_FSTYPE") + "\r\n")
         await availableAPIs.toMyCLI("format: " + await availableAPIs.lookupLocale("NO_ARGUMENTS") + "\r\n");
         return availableAPIs.terminate();
     }
@@ -20,7 +20,7 @@
     
     let knownNames = await availableAPIs.lldaList();
     if (knownNames.includes(exec_args[1]) && exec_args[2] != "overwrite") {
-        await availableAPIs.toMyCLI("format: The partition already contains data. Set the overwrite parameter to 'overwrite' to remove data anyway. In that case, ALL DATA ON THE PARTITION MAY BE REMOVED.\r\n");
+        await availableAPIs.toMyCLI("format: " + await availableAPIs.lookupLocale("FORMAT_OVERWRITE_WARN") + "\r\n");
         return await availableAPIs.terminate();
     }
 
@@ -97,7 +97,7 @@
             partition: exec_args[1]
         });
     } else {
-        await availableAPIs.toMyCLI("format: Unknown target formatting\r\n");
+        await availableAPIs.toMyCLI("format: " + await availableAPIs.lookupLocale("FORMAT_UNKNOWN_FSTYPE") + "\r\n");
     }
     
     await availableAPIs.terminate();
