@@ -1,5 +1,5 @@
 // =====BEGIN MANIFEST=====
-// allow: GET_LOCALE, LLDISK_LIST_PARTITIONS, LLDISK_WRITE, LLDISK_REMOVE
+// allow: GET_LOCALE, LLDISK_LIST_PARTITIONS, LLDISK_WRITE, LLDISK_REMOVE, LLDISK_READ, CSP_OPERATIONS
 // signer: automaticSigner
 // =====END MANIFEST=====
 (async function() {
@@ -24,8 +24,8 @@
         return await availableAPIs.terminate();
     }
 
+    let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
     if (exec_args[0] == "pcfs") {
-        let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
         let prevId = (await availableAPIs.lldaRead({ partition: exec_args[1] }))?.id || u8aToHex(await availableAPIs.cspOperation({
             cspProvider: "basic",
             operation: "random",
