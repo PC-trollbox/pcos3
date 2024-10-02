@@ -20,7 +20,7 @@
     let permissions = exec_args.includes("--permissions");
     if (recursive) exec_args.splice(exec_args.indexOf("--recursive"), 1);
     if (force) exec_args.splice(exec_args.indexOf("--force"), 1);
-    if (permissions) exec_args.splice(exec_args.indexOf("--privileges"), 1);
+    if (permissions) exec_args.splice(exec_args.indexOf("--permissions"), 1);
     if (exec_args.length != 2) {
         await availableAPIs.toMyCLI("cp: " + await availableAPIs.lookupLocale("ARGUMENT_COUNT_MISMATCH") + "\r\n");
         return await availableAPIs.terminate();
@@ -45,7 +45,7 @@
     await availableAPIs.terminate();
 })();
 
-async function recursiveCopy(source, destination, force, privileges) {
+async function recursiveCopy(source, destination, force, permissions) {
     try {
         for (let sourceFile of await availableAPIs.fs_ls({ path: source })) {
             let destinationFile = destination + "/" + sourceFile;
@@ -54,14 +54,14 @@ async function recursiveCopy(source, destination, force, privileges) {
                     try {
                         await availableAPIs.fs_mkdir({ path: destinationFile });
                     } catch {}
-                    await recursiveCopy(source + "/" + sourceFile, destinationFile, force, privileges);
+                    await recursiveCopy(source + "/" + sourceFile, destinationFile, force, permissions);
                 } else {
                     await availableAPIs.fs_write({
                         path: destinationFile,
                         data: await availableAPIs.fs_read({ path: source + "/" + sourceFile })
                     });
                 }
-                if (privileges) {
+                if (permissions) {
                     let originalPermissions = await availableAPIs.fs_permissions({ path: source + "/" + sourceFile });
                     await availableAPIs.fs_chmod({ path: destinationFile, newPermissions: originalPermissions.world });
                     await availableAPIs.fs_chgrp({ path: destinationFile, newGrp: originalPermissions.group });

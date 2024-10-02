@@ -366,21 +366,21 @@ async function htmlConfirm(msg) {
     });
 }
 
-async function recursiveCopy(source, destination, privileges) {
+async function recursiveCopy(source, destination, permissions) {
     for (let sourceFile of await availableAPIs.fs_ls({ path: source })) {
         let destinationFile = destination + "/" + sourceFile;
         if (await availableAPIs.fs_isDirectory({ path: source + "/" + sourceFile })) {
             try {
                 await availableAPIs.fs_mkdir({ path: destinationFile });
             } catch {}
-            await recursiveCopy(source + "/" + sourceFile, destinationFile, privileges);
+            await recursiveCopy(source + "/" + sourceFile, destinationFile, permissions);
         } else {
             await availableAPIs.fs_write({
                 path: destinationFile,
                 data: await availableAPIs.fs_read({ path: source + "/" + sourceFile })
             });
         }
-        if (privileges) {
+        if (permissions) {
             let originalPermissions = await availableAPIs.fs_permissions({ path: source + "/" + sourceFile });
             await availableAPIs.fs_chmod({ path: destinationFile, newPermissions: originalPermissions.world });
             await availableAPIs.fs_chgrp({ path: destinationFile, newGrp: originalPermissions.group });
