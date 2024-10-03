@@ -596,6 +596,10 @@ function reeAPIs() {
                     if (!privileges.includes("LLDISK_LIST_PARTITIONS")) throw new Error("UNAUTHORIZED_ACTION");
                     return modules.core.disk.partitions();
                 },
+                lldaInitPartitions: async function() {
+                    if (!privileges.includes("LLDISK_INIT_PARTITIONS")) throw new Error("UNAUTHORIZED_ACTION");
+                    return modules.core.disk.insertPartitionTable();
+                },
                 lldaRemove: async function(arg) {
                     if (!privileges.includes("LLDISK_REMOVE")) throw new Error("UNAUTHORIZED_ACTION");
                     return modules.core.disk.partition(arg.partition).remove();

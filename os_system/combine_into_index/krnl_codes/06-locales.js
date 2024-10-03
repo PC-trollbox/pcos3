@@ -386,7 +386,7 @@ function localization() {
             "SYSTEM_SECURITY_INTENT": "Management of the system-wide user account setup",
             "FORMAT_USAGE": "Usage: format [filesystem_type] [partition] <overwrite>",
             "FORMAT_DESCRIPTION": "Prepares the selected partition for use.",
-            "FORMAT_FSTYPE": "Filesystem types: pcfs (corresponds to mountpoint PCFSiDBMount), pcfs_crypt (PCFSiDBAESCryptMount), pcfs_crypt_monokey (PCFSiDBAESCryptMount), pcbm:<data_partition> (like code in boot partition), null (DELETE the partition)",
+            "FORMAT_FSTYPE": "Filesystem types: pcfs (corresponds to mountpoint PCFSiDBMount), pcfs_crypt (PCFSiDBAESCryptMount), pcfs_crypt_monokey (PCFSiDBAESCryptMount), pcfs_crypt_filetable_monokey (PCFSiDBAESCryptMount), pcbm:<data_partition> (like code in boot partition), null (DELETE the partition)",
             "FORMAT_OVERWRITE_WARN": "The partition already contains data. Set the overwrite parameter to 'overwrite' to remove data anyway. In that case, ALL DATA ON THE PARTITION MAY BE REMOVED.",
             "FORMAT_UNKNOWN_FSTYPE": "Unknown target formatting",
             "LLDA_USAGE": "Usage: llda_tool [action] [parameters]",
@@ -396,7 +396,10 @@ function localization() {
             "LLDA_ACTION_REMOVE": "action remove: [partition]",
             "LLDA_ACTION_LIST": "action list",
             "LLDA_DISCLAIMER": "When using this tool you may encounter LOSS OF DATA!",
-            "LLDA_UNKNOWN_ACTION": "Unknown action"
+            "LLDA_UNKNOWN_ACTION": "Unknown action",
+            "INITDISK_OVERWRITE_WARN": "The system disk already contains partitioning data. Set the overwrite parameter to 'overwrite' to remove data anyway. In that case, ALL DATA ON THE DISK MAY BE REMOVED.",
+            "INITDISK_USAGE": "Usage: initdisk [whatever] <overwrite>",
+            "INITDISK_DESCRIPTION": "Prepares the system disk for use."
         },
         ru: {
             "UNTITLED_APP": "Безымянная программа",
@@ -782,8 +785,8 @@ function localization() {
             "CRYPTO_TOOLS_INTENT": "Выполнять криптографические операции",
             "SYSTEM_SECURITY_INTENT": "Управление настройками учётных записей по всей системе",
             "FORMAT_USAGE": "Использование: format [тип_фс] [раздел] <перезапись>",
-            "FORMAT_DESCRIPTION": "Готовит указанный раздел к использованию..",
-            "FORMAT_FSTYPE": "Типы файловых систем: pcfs (соответствует точке монтирования PCFSiDBMount), pcfs_crypt (PCFSiDBAESCryptMount), pcfs_crypt_monokey (PCFSiDBAESCryptMount), pcbm:<data_partition> (как код загрузочного раздела), null (УДАЛИТЬ раздел)",
+            "FORMAT_DESCRIPTION": "Готовит указанный раздел к использованию.",
+            "FORMAT_FSTYPE": "Типы файловых систем: pcfs (соответствует точке монтирования PCFSiDBMount), pcfs_crypt (PCFSiDBAESCryptMount), pcfs_crypt_monokey (PCFSiDBAESCryptMount), pcfs_crypt_filetable_monokey (PCFSiDBAESCryptMount), pcbm:<раздел_данных> (как код загрузочного раздела), null (УДАЛИТЬ раздел)",
             "FORMAT_OVERWRITE_WARN": "Раздел уже содержит данные. Установите параметр перезаписи равным 'overwrite' для продолжения в любом случае. В таком случае ВСЕ ДАННЫЕ НА РАЗДЕЛЕ МОГУТ БЫТЬ УДАЛЕНЫ.",
             "FORMAT_UNKNOWN_FSTYPE": "Неизвестное целевое форматирование",
             "LLDA_USAGE": "Использование: llda_tool [действие] [параметры]",
@@ -793,7 +796,10 @@ function localization() {
             "LLDA_ACTION_REMOVE": "действие remove: [раздел]",
             "LLDA_ACTION_LIST": "действие list",
             "LLDA_DISCLAIMER": "При использовании утилиты можно столкнуться с ПОТЕРЕЙ ДАННЫХ!",
-            "LLDA_UNKNOWN_ACTION": "Неизвестное действие"
+            "LLDA_UNKNOWN_ACTION": "Неизвестное действие",
+            "INITDISK_OVERWRITE_WARN": "Системный диск уже сожержит таблицу разделов. Установите параметр перезаписи равным 'overwrite' для продолжения в любом случае. В таком случае ВСЕ ДАННЫЕ НА ДИСКЕ МОГУТ БЫТЬ УДАЛЕНЫ.",
+            "INITDISK_USAGE": "Использование: initdisk [что угодно] <перезапись>",
+            "INITDISK_DESCRIPTION": "Готовит системный диск к использованию."
         },
         defaultLocale: "en",
         get: function(key, lang) {

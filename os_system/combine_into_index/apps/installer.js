@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS
+// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS
 // =====END MANIFEST=====
 let onClose = () => availableAPIs.terminate();
 (async function() {
@@ -126,7 +126,7 @@ Used libraries:
                     await availableAPIs.lldaList();
                 } catch {
                     if (!(await htmlConfirm(await availableAPIs.lookupLocale("PROMPT_PARTITION_TABLE")))) return;
-                    await availableAPIs.runKlvlCode(`modules.core.disk.insertPartitionTable();`);
+                    await availableAPIs.lldaInitPartitions();
                 }
                 let confirmErasePart = await htmlConfirm(await availableAPIs.lookupLocale("CONFIRM_PARTITION_ERASE"));
                 if (confirmErasePart) {

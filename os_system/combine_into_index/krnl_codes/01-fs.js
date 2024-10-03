@@ -303,6 +303,7 @@ function loadFs() {
                 return this.partition.getData();
             },
             set backend(data) {
+                if (!this.partition) this.partition = modules.core.disk.partition(options.partition);
                 this.partition.setData(data);
             }
         };
@@ -351,6 +352,19 @@ function loadFs() {
             passwordLocking.set(iv);
             passwordLocking.set(ct, iv.length);
             partition.cryptodata.passwordLocking = passwordLocking.reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+            if (partition.encryptedFileTable) {
+                let fileIV = crypto.getRandomValues(new Uint8Array(16));
+                let fileCT = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: fileIV }, importedKey, new TextEncoder().encode(JSON.stringify({
+                    files: partition.files,
+                    permissions: partition.permissions
+                }))));
+                partition.files = {};
+                partition.permissions = {};
+                let ept = new Uint8Array(fileIV.length + fileCT.length);
+                ept.set(fileIV);
+                ept.set(fileCT, fileIV.length);
+                partition.encryptedFileTable = ept.reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+            }
             delete partition.cryptodata.passwordLockingInitial;
             modules.core.disk.partition(options.partition).setData(partition);
         }
@@ -366,7 +380,7 @@ function loadFs() {
                 key = String(key);          
                 let pathParts = key.split("/");
                 if (pathParts[0] == "") pathParts = pathParts.slice(1);
-                let files = this.backend.files;
+                let files = (await this.getBackend()).files;
                 for (let part of pathParts) {
                     files = files[part];
                     if (!files) throw new Error("NO_SUCH_FILE");
@@ -384,7 +398,7 @@ function loadFs() {
                 if (existenceChecks[0] == "") existenceChecks = existenceChecks.slice(1);
                 if (existenceChecks[existenceChecks.length - 1] == "") existenceChecks = existenceChecks.slice(0, -1);
                 let basename = key.split("/").slice(-1)[0];
-                let files = this.backend.files;
+                let files = (await this.getBackend()).files;
                 for (let part of existenceChecks) {
                     files = files[part];
                     if (!files) throw new Error("NO_SUCH_DIR");
@@ -400,11 +414,11 @@ function loadFs() {
                 await modules.core.idb.writePart(partitionId + "-" + id, newPart);
                 if (!files.hasOwnProperty(basename)) {
                     let HACKID = Math.floor(Math.random() * 1000000);
-                    globalThis["HACK" + HACKID] = this.backend;
+                    globalThis["HACK" + HACKID] = await this.getBackend();
                     let HACK = "";
                     for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
                     eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = " + JSON.stringify(id) + ";");
-                    this.backend = globalThis["HACK" + HACKID];
+                    await this.setBackend(globalThis["HACK" + HACKID]);
                     delete globalThis["HACK" + HACKID];
                 }
             },
@@ -413,7 +427,7 @@ function loadFs() {
                 let pathParts = key.split("/");
                 if (pathParts[0] == "") pathParts = pathParts.slice(1);
                 if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
-                let files = this.backend.files;
+                let files = (await this.getBackend()).files;
                 for (let part of pathParts) {
                     files = files[part];
                     if (!files) throw new Error("NO_SUCH_FILE_DIR");
@@ -421,12 +435,12 @@ function loadFs() {
                 if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
                 if (typeof files === "string") await modules.core.idb.removePart(partitionId + "-" + files);
                 let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = this.backend;
+                globalThis["HACK" + HACKID] = await this.getBackend();
                 let HACK = "";
                 for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
                 eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + ";");
                 eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].permissions[" + JSON.stringify(key) + "];");
-                this.backend = globalThis["HACK" + HACKID];
+                await this.setBackend(globalThis["HACK" + HACKID]);
                 delete globalThis["HACK" + HACKID];
             },
             ls: async function(directory) {
@@ -434,7 +448,7 @@ function loadFs() {
                 let pathParts = directory.split("/");
                 if (pathParts[0] == "") pathParts = pathParts.slice(1);
                 if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
-                let files = this.backend.files;
+                let files = (await this.getBackend()).files;
                 for (let part of pathParts) {
                     files = files[part];
                     if (!files) throw new Error("NO_SUCH_DIR");
@@ -447,18 +461,18 @@ function loadFs() {
                 let existenceChecks = directory.split("/").slice(0, -1);
                 if (existenceChecks[0] == "") existenceChecks = existenceChecks.slice(1);
                 if (existenceChecks[existenceChecks.length - 1] == "") existenceChecks = existenceChecks.slice(0, -1);
-                let files = this.backend.files;
+                let files = (await this.getBackend()).files;
                 for (let part of existenceChecks) {
                     files = files[part];
                     if (!files) throw new Error("NO_SUCH_DIR");
                 }
                 if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
                 let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = this.backend;
+                globalThis["HACK" + HACKID] = (await this.getBackend());
                 let HACK = "";
                 for (let a of directory.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
                 eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = {};");
-                this.backend = globalThis["HACK" + HACKID];
+                await this.setBackend(globalThis["HACK" + HACKID]);
                 delete globalThis["HACK" + HACKID];
             },
             permissions: async function(file) {
@@ -467,7 +481,7 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
-                return this.backend.permissions[properFile] || {
+                return (await this.getBackend()).permissions[properFile] || {
                     owner: "root",
                     group: "root",
                     world: "",
@@ -480,7 +494,7 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
-                let backend = this.backend;
+                let backend = await this.getBackend();
                 let filePermissions = backend.permissions[properFile] || {
                     owner: "root",
                     group: "root",
@@ -488,7 +502,7 @@ function loadFs() {
                 };
                 filePermissions.owner = owner;
                 backend.permissions[properFile] = filePermissions;
-                this.backend = backend;
+                await this.setBackend(backend);
             },
             chgrp: async function(file, group) {
                 file = String(file);
@@ -497,7 +511,7 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
-                let backend = this.backend;
+                let backend = await this.getBackend();
                 let filePermissions = backend.permissions[properFile] || {
                     owner: "root",
                     group: "root",
@@ -505,7 +519,7 @@ function loadFs() {
                 };
                 filePermissions.group = group;
                 backend.permissions[properFile] = filePermissions;
-                this.backend = backend;
+                await this.setBackend(backend);
             },
             chmod: async function(file, permissions) {
                 file = String(file);
@@ -514,7 +528,7 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
-                let backend = this.backend;
+                let backend = await this.getBackend();
                 let filePermissions = backend.permissions[properFile] || {
                     owner: "root",
                     group: "root",
@@ -522,15 +536,15 @@ function loadFs() {
                 };
                 filePermissions.world = permissions;
                 backend.permissions[properFile] = filePermissions;
-                this.backend = backend;
+                this.setBackend(backend);
             },
-            isDirectory: function(key) {
+            isDirectory: async function(key) {
                 key = String(key);
                 let pathParts = key.split("/").slice(0, -1);
                 if (pathParts[0] == "") pathParts = pathParts.slice(1);
                 if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
                 let basename = key.split("/").slice(-1)[0];
-                let files = this.backend.files;
+                let files = (await this.getBackend()).files;
                 for (let part of pathParts) {
                     files = files[part];
                     if (!files) throw new Error("NO_SUCH_DIR");
@@ -548,11 +562,28 @@ function loadFs() {
             read_only: !!options.read_only,
             permissions_supported: true,
             partition: null,
-            get backend() {
+            getBackend: async function() {
                 if (!this.partition) this.partition = modules.core.disk.partition(options.partition);
-                return this.partition.getData();
+                let returnedData = this.partition.getData();
+                if (returnedData.encryptedFileTable) {
+                    let iv = new Uint8Array(returnedData.encryptedFileTable.slice(0, 32).match(/.{1,2}/g).map(a => parseInt(a, 16)));
+                    let ct = new Uint8Array(returnedData.encryptedFileTable.slice(32).match(/.{1,2}/g).map(a => parseInt(a, 16)));
+                    return JSON.parse(new TextDecoder().decode(new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, this.key, ct))));   
+                }
+                return returnedData;
             },
-            set backend(data) {
+            setBackend: async function(data) {
+                if (!this.partition) this.partition = modules.core.disk.partition(options.partition);
+                let returnedData = this.partition.getData();
+                if (returnedData.encryptedFileTable) {
+                    let newIV = crypto.getRandomValues(new Uint8Array(16));
+                    let newCT = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: newIV }, this.key, new TextEncoder().encode(JSON.stringify(data))));
+                    let newPart = new Uint8Array(newIV.length + newCT.length);
+                    newPart.set(newIV);
+                    newPart.set(newCT, newIV.length);
+                    newPart = newPart.reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+                    return this.partition.setData({ ...returnedData, encryptedFileTable: newPart });
+                }
                 this.partition.setData(data);
             },
             key: importedKey

@@ -60,7 +60,8 @@
                 cryptodata: {
                     passwordLockingInitial: monokey,
                     salt: salt
-                }
+                },
+                encryptedFileTable: exec_args[0].endsWith("_filetable_monokey")
             }
         })
     } else if (exec_args[0].startsWith("pcbm:")) {
