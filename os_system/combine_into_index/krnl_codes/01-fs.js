@@ -536,7 +536,7 @@ function loadFs() {
                 };
                 filePermissions.world = permissions;
                 backend.permissions[properFile] = filePermissions;
-                this.setBackend(backend);
+                await this.setBackend(backend);
             },
             isDirectory: async function(key) {
                 key = String(key);
