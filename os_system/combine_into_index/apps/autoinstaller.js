@@ -11,9 +11,14 @@ let onClose = () => availableAPIs.terminate();
     let ppos = [];
     for (let arg of exec_args) {
         if (arg.startsWith("--")) {
+            let key = arg.split("=")[0].slice(2);
             let value = arg.split("=").slice(1).join("=");
             if (arg.split("=")[1] == null) value = true;
-            pargs[arg.split("=")[0].slice(2)] = value;
+            if (pargs.hasOwnProperty(key)) {
+                let ogValues = pargs[key];
+                if (ogValues instanceof Array) pargs[key] = [ ...ogValues, value ];
+                else pargs[key] = [ ogValues, value ];
+            } else pargs[key] = value;
         } else ppos.push(arg);
     }
 

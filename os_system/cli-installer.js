@@ -312,6 +312,7 @@ function setupbase() {
                     "06-ksk.js": ksk.toString() + "\nawait ksk();\n",
                     "07-tasks.js": loadTasks.toString() + "\nloadTasks();\n",
                     "08-tty.js": js_terminal.toString() + "\n",
+                    "09-logout.js": logOut.toString() + "\nmodules.logOut = logOut;\n",
                     "09-restart.js": restartLoad.toString() + "\nrestartLoad();\n",
                     "11-userfriendliness.js": loadUserFriendly.toString() + "\nloadUserFriendly();\n",
                     "12-tokens.js": setupTokens.toString() + "\nsetupTokens();\n",

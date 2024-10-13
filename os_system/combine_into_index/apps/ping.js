@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, FETCH_SEND, WEBSOCKETS_SEND, WEBSOCKETS_LISTEN, FS_READ, FS_BYPASS_PERMISSIONS
+// allow: GET_LOCALE, FETCH_SEND, PCOS_NETWORK_PING
 // =====END MANIFEST=====
 (async function() {
     // @pcos-app-mode isolatable
@@ -21,15 +21,16 @@
         }
         await availableAPIs.toMyCLI("Pinging " + exec_args[0] + " via HTTP...\r\n");
         for (let i = 1; i <= 4; i++) {
+            await new Promise((resolve) => setTimeout(() => resolve("ping"), 1000));
             try {
                 let time = performance.now();
-                await availableAPIs.fetchSend({
+                if ((await Promise.race([await availableAPIs.fetchSend({
                     url: exec_args[0],
                     init: {
                         noArrayBuffer: true,
                         mode: "no-cors"
                     }
-                });
+                }), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))])) == "timeout") throw new Error("Response timed out");
                 time = performance.now() - time;
                 await availableAPIs.toMyCLI("http_seq=" + i + " time=" + time.toFixed(2) + " ms\r\n");
             } catch (e) {
@@ -38,40 +39,19 @@
         }
         return availableAPIs.terminate();
     }
-    let networkWS;
-    try {
-        networkWS = await availableAPIs.fs_read({ path: "ram/run/network.ws" });
-    } catch (e) {
-        await availableAPIs.toMyCLI("ping: Network is unreachable: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
-        return availableAPIs.terminate();
-    }
     let undecoredAddress = exec_args[0].replaceAll(":", "");
     await availableAPIs.toMyCLI("Pinging " + undecoredAddress + " via PCOS Network...\r\n");
     for (let i = 1; i <= 4; i++) {
+        await new Promise((resolve) => setTimeout(() => resolve("ping"), 1000));
+        let time = performance.now();
         try {
-            let resendBytes = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16);
-            let time = performance.now();
-            await availableAPIs.sendToWebsocket({ handle: networkWS, data: JSON.stringify({
-                receiver: undecoredAddress,
-                data: {
-                    type: "ping",
-                    resend: resendBytes
-                }
-            })});
-            let eventLoop = (async function () {
-                while (true) {
-                    let message = JSON.parse(await availableAPIs.listenToWebsocket({ handle: networkWS, eventName: "message" }));
-                    if (message.from != undecoredAddress) continue;
-                    if (!message.data) continue;
-                    if (message.data.type == "pong" && message.data.resend == resendBytes) break;
-                }
-            })();
-            let race = await Promise.race([eventLoop, new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
+            let race = await Promise.race([await availableAPIs.networkPing(undecoredAddress), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
             if (race == "timeout") throw new Error("Response timed out");
             time = performance.now() - time;
-            await availableAPIs.toMyCLI("resend=" + resendBytes.length + " resend_seq=" + i + " time=" + time.toFixed(2) + " ms\r\n");
+            await availableAPIs.toMyCLI("count=" + i + " time=" + time.toFixed(2) + " ms\r\n");
         } catch (e) {
-            await availableAPIs.toMyCLI("resend=" + resendBytes.length + " resend_seq=" + i + " " + e.name + ": " + e.message + "\r\n");
+            time = performance.now() - time;
+            await availableAPIs.toMyCLI("count=" + i + " time=" + time.toFixed(2) + " ms err=" + e.name + ": " + e.message + "\r\n");
         }
     }
     await availableAPIs.terminate();

@@ -181,6 +181,7 @@ let user_spawn_token = null;
                     if (user_spawn_token) {
                         let forkedToken = await availableAPIs.forkToken(user_spawn_token);
                         try {
+                            otherProcessAttached = true;
                             let spawnedTask = await availableAPIs.startTask({
                                 file: runFile,
                                 argPassed: cmdline.slice(1),
@@ -188,11 +189,12 @@ let user_spawn_token = null;
                                 silent: true,
                                 token: forkedToken
                             });
+                            await availableAPIs.waitForOtherCLI({ taskId: spawnedTask, bypass: forkedToken });
                             otherProcessAttached = spawnedTask;
                             (async function() {
-                                while ((await availableAPIs.listTasks()).includes(spawnedTask)) {
+                                while (otherProcessAttached) {
                                     try {
-                                        let otherData = await availableAPIs.getOtherCLIData({ taskId: spawnedTask });
+                                        let otherData = await availableAPIs.getOtherCLIData({ taskId: spawnedTask, bypass: forkedToken });
                                         if (otherData.type == "write") availableAPIs.toMyCLI(otherData.data);
                                         else if (otherData.type == "consoleClear") availableAPIs.clearMyCLI();
                                     } catch {}

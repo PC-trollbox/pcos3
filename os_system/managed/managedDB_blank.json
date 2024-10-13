@@ -1,0 +1,20 @@
+{
+    "root": {
+        "groups": [ "root" ],
+        "homeDirectory": "storage/root",
+        "securityChecks": [
+            {
+                "type": "informative",
+                "message": "Continue to log in"
+            }
+        ]
+    },
+    "nobody": {
+        "groups": [ "nobody" ],
+        "homeDirectory": "storage"
+    },
+    "authui": {
+        "groups": [ "authui" ],
+        "homeDirectory": "storage"
+    }
+}

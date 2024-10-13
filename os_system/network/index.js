@@ -30,6 +30,9 @@ app.use("/os_system/keypair.json", function(req, res) {
         d: "no hablo unauthorized accesses"
     });
 });
+app.use("/os_system/managed", function(req, res) {
+    res.status(403).send("no hablo unauthorized accesses");
+});
 
 app.post("/sfsp/file_operation", express.json(), async function(req, res) {
     if (sessionTokens.hasOwnProperty(req.body.sessionToken)) {

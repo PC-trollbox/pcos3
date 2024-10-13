@@ -5,12 +5,14 @@ function reeAPIs() {
         let privileges = (await modules.tokens.info(token)).privileges;
         let isAllowlist = list.some(a => a.lineType == "allow");
         if (isAllowlist) list = list.filter(a => a.lineType == "allow");
+        let disallowedRegistry = [];
         for (let privilege of privileges) {
             if ((!list.some(x => x.data == privilege && x.lineType == "allow") && isAllowlist) || list.some(x => x.data == privilege && x.lineType == "deny")) {
                 privileges = privileges.filter(x => x != privilege);
-                await modules.tokens.removePrivilege(token, privilege);
+                disallowedRegistry.push(privilege);
             }
         }
+        modules.tokens.removePrivileges(token, disallowedRegistry);
         return privileges;
     }
 
@@ -75,6 +77,11 @@ function reeAPIs() {
                     if (!privileges.includes(privilege)) throw new Error("NO_SUCH_PRIVILEGE");
                     privileges.splice(privileges.indexOf(privilege), 1);
                     await modules.tokens.removePrivilege(token, privilege);
+                    return true;
+                },
+                rmPrivileges: async function(privilegesRemoved) {
+                    privileges = privileges.filter(x => !privilegesRemoved.includes(x));
+                    await modules.tokens.removePrivileges(token, privilegesRemoved);
                     return true;
                 },
                 switchUser: async function(desiredUser) {
@@ -416,6 +423,12 @@ function reeAPIs() {
                     await modules.tokens.removePrivilege(token, privilege);
                     return true;
                 },
+                removeTokenPrivileges: async function(arg) {
+                    let {token, privileges} = arg;
+                    if (!privileges.includes("MANAGE_TOKENS")) throw new Error("UNAUTHORIZED_ACTION");
+                    await modules.tokens.removePrivileges(token, privileges);
+                    return true;
+                },
                 estimateStorage: async function() {
                     if (!privileges.includes("FS_LIST_PARTITIONS")) throw new Error("UNAUTHORIZED_ACTION");
                     let estimate = await navigator.storage.estimate();
@@ -570,19 +583,36 @@ function reeAPIs() {
                 },
                 typeIntoOtherCLI: async function(arg) {
                     if (!privileges.includes("CLI_MODIFICATIONS")) throw new Error("UNAUTHORIZED_ACTION");
-                    let taskInfo = await modules.tasks.taskInfo(arg.taskId);
-                    if (!taskInfo) throw new Error("TASK_NOT_FOUND");
-                    if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
-                    if (!taskInfo.cliio) throw new Error("NO_CLI_ATTACHED");
+                    if (!modules.tasks.tracker.hasOwnProperty(arg.taskId)) throw new Error("TASK_NOT_FOUND");
+                    let bypassWorks = modules.tasks.tracker[arg.taskId].apis.public.getProcessToken() == arg.bypass;
+                    if (!bypassWorks) {
+                        let taskInfo = await modules.tasks.taskInfo(arg.taskId);
+                        if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
+                    }
+                    if (!modules.tasks.tracker[arg.taskId].cliio) throw new Error("NO_CLI_ATTACHED");
                     return await modules.tasks.tracker[arg.taskId].cliio.xtermInstance.input(arg.text, arg.human);
                 },
                 getOtherCLIData: async function(arg) {
                     if (!privileges.includes("CLI_MODIFICATIONS")) throw new Error("UNAUTHORIZED_ACTION");
-                    let taskInfo = await modules.tasks.taskInfo(arg.taskId);
-                    if (!taskInfo) throw new Error("TASK_NOT_FOUND");
-                    if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
-                    if (!taskInfo.cliio) throw new Error("NO_CLI_ATTACHED");
+                    if (!modules.tasks.tracker.hasOwnProperty(arg.taskId)) throw new Error("TASK_NOT_FOUND");
+                    let bypassWorks = modules.tasks.tracker[arg.taskId].apis.public.getProcessToken() == arg.bypass;
+                    if (!bypassWorks) {
+                        let taskInfo = await modules.tasks.taskInfo(arg.taskId);
+                        if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
+                    }
+                    if (!modules.tasks.tracker[arg.taskId].cliio) throw new Error("NO_CLI_ATTACHED");
                     return await modules.tasks.tracker[arg.taskId].cliio.signup();
+                },
+                waitForOtherCLI: async function(arg) {
+                    if (!privileges.includes("CLI_MODIFICATIONS")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (!modules.tasks.tracker.hasOwnProperty(arg.taskId)) throw new Error("TASK_NOT_FOUND");
+                    let bypassWorks = modules.tasks.tracker[arg.taskId].apis.public.getProcessToken() == arg.bypass;
+                    if (!bypassWorks) {
+                        let taskInfo = await modules.tasks.taskInfo(arg.taskId);
+                        if (taskInfo.runBy != user && !privileges.includes("TASK_BYPASS_PERMISSIONS")) throw new Error("PERMISSION_DENIED");
+                    }
+                    if (modules.tasks.tracker[arg.taskId].cliio) return true;
+                    return await modules.tasks.tracker[arg.taskId].cliio.attachedCLISignUp();
                 },
                 lldaRead: async function(arg) {
                     if (!privileges.includes("LLDISK_READ")) throw new Error("UNAUTHORIZED_ACTION");
@@ -712,15 +742,17 @@ function reeAPIs() {
                 getScreenInfo: async function() {
                     if (!privileges.includes("GET_SCREEN_INFO")) throw new Error("UNAUTHORIZED_ACTION");
                     return {
-                        width: screen.availWidth,
-                        height: screen.availHeight,
+                        width: document.documentElement.clientWidth,
+                        height: document.documentElement.clientHeight,
                         colorDepth: screen.colorDepth,
                         orientation: {
                             type: screen.orientation.type,
                             angle: screen.orientation.angle
                         },
                         fullWidth: screen.width,
-                        fullHeight: screen.height
+                        fullHeight: screen.height,
+                        availWidth: screen.availWidth,
+                        availHeight: screen.availHeight,
                     }
                 },
                 waitTermination: async function(arg) {
@@ -728,8 +760,8 @@ function reeAPIs() {
                     return modules.tasks.waitTermination(arg);
                 },
                 consentGetToken: async function(params) {
-                    if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
                     if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
+                    if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
                     let { desiredUser, intent } = params;
                     if (!intent) throw new Error("INTENT_REQUIRED");
                     let releaseLock;
@@ -768,6 +800,44 @@ function reeAPIs() {
                             return resolve(result.token);
                         });
                     });
+                },
+                networkPing: async function(address) {
+                    if (!privileges.includes("PCOS_NETWORK_PING")) throw new Error("UNAUTHORIZED_ACTION");
+                    let websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+                    if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+                    let websocket = modules.websocket._handles[websocketHandle].ws;
+                    if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+                    return new Promise(async function(resolve, reject) {
+                        let packetId = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
+                        let resend = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
+                        websocket.addEventListener("message", function self(e) {
+                            try {
+                                let data = JSON.parse(e.data);
+                                if (data.packetID == packetId && data.event == "AddressUnreachable") reject(new Error("ADDRESS_UNREACHABLE"));
+                                if (data.from == address && data.data.type == "pong" && data.data.resend == resend) resolve("success");
+                            } catch {}
+                        });
+                        websocket.send(JSON.stringify({
+                            receiver: address,
+                            data: {
+                                type: "ping",
+                                resend: resend
+                            },
+                            id: packetId
+                        }))
+                    });
+                },
+                logOut: async function(desiredUser) {
+                    if (desiredUser != user && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (desiredUser == user && !privileges.includes("LOGOUT")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHER")) throw new Error("UNAUTHORIZED_ACTION");
+                    await modules.logOut(desiredUser);
+                },
+                lock: async function() {
+                    if (modules.session.active == ses && !privileges.includes("LOGOUT")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHER")) throw new Error("UNAUTHORIZED_ACTION");
+                    modules.session.muteAllSessions();
+                    modules.session.activateSession(modules.session.systemSession);
                 }
             }
         }

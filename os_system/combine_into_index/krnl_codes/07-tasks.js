@@ -153,13 +153,20 @@ function loadTasks() {
                     apis: reeAPIInstance,
                     critical: false,
                     cliio: {
-                        attached: false
+                        attached: false,
+                        attachedCLISignUp: function() {
+                            return new Promise(a => attachedCLIRegistrations.push(a));
+                        }
                     }
                 };
                 let registrations = [];
+                let attachedCLIRegistrations = [];
+                let cliCache = "";
                 windowObject.closeButton.addEventListener("click", () => that.sendSignal(taskId, 15));
                 ree.exportAPI("attachCLI", function() {
                     if (that.tracker[taskId].cliio.attached) return true;
+                    for (let registration of attachedCLIRegistrations) registration();
+                    attachedCLIRegistrations = [];
                     let signup = () => new Promise((resolve) => registrations.push(resolve));
                     ree.iframe.hidden = true;
                     let termDiv = document.createElement("div");
@@ -177,38 +184,46 @@ function loadTasks() {
                     that.tracker[taskId].cliio.robsInstance = robs;
                     robs.observe(windowObject.windowDiv);
                     that.tracker[taskId].cliio.signup = signup;
+                    that.tracker[taskId].cliio.xtermInstance.onData(e => cliCache += e);
                     termInstance.clear();
                     return true;  
                 });
                 ree.exportAPI("toMyCLI", async function(apiArg) {
                     if (that.tracker[taskId].cliio.attached) {
-                        await new Promise((resolve) => setTimeout(resolve, 5));
+                        await new Promise((resolve) => setTimeout(resolve, 8));
                         that.tracker[taskId].cliio.xtermInstance.write(apiArg.arg);
                         for (let registered in registrations) {
                             await registrations[registered]({ type: "write", data: apiArg.arg });
                             registrations.splice(registered, 1);
                         }
-                        await new Promise((resolve) => setTimeout(resolve, 5));
+                        await new Promise((resolve) => setTimeout(resolve, 8));
                     }
                 });
-                ree.exportAPI("fromMyCLI", function() {
+                ree.exportAPI("fromMyCLI", async function() {
                     if (!that.tracker[taskId].cliio.attached) return false;
+                    await new Promise((resolve) => setTimeout(resolve, 8));
                     let ti = that.tracker[taskId].cliio.xtermInstance;
-                    return new Promise(function(resolve) {
-                        let d = ti.onData(function(e) {
+                    return new Promise(async function(resolve) {
+                        if (cliCache) {
+                            cliCache = "";
+                            await new Promise((resolve) => setTimeout(resolve, 8));
+                            return resolve(cliCache);
+                        }
+                        let d = ti.onData(async function(e) {
+                            await new Promise((resolve) => setTimeout(resolve, 8));
                             resolve(e);
                             d.dispose();
                         });
                     });
                 });
                 ree.exportAPI("clearMyCLI", async function() {
-                    await new Promise((resolve) => setTimeout(resolve, 5));
+                    await new Promise((resolve) => setTimeout(resolve, 8));
                     if (that.tracker[taskId].cliio.attached) that.tracker[taskId].cliio.xtermInstance.clear();
                     for (let registered in registrations) {
                         await registrations[registered]({ type: "consoleClear" });
                         registrations.splice(registered, 1);
                     }
-                    await new Promise((resolve) => setTimeout(resolve, 5));
+                    await new Promise((resolve) => setTimeout(resolve, 8));
                 });
                 ree.exportAPI("cliSize", function() {
                     if (!that.tracker[taskId].cliio.attached) return [ 0, 0 ];
@@ -233,6 +248,12 @@ function loadTasks() {
                     if (reeAPIInstance.public.getPrivileges().includes("GRAB_ATTENTION")) {
                         windowObject.windowDiv.style.width = apiArg.arg[0] + "px";
                         windowObject.windowDiv.style.height = apiArg.arg[1] + "px";
+                    }
+                });
+                ree.exportAPI("windowSize", function() {
+                    return {
+                        width: windowObject.windowDiv.clientWidth,
+                        height: windowObject.windowDiv.clientHeight
                     }
                 });
                 ree.exportAPI("windowRelocate", function(apiArg) {
