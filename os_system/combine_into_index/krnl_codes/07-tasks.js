@@ -59,7 +59,7 @@ function loadTasks() {
             let disableHarden = appHardening.overridable && modules.core.bootMode == "disable-harden";
             if (disableHarden) appHardening = {overridable:true};
             let limitations = [];
-            let execSignature = { signature: null, signer: "" };
+            let execSignature = {};
             if (executable.includes("// =====BEGIN MANIFEST=====")) {
                 let parsingLines = executable.split("\n");
                 let parsingBoundStart = parsingLines.indexOf("// =====BEGIN MANIFEST=====");
@@ -74,6 +74,7 @@ function loadTasks() {
                         executable = executable.replace(line + "\n", "");
                     }
                     if (lineType == "signer") execSignature.signer = lineData;
+                    if (lineType == "asck") execSignature.selfContainedSigner = lineData;
                     if (knownLineTypes.includes(lineType)) {
                         let dataParts = lineData.split(", ");
                         for (let data of dataParts) limitations.push({ lineType, data });
@@ -91,7 +92,31 @@ function loadTasks() {
                 if (!silent) errorAudio.play();
                 throw new Error("NO_APP_ALLOWLIST");
             }
-            if ((execSignature.signer || appHardening.requireSignature) && !disableHarden) {
+
+            async function recursiveKeyVerify(key, ksrl) {
+                if (!key) throw new Error("NO_KEY");
+                if (ksrl.includes(key.signature)) throw new Error("KEY_REVOKED");
+                let signedByKey = modules.ksk_imported;
+                if (key.keyInfo && key.keyInfo?.signedBy) {
+                    signedByKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
+                    if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
+                    if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
+                    await recursiveKeyVerify(signedByKey, ksrl);
+                    signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, {
+                        name: "ECDSA",
+                        namedCurve: "P-256"
+                    }, false, ["verify"]);
+                }
+                if (!await crypto.subtle.verify({
+                    name: "ECDSA",
+                    hash: {
+                        name: "SHA-256"
+                    }
+                }, signedByKey, hexToU8A(key.signature), new TextEncoder().encode(JSON.stringify(key.key || key.keyInfo)))) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
+                return true;
+            }
+
+            if ((execSignature.signer || appHardening.requireSignature || execSignature.selfContainedSigner) && !disableHarden) {
                 try {
                     let ksrlFiles = await this.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
                     let ksrlSignatures = [];
@@ -108,15 +133,11 @@ function loadTasks() {
                             ksrlSignatures.push(...ksrl.list);
                         }
                     }
-                    let signingKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + execSignature.signer, token));
-                    if (ksrlSignatures.includes(signingKey.signature)) throw new Error("KEY_REVOKED");
-                    if (!await crypto.subtle.verify({
-                        name: "ECDSA",
-                        hash: {
-                            name: "SHA-256"
-                        }
-                    }, modules.ksk_imported, hexToU8A(signingKey.signature), new TextEncoder().encode(JSON.stringify(signingKey.key)))) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
-                    let importSigningKey = await crypto.subtle.importKey("jwk", signingKey.key, {
+                    let signingKey = JSON.parse(execSignature.selfContainedSigner || "null");
+                    if (!signingKey || appHardening.disableASCK) signingKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + execSignature.signer, token));
+                    await recursiveKeyVerify(signingKey, ksrlSignatures);
+                    if (signingKey.keyInfo) if (!signingKey.keyInfo.usages.includes("appTrust")) throw new Error("NOT_APP_SIGNING_KEY");
+                    let importSigningKey = await crypto.subtle.importKey("jwk", signingKey.keyInfo?.key || signingKey.key, {
                         name: "ECDSA",
                         namedCurve: "P-256"
                     }, false, ["verify"]);
@@ -127,6 +148,7 @@ function loadTasks() {
                         }
                     }, importSigningKey, hexToU8A(execSignature.signature), new TextEncoder().encode(executable))) throw new Error("APP_SIGNATURE_VERIFICATION_FAILED");
                 } catch (e) {
+                    console.error(e);
                     windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
                     windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED").replace("%s", execSignature.signer || modules.locales.get("UNKNOWN_PLACEHOLDER"));
                     windowObject.closeButton.disabled = false;

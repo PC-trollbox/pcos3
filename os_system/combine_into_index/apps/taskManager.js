@@ -42,7 +42,7 @@
     table.appendChild(thead);
     table.appendChild(tbody);
     document.body.appendChild(table);
-    setInterval(async function refresh() {
+    async function refresh() {
         let prevtb = tbody;
         let newtb = document.createElement("tbody");
         let tasks = await availableAPIs.listTasks();
@@ -62,12 +62,12 @@
             terminateBtn.innerText = await availableAPIs.lookupLocale("TERMINATE_TASK");
             terminateBtn.addEventListener("click", async function() {
                 await availableAPIs.signalTask({ taskId: task, signal: 15 });
-                refresh();
             });
-            terminateBtn.addEventListener("contextmenu", async function() {
+            terminateBtn.addEventListener("contextmenu", async function(e) {
+                e.stopImmediatePropagation();
+                e.stopPropagation();
+                e.preventDefault();
                 await availableAPIs.signalTask({ taskId: task, signal: 9 });
-                refresh();
-                return false;
             });
             tdTerminate.appendChild(terminateBtn);
             tr.appendChild(tdBasename);
@@ -80,7 +80,9 @@
         table.appendChild(newtb);
         prevtb.remove();
         tbody = newtb;
-    }, 1000);
+        setTimeout(refresh, 1000);
+    }
+    await refresh();
 })();
 addEventListener("signal", async function(e) {
     if (e.detail == 15) await window.availableAPIs.terminate();

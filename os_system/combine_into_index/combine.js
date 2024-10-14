@@ -33,6 +33,10 @@ try {
     console.error("no keypair.json file found, run node ../keypair.js");
     process.exit(1);
 }
+if (!keypair.ksk_private && !keypair.automaticSigner_private) {
+    console.log("keypair.json is in v1, run node ../port-keypair-to-v2.js");
+    process.exit(1);
+}
 let pcosHeader = fs.readFileSync(__dirname + "/krnl_codes/00-pcos.js").toString().split("\n");
 let version = pcosHeader[1].match(/\d+/)[0];
 version = parseInt(version);
@@ -56,12 +60,10 @@ for (let buildFile of buildFiles) {
     }
     let bfc = fs.readFileSync(__dirname + "/krnl_codes/" + buildFile).toString();
     if (buildFile == "06-ksk.js") {
-        delete keypair.ksk.d;
-        if (keypair) bfc = bfc.replace("{stub:\"present\"}", JSON.stringify(keypair.ksk));
+        bfc = bfc.replace("{stub:\"present\"}", JSON.stringify(keypair.ksk));
     }
     if (buildFile == "15-apps.js") {
-        let sharedAS = structuredClone(keypair.automaticSigner);
-        delete sharedAS.key.d;
+        let publicAS = keypair.automaticSigner;
         appFns.push("keypairInstaller");
         bfc = bfc + `
         // dynamically inserted
@@ -76,7 +78,7 @@ for (let buildFile of buildFiles) {
             await modules.fs.chown(target + "/etc/keys", "root");
             await modules.fs.chgrp(target + "/etc/keys", "root");
             await modules.fs.chmod(target + "/etc/keys", "rx");
-            await modules.fs.write(target + "/etc/keys/automaticSigner", JSON.stringify(${JSON.stringify(sharedAS)}));
+            await modules.fs.write(target + "/etc/keys/automaticSigner", JSON.stringify(${JSON.stringify(publicAS)}));
             await modules.fs.chown(target + "/etc/keys/automaticSigner", "root");
             await modules.fs.chgrp(target + "/etc/keys/automaticSigner", "root");
             await modules.fs.chmod(target + "/etc/keys/automaticSigner", "rx");
@@ -94,7 +96,7 @@ for (let buildFile of buildFiles) {
             appName = appName.join(".");
             let manifestStats = [];
             let signature = crypto.sign("sha256", app, {
-                key: keypair.automaticSigner.key,
+                key: keypair.automaticSigner_private,
                 format: "jwk",
                 dsaEncoding: "ieee-p1363"
             }).toString("hex");

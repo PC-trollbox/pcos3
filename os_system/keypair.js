@@ -6,21 +6,29 @@ let keypair = crypto.generateKeyPairSync("ec", {
 let keypair2 = crypto.generateKeyPairSync("ec", {
     namedCurve: "P-256"
 });
-let keypairSignature = crypto.sign("sha256", JSON.stringify(keypair2.publicKey.export({
-    format: "jwk"
-})), {
+let keyInfo = {
+    key: keypair2.publicKey.export({
+        format: "jwk"
+    }),
+    usages: [ "appTrust" ]
+};
+let keypairSignature = crypto.sign("sha256", JSON.stringify(keyInfo), {
     key: keypair.privateKey,
     dsaEncoding: "ieee-p1363"
 }).toString("hex");
 
 fs.writeFileSync("./keypair.json", JSON.stringify({
-    ksk: keypair.privateKey.export({
+    ksk: keypair.publicKey.export({
+        format: "jwk"
+    }),
+    ksk_private: keypair.privateKey.export({
         format: "jwk"
     }),
     automaticSigner: {
         signature: keypairSignature,
-        key: keypair2.privateKey.export({
-            format: "jwk"
-        })
-    }
+        keyInfo: keyInfo
+    },
+    automaticSigner_private: keypair2.privateKey.export({
+        format: "jwk"
+    })
 }));
