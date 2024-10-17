@@ -233,9 +233,11 @@ async function requireLogon() {
                 while (true) {
                     let listen = await modules.ipc.listenFor(startMenuChannel);
                     if (listen.run) {
-                        let forkedToken = await modules.tokens.fork(resolvedLogon.token);
-                        let appWindow = modules.window(session);
-                        await modules.tasks.exec(listen.run.path, [ ...(listen.run.args || []) ], appWindow, forkedToken);
+                        try {
+                            let forkedToken = await modules.tokens.fork(resolvedLogon.token);
+                            let appWindow = modules.window(session);
+                            await modules.tasks.exec(listen.run.path, [ ...(listen.run.args || []) ], appWindow, forkedToken);
+                        } catch {}
                     } else if (listen.success) startButton.disabled = false;
                     else if (listen.dying) {
                         startButton.disabled = true;

@@ -359,7 +359,7 @@ function localization() {
             "REAL_TERMINAL_SU_USEDESC": "su <desiredUsername> - Switch the terminal user.",
             "REAL_TERMINAL_GRAPHIC_USEDESC": "graphic <boolean> - Enable or disable running new applications outside of background.",
             "REAL_TERMINAL_EXIT_USEDESC": "exit - Exit the terminal.",
-            "REAL_TERMINAL_LOGON_REQUIRED": "(internal): You need to must sugraph %s before running this program.",
+            "REAL_TERMINAL_LOGON_REQUIRED": "(internal): You must run sugraph %s before running this program.",
             "RM_USAGE": "Usage: rm <options> [file]",
             "RM_DESCRIPTION": "Removes the specified file or directory.",
             "RKL_USAGE": "Usage: runKlvlCode [codeFile]",

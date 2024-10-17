@@ -53,7 +53,11 @@
             let tdTerminate = document.createElement("td");
             let tdFP = document.createElement("td");
             let tdArgs = document.createElement("td");
-            let taskInfo = await availableAPIs.taskInfo(task);
+            let taskInfo;
+            try {
+                taskInfo = await availableAPIs.taskInfo(task);
+            } catch {}
+            if (!taskInfo) continue;
             let terminateBtn = document.createElement("button");
             tdBasename.innerText = taskInfo.file.split("/").slice(-1)[0];
             tdUser.innerText = taskInfo.runBy;
@@ -61,13 +65,17 @@
             tdArgs.innerText = "[" + (taskInfo.arg || []).map(a => JSON.stringify(a)).join(", ") + "]";
             terminateBtn.innerText = await availableAPIs.lookupLocale("TERMINATE_TASK");
             terminateBtn.addEventListener("click", async function() {
-                await availableAPIs.signalTask({ taskId: task, signal: 15 });
+                try {
+                    await availableAPIs.signalTask({ taskId: task, signal: 15 });
+                } catch {}
             });
             terminateBtn.addEventListener("contextmenu", async function(e) {
                 e.stopImmediatePropagation();
                 e.stopPropagation();
                 e.preventDefault();
-                await availableAPIs.signalTask({ taskId: task, signal: 9 });
+                try {
+                    await availableAPIs.signalTask({ taskId: task, signal: 9 });
+                } catch {}
             });
             tdTerminate.appendChild(terminateBtn);
             tr.appendChild(tdBasename);
