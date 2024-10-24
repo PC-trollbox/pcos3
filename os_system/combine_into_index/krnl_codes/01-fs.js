@@ -35,7 +35,8 @@ function loadFs() {
         permissions: async function(folder, sessionToken) {
             let mount = folder.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
-            if (!this.mounts[mount].permissions_supported) return { owner: "nobody", group: "nogroup", world: "rwx" };
+            let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+            if (!this.mounts[mount].permissions_supported) return { owner: randomNames, group: randomNames, world: "rwx" };
             return await this.mounts[mount].permissions(folder.split("/").slice(1).join("/"), sessionToken);
         },
         lsmounts: function() {
@@ -217,9 +218,10 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 return this.backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
             },
@@ -231,9 +233,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = this.backend;
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.owner = owner;
@@ -248,9 +251,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = this.backend;
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.group = group;
@@ -265,9 +269,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = this.backend;
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.world = permissions;
@@ -481,9 +486,10 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 return (await this.getBackend()).permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
             },
@@ -495,9 +501,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = await this.getBackend();
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.owner = owner;
@@ -512,9 +519,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = await this.getBackend();
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.group = group;
@@ -529,9 +537,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = await this.getBackend();
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.world = permissions;
@@ -591,6 +600,7 @@ function loadFs() {
     };
     
     function ramMount(options) {
+        let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
         return {
             read: async function(key) {
                 key = String(key);
@@ -688,9 +698,10 @@ function loadFs() {
                 if (properFile[0] == "") properFile = properFile.slice(1);
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 return this.backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
             },
@@ -702,9 +713,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = this.backend;
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.owner = owner;
@@ -719,9 +731,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = this.backend;
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.group = group;
@@ -736,9 +749,10 @@ function loadFs() {
                 if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
                 properFile = properFile.join("/");
                 let backend = this.backend;
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 let filePermissions = backend.permissions[properFile] || {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "",
                 };
                 filePermissions.world = permissions;
@@ -768,19 +782,19 @@ function loadFs() {
             permissions_supported: true,
             backend: options.type == "run" ? { files: { run: {} }, permissions: {
                 "": {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "rx"
                 },
                 run: {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "rwx"
                 }
             }} : { files: {}, permissions: {
                 "": {
-                    owner: "root",
-                    group: "root",
+                    owner: randomNames,
+                    group: randomNames,
                     world: "rx"
                 }
             } },

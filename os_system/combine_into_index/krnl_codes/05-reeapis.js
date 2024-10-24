@@ -830,12 +830,12 @@ function reeAPIs() {
                 logOut: async function(desiredUser) {
                     if (desiredUser != user && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
                     if (desiredUser == user && !privileges.includes("LOGOUT")) throw new Error("UNAUTHORIZED_ACTION");
-                    if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHER")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
                     await modules.logOut(desiredUser);
                 },
                 lock: async function() {
                     if (modules.session.active == ses && !privileges.includes("LOGOUT")) throw new Error("UNAUTHORIZED_ACTION");
-                    if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHER")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
                     modules.session.muteAllSessions();
                     modules.session.activateSession(modules.session.systemSession);
                 }
