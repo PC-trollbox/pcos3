@@ -1,0 +1,304 @@
+// All API returns provided in their best case scenario
+getUser() -> String
+getPrivileges() -> String[]
+terminate()
+rmPrivilege(String privilege) -> true
+rmPrivileges(String[] privilegesRemoved) -> true
+switchUser(String desiredUser) -> true // SWITCH_USERS_AUTOMATICALLY
+shutdown({
+    isReboot: Boolean,
+    token: String
+}) -> true // SYSTEM_SHUTDOWN
+fs_read({
+    path: String,
+    token: String
+}) -> String // FS_READ (may require also FS_BYPASS_PERMISSIONS)
+fs_ls({
+    path: String,
+    token: String
+}) -> String[] // FS_READ
+fs_write({
+    path: String,
+    data: String,
+    token: String
+}) // FS_WRITE
+fs_rm({
+    path: String,
+    token: String
+}) // FS_REMOVE
+fs_mkdir({
+    path: String,
+    token: String
+}) // FS_WRITE
+fs_chown({
+    path: String,
+    newUser: String,
+    token: String
+}) // FS_CHANGE_PERMISSION
+fs_chgrp({
+    path: String,
+    newGrp: String,
+    token: String
+}) // FS_CHANGE_PERMISSION
+fs_chmod({
+    path: String,
+    newPermissions: String,
+    token: String
+}) // FS_CHANGE_PERMISSION
+fs_permissions({
+    path: String,
+    token: String
+}) -> {
+    owner: String,
+    group: String,
+    world: String
+} // FS_READ
+fs_mounts() -> String[] // FS_LIST_PARTITIONS
+fs_sync({
+    mount: String,
+    token: String
+}) // FS_UNMOUNT
+fs_unmount({
+    mount: String,
+    token: String,
+    force: Boolean
+}) // FS_UNMOUNT
+fs_mountInfo(String mount) -> {
+    read_only: Boolean,
+    permissions_supported: Boolean,
+    directory_supported: Boolean,
+    filesystem: String
+} // FS_LIST_PARTITIONS
+getSystemMount() -> String // FS_LIST_PARTITIONS
+createPipe() -> String // IPC_CREATE_PIPE
+listenToPipe(String pipe) -> any // IPC_LISTEN_PIPE (may require also IPC_BYPASS_PERMISSIONS)
+sendToPipe({
+    pipe: String,
+    data: any
+}) // IPC_SEND_PIPE (may require also IPC_BYPASS_PERMISSIONS)
+closePipe(String pipe)
+setPipePermissions({
+    pipe: String,
+    newPermissions: {
+        owner: String,
+        group: String,
+        world: Boolean
+    }
+}) // IPC_CHANGE_PERMISSION (may require also IPC_BYPASS_PERMISSIONS)
+elevate(String[] newPrivileges) -> true // SWITCH_USERS_AUTOMATICALLY
+getVersion() -> String // GET_BUILD
+locale() -> String // GET_LOCALE
+osLocale() -> String // GET_LOCALE
+getUserInfo({
+    desiredUser: String,
+    token: String,
+    sensitive: Boolean
+}) -> Object // GET_USER_INFO (may require also USER_INFO_OTHERS or SENSITIVE_USER_INFO_OTHERS)
+setUserInfo({
+    desiredUser: String,
+    token: String,
+    info: Object || undefined
+}) // SET_USER_INFO
+setOwnSecurityChecks({
+    token: String,
+    checks: Object[]
+}) -> true // SET_SECURITY_CHECKS
+getNewToken(String desiredUser) -> String // ELEVATE_PRIVILEGES
+getProcessToken() -> String
+setProcessToken(String desiredToken) -> true // ELEVATE_PRIVILEGES
+revokeToken(String dt) // MANAGE_TOKENS
+forkToken(String dt) // MANAGE_TOKENS
+removeTokenPrivilege({
+    token: String,
+    privilege: String
+}) -> true // MANAGE_TOKENS
+removeTokenPrivileges({
+    token: String,
+    privileges: String[]
+}) -> true // MANAGE_TOKENS
+estimateStorage() -> {
+    [storageName]: {
+        total: Number,
+        used: Number,
+        free: Number
+    }
+} // FS_LIST_PARTITIONS
+startTask({
+    file: String,
+    argPassed: String,
+    token: String,
+    runInBackground: Boolean,
+    silent: Boolean
+}) -> String // START_TASK
+listTasks() -> String[] // LIST_TASKS
+taskInfo(String taskId) -> {
+    file: String,
+    arg: String[],
+    runBy: String,
+    cliio: Boolean
+} // LIST_TASKS
+signalTask({
+    taskId: String,
+    signal: Number
+}) // SIGNAL_TASK (may require also TASK_BYPASS_PERMISSIONS)
+lookupLocale(String key) -> String // GET_LOCALE
+lookupOtherLocale({
+    key: String,
+    locale: String
+}) -> String // GET_LOCALE
+ufTimeInc([ Number ms, Boolean majorUnitsOnly, Boolean displayMs ]) -> String // GET_LOCALE
+ufInfoUnits([ Number bytes, Boolean majorUnitsOnly ]) -> String // GET_LOCALE
+isDarkThemed() -> Boolean // GET_THEME
+fetchSend({
+    url: String,
+    init: Object /* mdn fetch() init + non-standard Boolean noArrayBuffer */
+}) -> {
+    status: Number,
+    statusText: String,
+    ok: Boolean,
+    redirected: Boolean,
+    type: String,
+    url: String,
+    headers: Object,
+    arrayBuffer: ArrayBuffer
+} // FETCH_SEND
+switchUserWithSetup(String desiredUser) -> true // SWITCH_USERS_AUTOMATICALLY
+runKlvlCode(String code) -> any // RUN_KLVL_CODE
+cspOperation({
+    cspProvider: String,
+    operation: String,
+    cspArgument: Object
+}) -> any // CSP_OPERATIONS
+availableCsps() -> String[] // CSP_OPERATIONS
+ufTimeCon([ Number ms, Boolean majorUnitsOnly, Boolean displayMs ]) -> String // GET_LOCALE
+websocketOpen(String url) -> String // WEBSOCKETS_OPEN
+listenToWebsocket({ handle: String }) -> ArrayBuffer // WEBSOCKETS_LISTEN (may require also WEBSOCKET_BYPASS_PERMISSIONS)
+sendToWebsocket({
+    handle: String,
+    data: String || ArrayBuffer || Blob || TypedArray || DataView
+}) // WEBSOCKETS_SEND (may require also WEBSOCKET_BYPASS_PERMISSIONS)
+closeWebsocket(String handle)
+websocketInfo({ handle: String }) -> {
+    bufferedAmount: Number,
+    extensions: String,
+    protocol: String,
+    readyState: Number,
+    url: String
+} // WEBSOCKETS_INFO (may require also WEBSOCKET_BYPASS_PERMISSIONS)
+setWebsocketPermissions({
+    handle: String,
+    owner: String,
+    group: String,
+    world: Boolean
+}) // WEBSOCKET_SET_PERMISSIONS (may require also WEBSOCKET_BYPASS_PERMISSIONS)
+getPublicSystemID() -> Object // IDENTIFY_SYSTEM
+getPrivateSystemID() -> Object // IDENTIFY_SYSTEM_SENSITIVE
+typeIntoOtherCLI({
+    taskId: String,
+    bypass: String, /* the process token of the other process */
+    text: String,
+    human: Boolean
+}) // CLI_MODIFICATIONS (may require also TASK_BYPASS_PERMISSIONS)
+getOtherCLIData({
+    taskId: String,
+    bypass: String
+}) -> {
+    type: "consoleClear" || "write",
+    data: String
+} // CLI_MODIFICATIONS (may require also TASK_BYPASS_PERMISSIONS)
+waitForOtherCLI({
+    taskId: String,
+    bypass: String
+}) // CLI_MODIFICATIONS (may require also TASK_BYPASS_PERMISSIONS)
+lldaRead({ partition: String }) -> any // LLDISK_READ
+lldaWrite({
+    partition: String,
+    data: any
+}) // LLDISK_WRITE
+lldaList() -> String[] // LLDISK_LIST_PARTITIONS
+lldaInitPartitions() // LLDISK_INIT_PARTITIONS
+lldaRemove({ partition: String }) // LLDISK_REMOVE
+lldaIDBRead({ key: String }) -> String // LLDISK_IDB_READ
+lldaIDBWrite({
+    key: String,
+    value: String
+}) // LLDISK_IDB_WRITE
+lldaIDBRemove({ key: String }) // LLDISK_IDB_REMOVE
+lldaIDBList() -> String[] // LLDISK_IDB_LIST
+lldaIDBSync() // LLDISK_IDB_SYNC
+fs_mount({
+    mountpoint: String,
+    filesystem: String,
+    filesystemOptions: {
+        partition: String,
+        interactivePassword: Boolean,
+        password: String,
+        key: String,
+        type: String,
+        url: String,
+        inputPipe: String,
+        outputPipe: String
+    }
+}) // FS_MOUNT
+supportedFilesystems() -> String[] // GET_FILESYSTEMS
+installedLocales() -> String[] // GET_LOCALES
+runningServer() -> String // GET_SERVER_URL
+fs_isDirectory({
+    path: String,
+    token: String
+}) -> Boolean // FS_READ (may require also FS_BYPASS_PERMISSIONS)
+automatedLogonCreate({
+    desiredUser: String,
+    token: String
+}) -> String // ELEVATE_PRIVILEGES
+automatedLogonGet(String session) -> {
+    success: Boolean || "intermediate",
+    message: String,
+    token: String,
+    type: "password" || "informative" || "promise" || "text",
+    message: String,
+    wantsUserInput: Boolean
+} // ELEVATE_PRIVILEGES
+automatedLogonInput({
+    session: String,
+    input: String || null
+}) // ELEVATE_PRIVILEGES
+automatedLogonDelete(String session) // ELEVATE_PRIVILEGES
+setSystemMount(String mount) // SET_DEFAULT_SYSTEM
+usedRAM() // GET_SYSTEM_RESOURCES
+checkBootMode() -> String // GET_BOOT_MODE
+getScreenInfo() -> {
+    width: Number,
+    height: Number,
+    colorDepth: Number,
+    orientation: {
+        type: String,
+        angle: Number
+    },
+    fullWidth: Number,
+    fullHeight: Number,
+    availWidth: Number,
+    availHeight: Number
+} // GET_SCREEN_INFO
+waitTermination(String taskID) // LIST_TASKS
+consentGetToken({
+    desiredUser: String,
+    intent: String
+}) -> String // ELEVATE_PRIVILEGES
+networkPing(String address) // NETWORK_PING
+logOut(String user) // LOGOUT (may require also LOGOUT_OTHERS)
+lock(String user) // LOGOUT (may require also LOGOUT_OTHERS)
+attachCLI()
+toMyCLI(String data)
+fromMyCLI()
+clearMyCLI()
+cliSize()
+detachCLI()
+windowVisibility(Boolean visible)
+windowTitleSet(String title)
+windowResize([ Number width, Number height ]) // GRAB_ATTENTION
+windowSize()
+windowRelocate([ Number x, Number y ]) // GRAB_ATTENTION
+windowFullscreen(Boolean fullscreen) // GRAB_ATTENTION
+closeability(Boolean closeable)
+critical(Boolean critical) // SYSTEM_STABILITY
