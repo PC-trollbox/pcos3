@@ -1,5 +1,5 @@
 // =====BEGIN MANIFEST=====
-// allow: GET_LOCALE, FS_LIST_PARTITIONS, FS_READ, MANAGE_TOKENS, ELEVATE_PRIVILEGES, FS_BYPASS_PERMISSIONS, START_TASK, START_BACKGROUND_TASK, CLI_MODIFICATIONS, GET_BUILD, LIST_TASKS, TASK_BYPASS_PERMISSIONS
+// allow: GET_LOCALE, FS_LIST_PARTITIONS, FS_READ, MANAGE_TOKENS, ELEVATE_PRIVILEGES, FS_BYPASS_PERMISSIONS, START_TASK, START_BACKGROUND_TASK, CLI_MODIFICATIONS, GET_BUILD, LIST_TASKS, TASK_BYPASS_PERMISSIONS, CSP_OPERATIONS
 // link: lrn:REAL_TERMINAL_NAME
 // signer: automaticSigner
 // =====END MANIFEST=====
@@ -72,7 +72,58 @@ let user_spawn_token = null;
                 }
                 while (su_stage >= 1) {
                     otherProcessAttached = true;
-                    if (su_stage == 2) await availableAPIs.automatedLogonInput({ session: suSession, input: str });
+                    if (su_stage == 2) {
+                        let prompt = await availableAPIs.automatedLogonGet(suSession);
+                        if (prompt.type == "zkpp_password") {
+                            let passwordAsKey = await availableAPIs.cspOperation({
+                                cspProvider: "basic",
+                                operation: "importKey",
+                                cspArgument: {
+                                    format: "raw",
+                                    keyData: new TextEncoder().encode(str),
+                                    algorithm: "PBKDF2",
+                                    extractable: false,
+                                    keyUsages: ["deriveBits"]
+                                }
+                            })
+                            let rngSeed = await availableAPIs.cspOperation({
+                                cspProvider: "basic",
+                                operation: "deriveBits",
+                                cspArgument: {
+                                    algorithm: {
+                                        name: "PBKDF2",
+                                        salt: new Uint8Array(32),
+                                        iterations: 100000,
+                                        hash: "SHA-256"
+                                    },
+                                    baseKey: passwordAsKey,
+                                    length: 256
+                                }
+                            });
+                            await availableAPIs.cspOperation({
+                                cspProvider: "basic",
+                                operation: "unloadKey",
+                                cspArgument: passwordAsKey
+                            });
+                            let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+                            let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+                            await availableAPIs.automatedLogonInput({ session: suSession, input: u8aToHex(await availableAPIs.cspOperation({
+                                cspProvider: "tweetnacl",
+                                operation: "sign",
+                                cspArgument: {
+                                    secretKey: (await availableAPIs.cspOperation({
+                                        cspProvider: "tweetnacl",
+                                        operation: "deriveKey",
+                                        cspArgument: {
+                                            type: "sign",
+                                            seed: new Uint8Array(rngSeed)
+                                        }
+                                    })).secretKey,
+                                    message: hexToU8A(prompt.challenge)
+                                }
+                            }))});
+                        } else await availableAPIs.automatedLogonInput({ session: suSession, input: str });
+                    }
                     otherProcessAttached = false;
                     str = "";
                     hideInput = false;
@@ -93,8 +144,8 @@ let user_spawn_token = null;
                     }
                     if (prompt.wantsUserInput || prompt.type == "informative") {
                         if (prompt.wantsUserInput) await availableAPIs.toMyCLI(": ");
-                        hideInput = prompt.type == "password" || prompt.type == "informative";
-                        hideInputMask = prompt.type == "password" ? "*" : "";
+                        hideInput = prompt.type == "password" || prompt.type == "informative" || prompt.type == "zkpp_password";
+                        hideInputMask = (prompt.type == "password" || prompt.type == "zkpp_password") ? "*" : "";
                         return;
                     }
                     if (su_stage != -1) await availableAPIs.toMyCLI("\r\n");

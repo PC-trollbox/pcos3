@@ -63,11 +63,13 @@
         let homeDirectoryChanger = document.createElement("button");
         let securityChecksButton = document.createElement("button");
         let groupChanger = document.createElement("button");
+        let privilegeSetButton = document.createElement("button");
         let removeButton = document.createElement("button");
         let leaveButton = document.createElement("button");
         homeDirectoryChanger.innerText = await availableAPIs.lookupLocale("USER_HOMEDIR");
         securityChecksButton.innerText = await availableAPIs.lookupLocale("PERSONAL_SECURITY_TITLE");
         groupChanger.innerText = await availableAPIs.lookupLocale("USER_GROUPS");
+        privilegeSetButton.innerText = await availableAPIs.lookupLocale("USER_EXT_PRIVILEGES");
         removeButton.innerText = await availableAPIs.lookupLocale("REMOVE_BTN");
         leaveButton.innerText = await availableAPIs.lookupLocale("EXIT");
         homeDirectoryChanger.addEventListener("click", changeHomeDir);
@@ -80,11 +82,13 @@
             await availableAPIs.terminate();
         });
         groupChanger.addEventListener("click", changeGroups);
+        privilegeSetButton.addEventListener("click", privilegeSet);
         removeButton.addEventListener("click", removeUser);
         leaveButton.addEventListener("click", main);
         actionSpecificField.appendChild(homeDirectoryChanger);
         actionSpecificField.appendChild(securityChecksButton);
         actionSpecificField.appendChild(groupChanger);
+        actionSpecificField.appendChild(privilegeSetButton);
         actionSpecificField.appendChild(removeButton);
         actionSpecificField.appendChild(leaveButton);
     }
@@ -228,6 +232,94 @@
         actionSpecificField.appendChild(backButton);
         actionSpecificField.appendChild(removeWithHomedir);
         actionSpecificField.appendChild(removeAlone);
+    }
+
+    async function privilegeSet() {
+        actionSpecificField.innerText = "";
+        pageHeader.innerText = "[" + username + "] " + await availableAPIs.lookupLocale("USER_EXT_PRIVILEGES");
+
+        let backButton = document.createElement("button");
+        let addPrivilege = document.createElement("button");
+        let removeAll = document.createElement("button");
+        let warning = document.createElement("b");
+        backButton.innerText = "<-";
+        addPrivilege.innerText = await availableAPIs.lookupLocale("ADD_BTN");
+        removeAll.innerText = await availableAPIs.lookupLocale("REMOVE_BTN");
+        warning.innerText = await availableAPIs.lookupLocale("WARNING_PRIVILEGES");
+
+        backButton.addEventListener("click", userEditPage);
+        addPrivilege.addEventListener("click", addPrivilegeAction);
+        removeAll.addEventListener("click", async function() {
+            userData.additionalPrivilegeSet = undefined;
+            await availableAPIs.setUserInfo({desiredUser: username, info: userData});
+            privilegeSet();
+        })
+        actionSpecificField.appendChild(backButton);
+        actionSpecificField.appendChild(addPrivilege);
+        actionSpecificField.appendChild(removeAll);
+        actionSpecificField.appendChild(document.createElement("br"));
+        actionSpecificField.appendChild(warning);
+
+        if (!userData.additionalPrivilegeSet) userData.additionalPrivilegeSet = [];
+        for (let privilege in userData.additionalPrivilegeSet) {
+            let privilegeInfo = userData.additionalPrivilegeSet[privilege];
+            let privilegeDiv = document.createElement("div");
+            privilegeDiv.style.display = "flex";
+            let privilegeNameDiv = document.createElement("div");
+            privilegeNameDiv.style.flex = 100;
+            let privilegeBtns = document.createElement("div");
+            privilegeNameDiv.innerText = privilegeInfo;
+            let btnUp = document.createElement("button");
+            let btnDown = document.createElement("button");
+            let btnDelete = document.createElement("button");
+            btnUp.innerText = "/\\";
+            btnUp.disabled = privilege == 0;
+            btnDown.disabled = privilege == userData.additionalPrivilegeSet.length - 1;
+            btnDown.innerText = "\\/";
+            btnDelete.innerText = "x";
+            privilegeBtns.appendChild(btnUp);
+            privilegeBtns.appendChild(btnDown);
+            privilegeBtns.appendChild(btnDelete);
+            privilegeDiv.appendChild(privilegeNameDiv);
+            privilegeDiv.appendChild(privilegeBtns);
+            btnDelete.addEventListener("click", async function() {
+                userData.additionalPrivilegeSet.splice(privilege, 1);
+                await availableAPIs.setUserInfo({desiredUser: username, info: userData});
+                privilegeSet();
+            });
+            actionSpecificField.appendChild(privilegeDiv);
+            btnUp.addEventListener("click", async function() {
+                userData.additionalPrivilegeSet.splice(privilege, 1);
+                userData.additionalPrivilegeSet.splice(privilege - 1, 0, privilegeInfo);
+                await availableAPIs.setUserInfo({desiredUser: username, info: userData});
+                privilegeSet();
+            });
+            btnDown.addEventListener("click", async function() {
+                userData.additionalPrivilegeSet.splice(privilege, 1);
+                userData.additionalPrivilegeSet.splice(privilege - 1 + 2, 0, privilegeInfo);
+                await availableAPIs.setUserInfo({desiredUser: username, info: userData});
+                privilegeSet();
+            });
+        }
+    }
+
+    async function addPrivilegeAction() {
+        actionSpecificField.innerText = "";
+        let backButton = document.createElement("button");
+        let privilegeNameField = document.createElement("input");
+        let createButton = document.createElement("button");
+        backButton.innerText = "<-";
+        createButton.innerText = await availableAPIs.lookupLocale("ADD_BTN");
+        backButton.addEventListener("click", privilegeSet);
+        createButton.addEventListener("click", async function() {
+            if (!userData.additionalPrivilegeSet) userData.additionalPrivilegeSet = [];
+            userData.additionalPrivilegeSet.push(...(privilegeNameField.value.match(/[A-Z_]+/g) || []));
+            await availableAPIs.setUserInfo({desiredUser: username, info: userData});
+            privilegeSet();
+        });
+        actionSpecificField.appendChild(backButton);
+        actionSpecificField.appendChild(privilegeNameField);
+        actionSpecificField.appendChild(createButton);
     }
 
     async function mkrecursive(dir) {

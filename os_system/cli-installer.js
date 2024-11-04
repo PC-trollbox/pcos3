@@ -306,6 +306,7 @@ function setupbase() {
                     "03-xterm.js": xterm_export.toString() + "\nxterm_export();\n",
                     "04-ipc.js": loadIpc.toString() + "\nloadIpc();\n",
                     "04-websockets.js": loadWebsocketSupport.toString() + "\nloadWebsocketSupport();\n",
+                    "05-network.js": networkd.toString() + "\nnetworkd();\n",
                     "05-reeapis.js": reeAPIs.toString() + "\nreeAPIs();\n",
                     "06-csp.js": loadBasicCSP.toString() + "\nloadBasicCSP();\n",
                     "06-locales.js": localization.toString() + "\nlocalization();\n",

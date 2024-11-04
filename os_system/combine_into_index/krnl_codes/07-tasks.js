@@ -1,7 +1,7 @@
 function loadTasks() {
     // @pcos-app-mode native
     let tasks = {
-        exec: async function(file, arg, windowObject, token, silent) {
+        exec: async function(file, arg, windowObject, token, silent, privateData) {
             let errorAudio = new Audio();
             try {
                 let errorSoundPerm = await modules.fs.permissions(modules.defaultSystem + "/etc/sounds/error.aud", token);
@@ -166,7 +166,7 @@ function loadTasks() {
                 arg = arg.map(a => String(a));
                 let that = this;
                 ree.iframe.style = "width: 100%; height: 100%; border: none; top: 0; left: 0; position: absolute;";
-                let reeAPIInstance = await modules.reeAPIInstance({ ree, ses: windowObject.sessionId, token, taskId, limitations });
+                let reeAPIInstance = await modules.reeAPIInstance({ ree, ses: windowObject.sessionId, token, taskId, limitations, privateData });
                 for (let action in reeAPIInstance.public) ree.exportAPI(action, (e) => reeAPIInstance.public[action](e.arg));
                 this.tracker[taskId] = {
                     ree,

@@ -7,6 +7,12 @@
     document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
     if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
     await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("SET_UP_PCOS"));
+    let privileges = await availableAPIs.getPrivileges();
+    let checklist = [ "CSP_OPERATIONS", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_LIST_PARTITIONS", "SET_USER_INFO", "RUN_KLVL_CODE", "FS_CHANGE_PERMISSION", "FS_REMOVE" ];
+    if (!checklist.every(p => privileges.includes(p))) {
+        document.body.innerText = await availableAPIs.lookupLocale("SETUP_FAILED");
+        return;
+    }
     await availableAPIs.closeability(false);
     let defaultSystem = await availableAPIs.getSystemMount();
     let header = document.createElement("b");
@@ -33,9 +39,11 @@
         let darkmode = document.createElement("input");
         let darkmode_lb = document.createElement("label");
         useraccountname.placeholder = await availableAPIs.lookupLocale("USERNAME");
-        useraccountname.value = "root";
-        useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
-        useraccountname.disabled = true;
+        if (!exec_args.includes("usersConfigured")) {
+            useraccountname.value = "root";
+            useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
+            useraccountname.disabled = true;
+        }
         useraccountpassword.placeholder = await availableAPIs.lookupLocale("PASSWORD");
         useraccountpassword.type = "password";
         darkmode.type = "checkbox";
@@ -49,9 +57,13 @@
         content.appendChild(darkmode);
         content.appendChild(darkmode_lb);
         button.onclick = async function() {
+            let username = useraccountname.value;
             let password = useraccountpassword.value;
-            let darkModeChecked = darkmode.checked;
+            if (!username) return;
+            if (username.includes("/")) return;
             if (!password) return;
+            let homedir = username == "root" ? (defaultSystem + "/root") : (defaultSystem + "/home/" + username);
+            let darkModeChecked = darkmode.checked;
             content.innerHTML = "";
             button.hidden = true;
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
@@ -94,7 +106,7 @@
                 cspArgument: key
             });
             await availableAPIs.setUserInfo({
-                desiredUser: "root",
+                desiredUser: username,
                 info: {
                     securityChecks: [
                         {
@@ -103,30 +115,30 @@
                             salt: u8aToHex(salt)
                         }
                     ],
-                    groups: [ "root", "users" ],
-                    homeDirectory: defaultSystem + "/root"
+                    groups: [ username, "users" ],
+                    homeDirectory: homedir
                 }
             });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER_HOME"));
             try {
-                await availableAPIs.fs_mkdir({ path: defaultSystem + "/root" });
-            } catch {}
-            try {
                 await availableAPIs.fs_mkdir({ path: defaultSystem + "/home" });
             } catch {}
-            description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("HOLDING_NETCONFIG"));
-            await availableAPIs.fs_write({
-                path: defaultSystem + "/etc/network.json",
-                data: await availableAPIs.lookupLocale("CONFIG_HELD")
-            });
+            try {
+                await availableAPIs.fs_mkdir({ path: homedir });
+            } catch {}
+            await availableAPIs.fs_chown({ path: homedir, newUser: username });
+            await availableAPIs.fs_chgrp({ path: homedir, newGrp: username });
+            await availableAPIs.fs_chmod({ path: homedir, newPermissions: "rx" });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2U"));
             await availableAPIs.fs_write({
-                path: defaultSystem + "/root/.wallpaper",
+                path: homedir + "/.wallpaper",
                 data: await availableAPIs.fs_read({
                     path: defaultSystem + "/etc/wallpapers/pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"
                 })
             });
-            await availableAPIs.fs_chmod({ path: defaultSystem + "/root/.wallpaper", newPermissions: "" });
+            await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
+            await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
+            await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
             await availableAPIs.fs_write({
                 path: defaultSystem + "/etc/wallpapers/lockscreen.pic",
@@ -134,10 +146,12 @@
             });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE"));
             await availableAPIs.fs_write({
-                path: defaultSystem + "/root/.darkmode",
+                path: homedir + "/.darkmode",
                 data: darkModeChecked.toString()
             });
-            await availableAPIs.fs_chmod({ path: defaultSystem + "/root/.darkmode", newPermissions: "" });
+            await availableAPIs.fs_chown({ path: homedir + "/.darkmode", newUser: username });
+            await availableAPIs.fs_chgrp({ path: homedir + "/.darkmode", newGrp: username });
+            await availableAPIs.fs_chmod({ path: homedir + "/.darkmode", newPermissions: "rx" });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE2L"));
             await availableAPIs.fs_write({
                 path: defaultSystem + "/etc/darkLockScreen",
@@ -164,7 +178,6 @@
 })();
 addEventListener("signal", async function(e) {
     if (e.detail == 15) {
-        await availableAPIs.runKlvlCode("requireLogon(); null;");
         await window.availableAPIs.terminate();
     }
 });

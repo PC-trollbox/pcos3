@@ -58,7 +58,8 @@
         "serverReport",
         "pc-totp",
         "totp",
-        "workingHours"
+        "workingHours",
+        "zkpp"
     ];
     let checks = (await availableAPIs.getUserInfo({ desiredUser: await availableAPIs.getUser(), sensitive: true })).securityChecks;
 
@@ -71,7 +72,8 @@
         "serverReport": "SERVER_REPORT_OPTION",
         "pc-totp": "PCTOTP_OPTION",
         "totp": "RFCTOTP_OPTION",
-        "workingHours": "WORKING_HOURS_OPTION"
+        "workingHours": "WORKING_HOURS_OPTION",
+        "zkpp": "ZKPP_OPTION"
     };
 
     async function reparse() {
@@ -324,6 +326,64 @@
                     hours: Number(inputBoxEnd.value.split(":")[0]),
                     minutes: Number(inputBoxEnd.value.split(":")[1]),
                     seconds: Number(inputBoxEnd.value.split(":")[2])
+                };
+                reparse();
+            });
+        } else if (checkInfo.type == "zkpp") {
+            let inputDescribe = document.createElement("span");
+            let inputBox = document.createElement("input");
+            let inputAccept = document.createElement("button");
+            inputDescribe.innerText = await availableAPIs.lookupLocale("PASSWORD") + ": ";
+            inputBox.type = "password";
+            secCheck.appendChild(inputDescribe);
+            secCheck.appendChild(inputBox);
+            secCheck.appendChild(inputAccept);
+            inputAccept.innerText = await availableAPIs.lookupLocale("CONFIRM");
+            inputAccept.addEventListener("click", async function() {
+                let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+                let key = await availableAPIs.cspOperation({
+                    cspProvider: "basic",
+                    operation: "importKey",
+                    cspArgument: {
+                        format: "raw",
+                        keyData: new TextEncoder().encode(inputBox.value),
+                        algorithm: {
+                            name: "PBKDF2"
+                        },
+                        extractable: false,
+                        keyUsages: ["deriveBits", "deriveKey"]
+                    }
+                });
+                let derived = new Uint8Array(await availableAPIs.cspOperation({
+                    cspProvider: "basic",
+                    operation: "deriveBits",
+                    cspArgument: {
+                        algorithm: {
+                            name: "PBKDF2",
+                            salt: new Uint8Array(32),
+                            iterations: 100000,
+                            hash: "SHA-256"
+                        },
+                        baseKey: key,
+                        length: 256
+                    }
+                }));
+                await availableAPIs.cspOperation({
+                    cspProvider: "basic",
+                    operation: "unloadKey",
+                    cspArgument: key
+                });
+                let publicKey = (await availableAPIs.cspOperation({
+                    cspProvider: "tweetnacl",
+                    operation: "deriveKey",
+                    cspArgument: {
+                        type: "sign",
+                        seed: derived
+                    }
+                })).publicKey;
+                checks[check] = {
+                    type: "zkpp",
+                    publicKey: u8aToHex(publicKey)
                 };
                 reparse();
             });

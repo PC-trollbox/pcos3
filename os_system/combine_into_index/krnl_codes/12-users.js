@@ -29,6 +29,7 @@ async function setupUsers() {
                     type: currentPrompt.type,
                     message: currentPrompt.message,
                     wantsUserInput: currentPrompt.userInput,
+                    challenge: currentPrompt.challenge,
                     input: async function(input) {
                         if (used || destroyed) return that.getNextPrompt();
                         if (!used) used = true;
@@ -112,6 +113,14 @@ async function setupUsers() {
             userDB = userDB[user];
             if (!sensitive) delete userDB.securityChecks;
             return userDB;
+        },
+        configured: async function(token) {
+            try {
+                JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/security/users"), token);
+                return true;
+            } catch {
+                return false;
+            }
         },
         access: async function(user, token) {
             let userDB = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/security/users"), token);
@@ -207,6 +216,15 @@ async function setupUsers() {
                         credentials[check].userInput = false;
                         credentials[check].verify = () => true;
                     }
+                }
+                if (credentials[check].type == "zkpp") {
+                    let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+                    let randomChallenge = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+                    credentials[check].message = modules.locales.get("PASSWORD_PROMPT");
+                    credentials[check].type = "zkpp_password";
+                    credentials[check].userInput = true;
+                    credentials[check].challenge = randomChallenge;
+                    credentials[check].verify = input => nacl.sign.detached.verify(hexToU8A(credentials[check].challenge), hexToU8A(input), hexToU8A(credentials[check].publicKey));
                 }
             }
             if (credentials.length == 0) {

@@ -267,8 +267,6 @@ function localization() {
             "UPDATE_BUTTON": "Update OS",
             "TOGGLE_HIDDEN_FILES": "Hide/unhide files",
             "AUTORUN_NECESSITIES_FAILED": "Failed to run one of your autorun files. The system will not log you in.",
-            "HOLDING_NETCONFIG": "Holding network configuration file...",
-            "CONFIG_HELD": "This configuration file was held to prevent modification.",
             "CRYPTO_TOOLS_TITLE": "Cryptographic Tools",
             "CRYPTO_TOOLS_NOPERM": "Not enough privileges were given to use Cryptographic Tools.",
             "CRYPTO_RNG": "Random generation",
@@ -431,7 +429,13 @@ function localization() {
             "CALC_TOIMPR_BTN": "Convert to improper fraction",
             "CALC_GCD": "GCD",
             "CALC_FACTORIAL": "Factorial",
-            "CALC_GCD_PAGE": "Greatest common divisor"
+            "CALC_GCD_PAGE": "Greatest common divisor",
+            "ZKPP_OPTION": "ZKPP (Password)",
+            "SECONDSTAGE_INSTALLER_INTENT": "Complete the OS configuration",
+            "SETUP_FAILED": "Setting up PCOS failed. Please try again by rebooting.",
+            "WARNING_PRIVILEGES": "Be careful with this feature! You may compromise system security.",
+            "USER_EXT_PRIVILEGES": "Extended privilege set",
+            "LULL_SYSTEM": "Sleep mode"
         },
         ru: {
             "UNTITLED_APP": "Безымянная программа",
@@ -699,8 +703,6 @@ function localization() {
             "UPDATE_BUTTON": "Обновить ОС",
             "TOGGLE_HIDDEN_FILES": "Скрыть/показать файлы",
             "AUTORUN_NECESSITIES_FAILED": "Не удалось запустить один из ваших файлов автозапуска. Система не позволит выполнить вход.",
-            "HOLDING_NETCONFIG": "Удерживание файла конфигурации сети...",
-            "CONFIG_HELD": "Файл конфигурации удержан для предотвращения изменений.\nThis configuration file was held to prevent modification.",
             "CRYPTO_TOOLS_TITLE": "Утилиты для криптографии",
             "CRYPTO_TOOLS_NOPERM": "Недостаточно прав для использования утилит для криптографии.",
             "CRYPTO_RNG": "Случайная генерация",
@@ -863,7 +865,13 @@ function localization() {
             "CALC_TOIMPR_BTN": "Перевести в неправильную дробь",
             "CALC_GCD": "НОД",
             "CALC_FACTORIAL": "Факториал",
-            "CALC_GCD_PAGE": "Наибольший общий делитель"
+            "CALC_GCD_PAGE": "Наибольший общий делитель",
+            "ZKPP_OPTION": "ZKPP (Пароль)",
+            "SECONDSTAGE_INSTALLER_INTENT": "Завершить конфигурацию ОС",
+            "SETUP_FAILED": "Настройка не удалась. Попробуйте ещё раз, перезапустив систему.",
+            "WARNING_PRIVILEGES": "Будьте осторожны с этой функцией! Вы можете понизить уровень безопасности системы.",
+            "USER_EXT_PRIVILEGES": "Расширенный набор разрешений",
+            "LULL_SYSTEM": "Режим сна"
         },
         defaultLocale: "en",
         get: function(key, lang) {

@@ -15,11 +15,13 @@ function loadUi() {
         bottom: 0;
         position: absolute;
         padding: 4px;
+        box-sizing: border-box;
+        border-radius: 4px;
     }
 
     .clock {
         float: right;
-        margin-right: 8px;
+        margin-right: 4px;
     }
 
     .window {
@@ -38,6 +40,8 @@ function loadUi() {
         flex-direction: column;
         overflow: auto;
         backdrop-filter: blur(8px);
+        animation: fade-in 0.1s ease-in forwards;
+        border-radius: 4px;
     }
 
     .window.dark {
@@ -65,6 +69,11 @@ function loadUi() {
         border: none;
         flex: 1;
         margin: 0 0 0 2px;
+        border-radius: 4px;
+    }
+
+    .window .button:hover {
+        opacity: 75%;
     }
 
     .window .close-button {
@@ -119,15 +128,37 @@ function loadUi() {
         height: 100%;
         background: black;
         cursor: default;
+        animation: fade-in 0.1s ease-in forwards;
     }
 
     .session.secure {
         background: none;
         backdrop-filter: blur(8px) brightness(50%);
+        animation: fade 0.1s ease-out forwards;
     }
         
     .hidden {
         display: none;
+    }
+    
+    @keyframes fade-in {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @keyframes fade {
+        0% {
+            backdrop-filter: blur(0px) brightness(100%);
+        }
+
+        100% {
+            backdrop-filter: blur(8px) brightness(50%);
+        }
     }`;
     document.head.appendChild(uiStyle);
 
@@ -250,10 +281,13 @@ function loadUi() {
     session.muteAllSessions();
     session.activateSession(modules.session.systemSession);
     modules.startupWindow = modules.window(modules.session.systemSession);
+    modules.startupWindowProgress = document.createElement("progress");
     modules.startupWindow.title.innerText = "PCOS 3";
     modules.startupWindow.content.style.padding = "8px";
     modules.startupWindow.closeButton.classList.toggle("hidden", true);
     modules.startupWindow.content.innerText = "PCOS is starting...";
+    modules.startupWindow.content.appendChild(document.createElement("br"));
+    modules.startupWindow.content.appendChild(modules.startupWindowProgress);
 }
 
 loadUi();

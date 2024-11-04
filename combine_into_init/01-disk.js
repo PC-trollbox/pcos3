@@ -40,9 +40,7 @@ let idb = {
         let tx = this._db.transaction("disk", "readonly");
         let store = tx.objectStore("disk").get(part);
         return new Promise(function(resolve, reject) {
-            store.onsuccess = function(e) {
-                resolve(e.target.result);
-            };
+            store.onsuccess = (e) => resolve(e.target.result);
             store.onerror = reject;
             store.onabort = reject;
         })
@@ -67,6 +65,16 @@ let idb = {
         });
         that._transactionCompleteEvent[promiseID] = promise;
         return promise;
+    },
+    listParts: async function() {
+        if (!this._db) await this.opendb();
+        let tx = this._db.transaction("disk", "readonly");
+        let allKeys = tx.objectStore("disk").getAllKeys();
+        return new Promise(function(resolve, reject) {
+            allKeys.onsuccess = (e) => resolve(e.target.result);
+            allKeys.onerror = reject;
+            allKeys.onabort = reject;
+        });
     },
     write: (value) => idb.writePart("disk", value),
     read: () => idb.readPart("disk"),

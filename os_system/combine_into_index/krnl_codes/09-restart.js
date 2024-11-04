@@ -44,9 +44,21 @@ function restartLoad() {
             timeout(5000),
             allProcessesClosed()
         ]);
+        try {
+            modules.websocket._handles[(await modules.fs.read("ram/run/network.ws"))].ws.send(JSON.stringify({
+                finalProxyPacket: true
+            }));
+        } catch {}
         description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("ABRUPT_CLOSE_SIGNAL"));
         for (let taskId in tasks.tracker) tasks.sendSignal(taskId, 9, true);
         await allProcessesClosed();
+        try {
+            let networkWS = await modules.fs.read("ram/run/network.ws");
+            modules.websocket._handles[networkWS].ws.onclose = null;
+            modules.websocket._handles[networkWS].ws.close();
+            delete modules.websocket._handles[networkWS];
+            await modules.fs.rm("ram/run/network.ws");
+        } catch {}
         description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("UNMOUNTING_MOUNTS"));
         for (let mount in fs.mounts) await fs.unmount(mount, token);
         description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("RESTARTING"));

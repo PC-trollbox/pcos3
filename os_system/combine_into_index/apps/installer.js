@@ -8,11 +8,41 @@ let onClose = () => availableAPIs.terminate();
     document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
     if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
     await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
+    let privileges = await availableAPIs.getPrivileges();
+    let checklist = [ "GET_BUILD", "RUN_KLVL_CODE", "LLDISK_WRITE", "LLDISK_READ", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_REMOVE", "FS_LIST_PARTITIONS", "SYSTEM_SHUTDOWN", "FS_CHANGE_PERMISSION", "LLDISK_LIST_PARTITIONS", "FS_MOUNT", "CSP_OPERATIONS", "LLDISK_INIT_PARTITIONS" ];
+    if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
     onClose = async function() {
         mainInstallerContent.hidden = true;
         closeContent.hidden = false;
         await availableAPIs.closeability(false);
     }
+    const licenseText = `Copyright (c) 2024 PCsoft
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+---
+Used libraries:
+    xterm.js:
+        Copyright (c) 2017-2022, The xterm.js authors (https://github.com/xtermjs/xterm.js/graphs/contributors) (MIT License)
+        Copyright (c) 2014-2017, SourceLair, Private Company (www.sourcelair.com) (MIT License)
+        Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
+    tweetnacl.js:
+        Public domain, https://github.com/dchest/tweetnacl-js`;
     let mainInstallerContent = document.createElement("div");
     let closeContent = document.createElement("div");
     let header = document.createElement("b");
@@ -77,29 +107,7 @@ let onClose = () => availableAPIs.terminate();
         textareaLicense.style.width = "100%";
         textareaLicense.style.height = "100%";
         content.style.height = "100%";
-        textareaLicense.value = `Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
----
-Used libraries:
-    xterm.js:
-        Copyright (c) 2017-2022, The xterm.js authors (https://github.com/xtermjs/xterm.js/graphs/contributors) (MIT License)
-        Copyright (c) 2014-2017, SourceLair, Private Company (www.sourcelair.com) (MIT License)
-        Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)`;
+        textareaLicense.value = licenseText;
         content.appendChild(textareaLicense);
         button.innerText = await availableAPIs.lookupLocale("RIGHT_REVIEW_BTN");
         button.onclick = async function() {
@@ -191,7 +199,10 @@ Used libraries:
                     let pre_boot_module_list = Object.keys(pre_boot_modules);
                     pre_boot_module_list = pre_boot_module_list.sort((a, b) => a.localeCompare(b));
                     let pre_boot_module_script = "";
-                    for (let module of pre_boot_module_list) pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
+                    for (let module of pre_boot_module_list) {
+                        if (coreExports.bootMode == "logboot") pre_boot_module_script += "coreExports.tty_bios_api.println(" + JSON.stringify(module) + ");\\n";
+                        pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
+                    }
                     await new AsyncFunction(pre_boot_module_script)();
                 } catch (e) {
                     coreExports.tty_bios_api.println("Boot failed");
@@ -260,29 +271,7 @@ Used libraries:
         textareaLicense.style.width = "100%";
         textareaLicense.style.height = "100%";
         content.style.height = "100%";
-        textareaLicense.value = `Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
----
-Used libraries:
-    xterm.js:
-        Copyright (c) 2017-2022, The xterm.js authors (https://github.com/xtermjs/xterm.js/graphs/contributors) (MIT License)
-        Copyright (c) 2014-2017, SourceLair, Private Company (www.sourcelair.com) (MIT License)
-        Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)`;
+        textareaLicense.value = licenseText;
         content.appendChild(textareaLicense);
         button.innerText = await availableAPIs.lookupLocale("RIGHT_REVIEW_BTN");
         button.onclick = async function() {

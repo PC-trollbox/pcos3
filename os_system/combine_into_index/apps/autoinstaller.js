@@ -82,7 +82,10 @@ let onClose = () => availableAPIs.terminate();
                 let pre_boot_module_list = Object.keys(pre_boot_modules);
                 pre_boot_module_list = pre_boot_module_list.sort((a, b) => a.localeCompare(b));
                 let pre_boot_module_script = "";
-                for (let module of pre_boot_module_list) pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
+                for (let module of pre_boot_module_list) {
+                    if (coreExports.bootMode == "logboot") pre_boot_module_script += "coreExports.tty_bios_api.println(" + JSON.stringify(module) + ");\\n";
+                    pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
+                }
                 await new AsyncFunction(pre_boot_module_script)();
             } catch (e) {
                 coreExports.tty_bios_api.println("Boot failed");

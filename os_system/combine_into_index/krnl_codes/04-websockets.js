@@ -7,8 +7,8 @@ function loadWebsocketSupport() {
             websocketAPI._handles[handle] = {
                 ws: websocket,
                 acl: {
-                    owner: "root",
-                    group: "root",
+                    owner: handle.slice(0, 16),
+                    group: handle.slice(0, 16),
                     world: true
                 }
             };

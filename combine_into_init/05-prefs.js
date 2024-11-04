@@ -123,7 +123,7 @@ async function prefmgr() {
             prefs.write("never_boot_from_network", !prefs.read("never_boot_from_network"));
             tty_bios_api.println("Boot from network " + (prefs.read("never_boot_from_network") ? "disallowed" : "ALLOWED") + ".");
         } else if (choice == "7") {
-            tty_bios_api.println("Recognizable modes: normal, safe, disable-harden, readonly");
+            tty_bios_api.println("Recognizable modes: normal, safe, disable-harden, readonly, logboot");
             tty_bios_api.print("Boot mode [normal]: ");
             coreExports.bootMode = await tty_bios_api.inputLine(true, true) || "normal";
             tty_bios_api.println("Boot mode set to " + coreExports.bootMode + ".");

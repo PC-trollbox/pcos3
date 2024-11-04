@@ -17,7 +17,7 @@ function reeAPIs() {
     }
 
     modules.reeAPIInstance = async function(opts) {
-        let {ree, ses, token, taskId, limitations} = opts;
+        let {ree, ses, token, taskId, limitations, privateData} = opts;
         let processToken = token;
         let tokenInfo = await modules.tokens.info(token);
         let user = tokenInfo.user;
@@ -48,7 +48,7 @@ function reeAPIs() {
             for (let processPipe of processPipes) delete modules.ipc._ipc[processPipe];
             for (let websocket of websockets) modules.websocket.close(websocket);
             await modules.tokens.revoke(token);
-            for (let i in modules.csps) modules.csps[i].removeSameGroupKeys(null, taskId);
+            for (let i in modules.csps) if (modules.csps[i].hasOwnProperty("removeSameGroupKeys")) modules.csps[i].removeSameGroupKeys(null, taskId);
         });
         let apis = {
             private: {
@@ -319,7 +319,7 @@ function reeAPIs() {
                 setOwnSecurityChecks: async function(arg) {
                     let {token, checks} = arg;
                     if (!privileges.includes("SET_SECURITY_CHECKS")) throw new Error("UNAUTHORIZED_ACTION");
-                    let allowedTypes = [ "pbkdf2", "informative", "informative_deny", "timeout", "timeout_deny", "serverReport", "pc-totp", "totp", "workingHours" ];
+                    let allowedTypes = [ "pbkdf2", "informative", "informative_deny", "timeout", "timeout_deny", "serverReport", "pc-totp", "totp", "workingHours", "zkpp" ];
                     let sanitizedChecks = [];
                     checks.filter(a => allowedTypes.includes(a.type));
                     for (let checkIndex in checks) {
@@ -356,6 +356,9 @@ function reeAPIs() {
                                     seconds: check.end.seconds
                                 }
                             };
+                        } else if (check.type == "zkpp") {
+                            if (!check.publicKey) continue;
+                            check = { type: "zkpp", publicKey: check.publicKey };
                         }
                         sanitizedChecks.push(check);
                     }
@@ -366,6 +369,7 @@ function reeAPIs() {
                 getNewToken: async function(desiredUser) {
                     if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
                     if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
+                    if (modules.session.active != ses) throw new Error("TRY_AGAIN_LATER");
                     let releaseLock;
                     let lock = new Promise((resolve) => releaseLock = resolve);
                     modules.session.attrib(ses, "secureLock", lock);
@@ -441,12 +445,12 @@ function reeAPIs() {
                     };
                 },
                 startTask: async function(arg) {
-                    let {file, argPassed, token, runInBackground, silent} = arg;
+                    let {file, argPassed, token, runInBackground, silent, privateData} = arg;
                     if (!privileges.includes("START_TASK")) throw new Error("UNAUTHORIZED_ACTION");
                     if (runInBackground && !privileges.includes("START_BACKGROUND_TASK")) throw new Error("UNAUTHORIZED_ACTION");
                     if (!token) token = await modules.tokens.fork(processToken);
                     try {
-                        return await modules.tasks.exec(file, argPassed, modules.window(runInBackground ? modules.serviceSession : ses), token, silent);
+                        return await modules.tasks.exec(file, argPassed, modules.window(runInBackground ? modules.serviceSession : ses), token, silent, privateData);
                     } catch (e) {
                         if (e.name == "Error") throw e;
                         throw new Error("UNABLE_TO_START_TASK");
@@ -647,7 +651,8 @@ function reeAPIs() {
                     return modules.core.idb.removePart(arg.key);
                 },
                 lldaIDBList: async function() {
-                    if (!privileges.includes("LLDISK_IDB_LIST")) throw new Error("UNAUTHORIZED_ACTION");    
+                    if (!privileges.includes("LLDISK_IDB_LIST")) throw new Error("UNAUTHORIZED_ACTION"); 
+                    if (modules.core.idb.listParts) return modules.core.idb.listParts(); 
                     let idb_keys = modules.core.idb._db.transaction("disk").objectStore("disk").getAllKeys();
                     return new Promise(function(resolve) {
                         idb_keys.onsuccess = () => resolve(idb_keys.result);
@@ -760,8 +765,9 @@ function reeAPIs() {
                     return modules.tasks.waitTermination(arg);
                 },
                 consentGetToken: async function(params) {
-                    if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
                     if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
+                    if (modules.session.active != ses) throw new Error("TRY_AGAIN_LATER");
                     let { desiredUser, intent } = params;
                     if (!intent) throw new Error("INTENT_REQUIRED");
                     let releaseLock;
@@ -838,6 +844,12 @@ function reeAPIs() {
                     if (modules.session.active != ses && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
                     modules.session.muteAllSessions();
                     modules.session.activateSession(modules.session.systemSession);
+                },
+                getPrivateData: () => privateData,
+                lull: async function() {
+                    if (!privileges.includes("LULL_SYSTEM")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (modules.session.active != ses && !privileges.includes("LULL_SYSTEM_FORCE")) throw new Error("UNAUTHORIZED_ACTION");
+                    await modules.lull();
                 }
             }
         }

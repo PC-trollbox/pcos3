@@ -128,7 +128,8 @@ startTask({
     argPassed: String,
     token: String,
     runInBackground: Boolean,
-    silent: Boolean
+    silent: Boolean,
+    privateData: any
 }) -> String // START_TASK
 listTasks() -> String[] // LIST_TASKS
 taskInfo(String taskId) -> {
@@ -288,6 +289,8 @@ consentGetToken({
 networkPing(String address) // NETWORK_PING
 logOut(String user) // LOGOUT (may require also LOGOUT_OTHERS)
 lock(String user) // LOGOUT (may require also LOGOUT_OTHERS)
+getPrivateData() -> any
+lull() // LULL_SYSTEM (may require also LULL_SYSTEM_FORCE)
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()

@@ -115,7 +115,9 @@ async function isDirectory(path) {
 }
 addEventListener("signal", async function(e) {
     if (e.detail == 15) {
-        await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { success: false, reason: "closed" } });
+        try {
+            await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { success: false, reason: "closed" } });
+        } catch {}
         await window.availableAPIs.terminate();
     }
 }); null;

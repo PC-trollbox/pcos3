@@ -2,7 +2,7 @@
 // link: lrn:NETCONFIG_TITLE
 // signer: automaticSigner
 // fnName: networkInstaller
-// allow: IDENTIFY_SYSTEM, CSP_OPERATIONS, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_SERVER_URL, LIST_TASKS, GET_THEME, FS_BYPASS_PERMISSIONS
+// allow: IDENTIFY_SYSTEM, CSP_OPERATIONS, FS_READ, FS_WRITE, FS_REMOVE, FS_LIST_PARTITIONS, GET_LOCALE, GET_SERVER_URL, LIST_TASKS, GET_THEME, FS_BYPASS_PERMISSIONS
 // =====END MANIFEST=====
 (async function() {
     // @pcos-app-mode isolatable
@@ -26,8 +26,6 @@
     let descriptionNetworkURL = document.createElement("span");
     let paramNetworkURL = document.createElement("input");
     let ucBits = document.createElement("input");
-    let descriptionStartOnStartup = document.createElement("label");
-    let paramStartOnStartup = document.createElement("input");
     let saveBtn = document.createElement("button");
     let updatePredictBtn = document.createElement("button");
     let addressPrediction = document.createElement("span");
@@ -36,11 +34,6 @@
     originUrl.protocol = "ws" + (originUrl.protocol == "https:" ? "s" : "") + ":";
     descriptionNetworkURL.innerText = await availableAPIs.lookupLocale("NETCONFIG_URLF");
     paramNetworkURL.value = existingConfig.url || originUrl.origin;
-    descriptionStartOnStartup.innerText = await availableAPIs.lookupLocale("NETCONFIG_AUTO");
-    paramStartOnStartup.type = "checkbox";
-    paramStartOnStartup.checked = existingConfig.startOnStartup;
-    paramStartOnStartup.id = "startOnStartup";
-    descriptionStartOnStartup.setAttribute("for", "startOnStartup");
     ucBits.placeholder = await availableAPIs.lookupLocale("NETCONFIG_UC");
     ucBits.type = "number";
     ucBits.min = 0;
@@ -52,9 +45,6 @@
     form.appendChild(paramNetworkURL);
     form.appendChild(document.createElement("br"));
     form.appendChild(ucBits);
-    form.appendChild(document.createElement("br"));
-    form.appendChild(paramStartOnStartup);
-    form.appendChild(descriptionStartOnStartup);
     form.appendChild(document.createElement("br"));
     form.appendChild(saveBtn);
     form.appendChild(updatePredictBtn);
@@ -69,24 +59,14 @@
                 path: (await availableAPIs.getSystemMount()) + "/etc/network.json",
                 data: JSON.stringify({
                     url: paramNetworkURL.value,
-                    startOnStartup: paramStartOnStartup.checked,
                     ucBits: Math.round(Math.abs(Number(ucBits.value)))
                 }, null, "\t")
             });
             try {
-                await availableAPIs.fs_mkdir({
-                    path: (await availableAPIs.getSystemMount()) + "/apps/services"
-                })
+                await availableAPIs.fs_rm({
+                    path: (await availableAPIs.getSystemMount()) + "/apps/services/networkd.lnk"
+                });
             } catch {}
-            await availableAPIs.fs_write({
-                path: (await availableAPIs.getSystemMount()) + "/apps/services/networkd.lnk",
-                data: JSON.stringify({
-                    path: (await availableAPIs.getSystemMount()) + "/apps/networkd.js",
-                    args: [],
-                    name: "PCOS Network",
-                    disabled: !paramStartOnStartup.checked
-                }, null, "\t")
-            });
             addressPrediction.innerText = await availableAPIs.lookupLocale("NETCONFIG_SAVE_OK");
         } catch {
             addressPrediction.innerText = await availableAPIs.lookupLocale("NETCONFIG_SAVE_FAIL");

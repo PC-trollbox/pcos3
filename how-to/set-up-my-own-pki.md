@@ -6,7 +6,7 @@
 1. Log into the OS as administrator.
 2. Open Cryptographic Tools.
 3. Select Key generation.
-4. Choose algorithm "ECDSA".
+4. Choose algorithm "ECDSA".    
 5. Choose key usages "sign" and "verify".
 6. Generate the key.
 7. Save the private and public keys to somewhere. These will be your KSK (Key Signing Key) keys.
@@ -43,6 +43,6 @@ For example, if there was `let ksk = {"crv":"P-256","x":1,"y":3};` and your KSK 
 ```
 30. Save as `{systemMount}/etc/keys/{whatever_your_ask_name_will_be}`
 31. Load the automaticSigner key in one text editor, and its new signature in another.
-32. Replace the signature field with the new signature. For example, you have the original key `{"signature":"123","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}` and a new signature of `515`, the new key would be `{"signature":"525","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}`.
+32. Replace the signature field with the new signature. For example, you have the original key `{"signature":"123","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}` and a new signature of `515`, the new key would be `{"signature":"515","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}`.
 33. Save the automaticSigner key. (If you have any other keys, do the same thing with them)
 34. Restart the system.

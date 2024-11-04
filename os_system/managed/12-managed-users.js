@@ -43,6 +43,7 @@ async function setupUsers() {
                     type: currentPrompt.type,
                     message: currentPrompt.message,
                     wantsUserInput: currentPrompt.userInput,
+                    challenge: currentPrompt.challenge,
                     input: async function(input) {
                         if (used || destroyed) return that.getNextPrompt();
                         if (!used) used = true;
@@ -110,6 +111,7 @@ async function setupUsers() {
                 body: JSON.stringify({ user, sensitive, token })
             })).json();
         },
+        configured: _ => true,
         access: async function(user, token) {
             return handleAuthentication(user, token);
         }

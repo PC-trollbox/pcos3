@@ -8,4 +8,5 @@
  - `safe` - Safe mode. Should disable some automatically starting apps.
  - `disable-harden` - Disable security hardening. May disable the enforcement of the principle of least privilege and signature verification.
  - `readonly` - Disable saving data.
+ - `logboot` - Log boot modules.
 5. Select the boot medium you want to boot: booting from hard drive, from a network resource, from a custom network resource or exit to follow the regular boot flow.

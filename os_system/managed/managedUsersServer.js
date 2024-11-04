@@ -5,6 +5,7 @@ const http = require("http").createServer(app);
 const cors = require("cors");
 const util = require("util");
 const crypto = require("crypto").webcrypto;
+const nacl = require("tweetnacl");
 const bodyParser = express.json();
 let args = util.parseArgs({
     allowPositionals: true,
@@ -47,8 +48,9 @@ let tokens = {
         if (!this._tokens.hasOwnProperty(token)) throw new Error();
         this._tokens[token].user = user;
         this._tokens[token].groups = managedUsers[user].groups || [];
-        this._tokens[token].privileges = ["FS_READ", "FS_WRITE", "FS_REMOVE", "FS_CHANGE_PERMISSION", "FS_LIST_PARTITIONS", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "IPC_SEND_PIPE", "IPC_CHANGE_PERMISSION", "ELEVATE_PRIVILEGES", "GET_USER_INFO", "SET_SECURITY_CHECKS", "START_TASK", "LIST_TASKS", "SIGNAL_TASK", "FETCH_SEND", "CSP_OPERATIONS", "IDENTIFY_SYSTEM", "WEBSOCKETS_OPEN", "WEBSOCKETS_LISTEN", "WEBSOCKETS_SEND", "WEBSOCKET_SET_PERMISSIONS", "MANAGE_TOKENS", "WEBSOCKET_INFO", "GRAB_ATTENTION", "CLI_MODIFICATIONS", "GET_THEME", "GET_LOCALE", "GET_FILESYSTEMS", "GET_BUILD", "GET_SERVER_URL", "START_BACKGROUND_TASK", "GET_BOOT_MODE", "GET_SCREEN_INFO", "LOGOUT"];
-        if (user == fullAbledUser) this._tokens[token].privileges.push("FS_UNMOUNT", "SYSTEM_SHUTDOWN", "SWITCH_USERS_AUTOMATICALLY", "USER_INFO_OTHERS", "SET_USER_INFO", "FS_BYPASS_PERMISSIONS", "IPC_BYPASS_PERMISSIONS", "TASK_BYPASS_PERMISSIONS", "SENSITIVE_USER_INFO_OTHERS", "SYSTEM_STABILITY", "RUN_KLVL_CODE", "IDENTIFY_SYSTEM_SENSITIVE", "WEBSOCKET_BYPASS_PERMISSIONS", "LLDISK_READ", "LLDISK_WRITE", "LLDISK_LIST_PARTITIONS", "LLDISK_REMOVE", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "FS_MOUNT", "SET_DEFAULT_SYSTEM", "GET_SYSTEM_RESOURCES", "LLDISK_INIT_PARTITIONS", "LOGOUT_OTHERS");
+        this._tokens[token].privileges = ["FS_READ", "FS_WRITE", "FS_REMOVE", "FS_CHANGE_PERMISSION", "FS_LIST_PARTITIONS", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "IPC_SEND_PIPE", "IPC_CHANGE_PERMISSION", "ELEVATE_PRIVILEGES", "GET_USER_INFO", "SET_SECURITY_CHECKS", "START_TASK", "LIST_TASKS", "SIGNAL_TASK", "FETCH_SEND", "CSP_OPERATIONS", "IDENTIFY_SYSTEM", "WEBSOCKETS_OPEN", "WEBSOCKETS_LISTEN", "WEBSOCKETS_SEND", "WEBSOCKET_SET_PERMISSIONS", "MANAGE_TOKENS", "WEBSOCKET_INFO", "GRAB_ATTENTION", "CLI_MODIFICATIONS", "GET_THEME", "GET_LOCALE", "GET_FILESYSTEMS", "GET_BUILD", "GET_SERVER_URL", "START_BACKGROUND_TASK", "GET_BOOT_MODE", "GET_SCREEN_INFO", "LOGOUT", "LULL_SYSTEM"];
+        this._tokens[token].privileges.push(...(managedUsers[user].additionalPrivilegeSet || []));
+        if (user == fullAbledUser) this._tokens[token].privileges.push("FS_UNMOUNT", "SYSTEM_SHUTDOWN", "SWITCH_USERS_AUTOMATICALLY", "USER_INFO_OTHERS", "SET_USER_INFO", "FS_BYPASS_PERMISSIONS", "IPC_BYPASS_PERMISSIONS", "TASK_BYPASS_PERMISSIONS", "SENSITIVE_USER_INFO_OTHERS", "SYSTEM_STABILITY", "RUN_KLVL_CODE", "IDENTIFY_SYSTEM_SENSITIVE", "WEBSOCKET_BYPASS_PERMISSIONS", "LLDISK_READ", "LLDISK_WRITE", "LLDISK_LIST_PARTITIONS", "LLDISK_REMOVE", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "FS_MOUNT", "SET_DEFAULT_SYSTEM", "GET_SYSTEM_RESOURCES", "LLDISK_INIT_PARTITIONS", "LOGOUT_OTHERS", "LULL_SYSTEM_FORCE");
     },
     halfInitialize: function(token, user) {
         if (!this._tokens.hasOwnProperty(token)) throw new Error();
@@ -77,7 +79,7 @@ let tokens = {
         authui: {
             user: "authui",
             groups: [ "authui" ],
-            privileges: "IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES, FS_READ, FS_LIST_PARTITIONS".split(", ")
+            privileges: "IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES, FS_READ, FS_LIST_PARTITIONS, CSP_OPERATIONS".split(", ")
         }
     }
 };
@@ -106,6 +108,7 @@ async function handleAuthentication(user, prompts) {
                 type: currentPrompt.type,
                 message: currentPrompt.message,
                 userInput: currentPrompt.userInput,
+                challenge: currentPrompt.challenge,
                 input: async function(input) {
                     if (used || destroyed) return that.getNextPrompt();
                     if (!used) used = true;
@@ -281,6 +284,15 @@ app.post("/managedUsers/userAccess", bodyParser, async function(req, res) {
                     credentials[check].userInput = false;
                     credentials[check].verify = () => true;
                 }
+            }
+            if (credentials[check].type == "zkpp") {
+                let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+                let randomChallenge = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+                credentials[check].message = "Password";
+                credentials[check].type = "zkpp_password";
+                credentials[check].userInput = true;
+                credentials[check].challenge = randomChallenge;
+                credentials[check].verify = input => nacl.sign.detached.verify(hexToU8A(credentials[check].challenge), hexToU8A(input), hexToU8A(credentials[check].publicKey));
             }
         }
         if (credentials.length == 0) {

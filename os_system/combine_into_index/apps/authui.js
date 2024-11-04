@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES
+// allow: IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES, CSP_OPERATIONS
 // =====END MANIFEST=====
 
 let ipc = exec_args[0];
@@ -9,7 +9,7 @@ let ipc = exec_args[0];
     if (!ipc) return availableAPIs.terminate();
     let user = exec_args[1];
     await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("LOG_IN_INVITATION"));
-    let checklist = [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES" ];
+    let checklist = [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "CSP_OPERATIONS" ];
     let privileges = await availableAPIs.getPrivileges();
     if (!checklist.every(p => privileges.includes(p))) {
         if (privileges.includes("IPC_SEND_PIPE")) await availableAPIs.sendToPipe({ pipe: ipc, data: { success: false, cancelled: false } });
@@ -73,6 +73,7 @@ let ipc = exec_args[0];
             input.type = userLogonSession.type == "password" ? "password" : "text";
             input.disabled = !userLogonSession.wantsUserInput;
             submit.disabled = !userLogonSession.wantsUserInput;
+            if (userLogonSession.type == "zkpp_password") input.type = "password";
             if (userLogonSession.type == "promise") {
                 try {
                     input.disabled = true;
@@ -96,7 +97,55 @@ let ipc = exec_args[0];
                 try {
                     input.disabled = true;
                     submit.disabled = true;
-                    await availableAPIs.automatedLogonInput({ session: userLogonID, input: input.value });
+                    if (userLogonSession.type == "zkpp_password") {
+                        let passwordAsKey = await availableAPIs.cspOperation({
+                            cspProvider: "basic",
+                            operation: "importKey",
+                            cspArgument: {
+                                format: "raw",
+                                keyData: new TextEncoder().encode(input.value),
+                                algorithm: "PBKDF2",
+                                extractable: false,
+                                keyUsages: ["deriveBits"]
+                            }
+                        })
+                        let rngSeed = await availableAPIs.cspOperation({
+                            cspProvider: "basic",
+                            operation: "deriveBits",
+                            cspArgument: {
+                                algorithm: {
+                                    name: "PBKDF2",
+                                    salt: new Uint8Array(32),
+                                    iterations: 100000,
+                                    hash: "SHA-256"
+                                },
+                                baseKey: passwordAsKey,
+                                length: 256
+                            }
+                        });
+                        await availableAPIs.cspOperation({
+                            cspProvider: "basic",
+                            operation: "unloadKey",
+                            cspArgument: passwordAsKey
+                        });
+                        let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+                        let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+                        await availableAPIs.automatedLogonInput({ session: userLogonID, input: u8aToHex(await availableAPIs.cspOperation({
+                            cspProvider: "tweetnacl",
+                            operation: "sign",
+                            cspArgument: {
+                                secretKey: (await availableAPIs.cspOperation({
+                                    cspProvider: "tweetnacl",
+                                    operation: "deriveKey",
+                                    cspArgument: {
+                                        type: "sign",
+                                        seed: new Uint8Array(rngSeed)
+                                    }
+                                })).secretKey,
+                                message: hexToU8A(userLogonSession.challenge)
+                            }
+                        }))});
+                    } else await availableAPIs.automatedLogonInput({ session: userLogonID, input: input.value });
                     userLogonSession = await availableAPIs.automatedLogonGet(userLogonID);
                 } catch {}
                 return await updateProgress();
@@ -113,8 +162,10 @@ let ipc = exec_args[0];
     }
 })();
 addEventListener("signal", async function(e) {
-    if (e.detail == 15) {   
-        await availableAPIs.sendToPipe({ pipe: ipc, data: { success: false, cancelled: true } });
+    if (e.detail == 15) {
+        try {
+            await availableAPIs.sendToPipe({ pipe: ipc, data: { success: false, cancelled: true } });
+        } catch {}
         await window.availableAPIs.terminate();
     }
 }); null;

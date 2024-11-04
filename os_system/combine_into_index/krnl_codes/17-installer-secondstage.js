@@ -14,7 +14,6 @@ async function secondstage() {
     windowDiv.content.appendChild(krnlDiv);
     let appScripts = await modules.fs.read(modules.defaultSystem + "/boot/15-apps.js");
     let apps = appScripts.match(/async function (.+)Installer\(target, token\)/g).map(a => a.split(" ")[2].split("(")[0]);
-    await modules.users.init();
     progressBar.max = apps.length + 2;
     progressBar.value = 0;
     description.innerHTML = modules.locales.get("INSTALLING_PCOS").replace("%s", modules.locales.get("INSTALLING_WPS"));
@@ -31,9 +30,31 @@ async function secondstage() {
     installerCode += "fireAfterInstall(); })();";
     eval(installerCode);
     await firesAfterInstall;
-    progressBar.value = progressBar.max;
+    progressBar.removeAttribute("max");
+    progressBar.removeAttribute("value");
+    description.innerHTML = modules.locales.get("INSTALLING_PCOS").replace("%s", modules.locales.get("ACCESS_REQUEST_TITLE"));
+    let token;
+    let usersConfigured = await modules.users.configured();
+    if (usersConfigured) {
+        token = await new Promise(async function(resolve) {
+            let consentui = await modules.consentui(modules.session.systemSession, {
+                path: modules.defaultSystem + "/apps/secondstage.js",
+                args: [ "usersConfigured" ],
+                intent: modules.locales.get("SECONDSTAGE_INSTALLER_INTENT"),
+                name: modules.locales.get("SET_UP_PCOS")
+            });
+            consentui.hook(async function(msg) {
+                if (msg.success) return resolve(msg.token);
+                modules.restart(true);
+            });
+        });
+    } else {
+        await modules.users.init();
+        token = await modules.tokens.generate();
+        await modules.tokens.userInitialize(token, "root");
+    }
     krnlDiv.remove();
-    let token = await modules.tokens.generate();
-    await modules.tokens.userInitialize(token, "root");
-    await modules.tasks.exec(modules.defaultSystem + "/apps/secondstage.js", [], windowDiv, token, false);
+    let taskId = await modules.tasks.exec(modules.defaultSystem + "/apps/secondstage.js", [ usersConfigured ? "usersConfigured" : "" ], windowDiv, token, false);
+    await modules.tasks.waitTermination(taskId);
+    requireLogon();
 }

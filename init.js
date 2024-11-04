@@ -184,9 +184,7 @@ function reed() {
         let tx = this._db.transaction("disk", "readonly");
         let store = tx.objectStore("disk").get(part);
         return new Promise(function(resolve, reject) {
-            store.onsuccess = function(e) {
-                resolve(e.target.result);
-            };
+            store.onsuccess = (e) => resolve(e.target.result);
             store.onerror = reject;
             store.onabort = reject;
         })
@@ -211,6 +209,16 @@ function reed() {
         });
         that._transactionCompleteEvent[promiseID] = promise;
         return promise;
+    },
+    listParts: async function() {
+        if (!this._db) await this.opendb();
+        let tx = this._db.transaction("disk", "readonly");
+        let allKeys = tx.objectStore("disk").getAllKeys();
+        return new Promise(function(resolve, reject) {
+            allKeys.onsuccess = (e) => resolve(e.target.result);
+            allKeys.onerror = reject;
+            allKeys.onabort = reject;
+        });
     },
     write: (value) => idb.writePart("disk", value),
     read: () => idb.readPart("disk"),
@@ -576,7 +584,7 @@ async function prefmgr() {
             prefs.write("never_boot_from_network", !prefs.read("never_boot_from_network"));
             tty_bios_api.println("Boot from network " + (prefs.read("never_boot_from_network") ? "disallowed" : "ALLOWED") + ".");
         } else if (choice == "7") {
-            tty_bios_api.println("Recognizable modes: normal, safe, disable-harden, readonly");
+            tty_bios_api.println("Recognizable modes: normal, safe, disable-harden, readonly, logboot");
             tty_bios_api.print("Boot mode [normal]: ");
             coreExports.bootMode = await tty_bios_api.inputLine(true, true) || "normal";
             tty_bios_api.println("Boot mode set to " + coreExports.bootMode + ".");
