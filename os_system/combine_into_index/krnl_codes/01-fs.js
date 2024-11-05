@@ -149,15 +149,7 @@ function loadFs() {
                 if (typeof files[basename] === "object") throw new Error("IS_A_DIR");
                 let id = files[basename] || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 await modules.core.idb.writePart(partitionId + "-" + id, value);
-                if (!files.hasOwnProperty(basename)) {
-                    let HACKID = Math.floor(Math.random() * 1000000);
-                    globalThis["HACK" + HACKID] = this.backend;
-                    let HACK = "";
-                    for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                    eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = " + JSON.stringify(id) + ";");
-                    this.backend = globalThis["HACK" + HACKID];
-                    delete globalThis["HACK" + HACKID];
-                }
+                if (!files.hasOwnProperty(basename)) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
             },
             rm: async function(key) {
                 key = String(key);
@@ -171,14 +163,7 @@ function loadFs() {
                 }
                 if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
                 if (typeof files === "string") await modules.core.idb.removePart(partitionId + "-" + files);
-                let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = this.backend;
-                let HACK = "";
-                for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + ";");
-                eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].permissions[" + JSON.stringify(key) + "];");
-                this.backend = globalThis["HACK" + HACKID];
-                delete globalThis["HACK" + HACKID];
+                this.backend = this._recursive_op(this.backend, "files/" + key, { type: "delete" });
             },
             ls: async function(directory) {
                 directory = String(directory);
@@ -204,13 +189,7 @@ function loadFs() {
                     if (!files) throw new Error("NO_SUCH_DIR");
                 }
                 if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
-                let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = this.backend;
-                let HACK = "";
-                for (let a of directory.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = {};");
-                this.backend = globalThis["HACK" + HACKID];
-                delete globalThis["HACK" + HACKID];
+                this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} });
             },
             permissions: async function(file) {
                 file = String(file);
@@ -298,6 +277,13 @@ function loadFs() {
                 return false;
             },
             unmount: () => true,
+            _recursive_op: function(obj, path, action, stage = 0) {
+                if (path.split("/").length == (stage + 1)) {
+                    if (action.type == "delete") delete obj[path.split("/").slice(-1)[0]];
+                    if (action.type == "write") obj[path.split("/").slice(-1)[0]] = action.value;
+                } else obj[path.split("/")[stage]] = this._recursive_op(obj[path.split("/")[stage]], path, action, stage + 1);
+                return obj;
+            },
             directory_supported: true,
             read_only: !!options.read_only,
             filesystem: "PCFS",
@@ -417,15 +403,7 @@ function loadFs() {
                 newPart.set(newCT, newIV.length);
                 newPart = newPart.reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 await modules.core.idb.writePart(partitionId + "-" + id, newPart);
-                if (!files.hasOwnProperty(basename)) {
-                    let HACKID = Math.floor(Math.random() * 1000000);
-                    globalThis["HACK" + HACKID] = await this.getBackend();
-                    let HACK = "";
-                    for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                    eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = " + JSON.stringify(id) + ";");
-                    await this.setBackend(globalThis["HACK" + HACKID]);
-                    delete globalThis["HACK" + HACKID];
-                }
+                if (!files.hasOwnProperty(basename)) await this.setBackend(this._recursive_op(await this.getBackend(), key, { type: "write", value: id }));
             },
             rm: async function(key) {
                 key = String(key);
@@ -439,14 +417,7 @@ function loadFs() {
                 }
                 if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
                 if (typeof files === "string") await modules.core.idb.removePart(partitionId + "-" + files);
-                let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = await this.getBackend();
-                let HACK = "";
-                for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + ";");
-                eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].permissions[" + JSON.stringify(key) + "];");
-                await this.setBackend(globalThis["HACK" + HACKID]);
-                delete globalThis["HACK" + HACKID];
+                await this.setBackend(this._recursive_op(await this.getBackend(), key, { type: "delete" }));
             },
             ls: async function(directory) {
                 directory = String(directory);
@@ -472,13 +443,7 @@ function loadFs() {
                     if (!files) throw new Error("NO_SUCH_DIR");
                 }
                 if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
-                let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = (await this.getBackend());
-                let HACK = "";
-                for (let a of directory.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = {};");
-                await this.setBackend(globalThis["HACK" + HACKID]);
-                delete globalThis["HACK" + HACKID];
+                await this.setBackend(this._recursive_op(await this.getBackend(), directory, { type: "write", value: {} }));
             },
             permissions: async function(file) {
                 file = String(file);
@@ -566,6 +531,13 @@ function loadFs() {
                 await modules.core.disk.sync();
             },
             unmount: () => true,
+            _recursive_op: function(obj, path, action, stage = 0) {
+                if (path.split("/").length == (stage + 1)) {
+                    if (action.type == "delete") delete obj[path.split("/").slice(-1)[0]];
+                    if (action.type == "write") obj[path.split("/").slice(-1)[0]] = action.value;
+                } else obj[path.split("/")[stage]] = this._recursive_op(obj[path.split("/")[stage]], path, action, stage + 1);
+                return obj;
+            },
             directory_supported: true,
             filesystem: "PCFS-AES",
             read_only: !!options.read_only,
@@ -629,15 +601,7 @@ function loadFs() {
                 if (typeof files[basename] === "object") throw new Error("IS_A_DIR");
                 let id = files[basename] || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
                 this.ramFiles.set(id, value);
-                if (!files.hasOwnProperty(basename)) {
-                    let HACKID = Math.floor(Math.random() * 1000000);
-                    globalThis["HACK" + HACKID] = this.backend;
-                    let HACK = "";
-                    for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                    eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = " + JSON.stringify(id) + ";");
-                    this.backend = globalThis["HACK" + HACKID];
-                    delete globalThis["HACK" + HACKID];
-                }
+                if (!files.hasOwnProperty(basename)) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
             },
             rm: async function(key) {
                 key = String(key);
@@ -651,14 +615,7 @@ function loadFs() {
                 }
                 if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
                 if (typeof files === "string") this.ramFiles.delete(files);
-                let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = this.backend;
-                let HACK = "";
-                for (let a of key.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + ";");
-                eval("delete globalThis[" + JSON.stringify("HACK" + HACKID) + "].permissions[" + JSON.stringify(key) + "];");
-                this.backend = globalThis["HACK" + HACKID];
-                delete globalThis["HACK" + HACKID];
+                this.backend = this._recursive_op(this.backend, "files/" + key, { type: "remove" }, 0);
             },
             ls: async function(directory) {
                 directory = String(directory);
@@ -684,13 +641,7 @@ function loadFs() {
                     if (!files) throw new Error("NO_SUCH_DIR");
                 }
                 if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
-                let HACKID = Math.floor(Math.random() * 1000000);
-                globalThis["HACK" + HACKID] = this.backend;
-                let HACK = "";
-                for (let a of directory.split("/")) HACK = HACK + "[" + JSON.stringify(a) + "]";
-                eval("globalThis[" + JSON.stringify("HACK" + HACKID) + "].files" + HACK + " = {};");
-                this.backend = globalThis["HACK" + HACKID];
-                delete globalThis["HACK" + HACKID];
+                this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} }, 0);
             },
             permissions: async function(file) {
                 file = String(file);
@@ -773,6 +724,13 @@ function loadFs() {
                 if (!files.hasOwnProperty(basename)) throw new Error("NO_SUCH_FILE_DIR");
                 if (typeof files[basename] === "object") return true;
                 return false;
+            },
+            _recursive_op: function(obj, path, action, stage = 0) {
+                if (path.split("/").length == (stage + 1)) {
+                    if (action.type == "delete") delete obj[path.split("/").slice(-1)[0]];
+                    if (action.type == "write") obj[path.split("/").slice(-1)[0]] = action.value;
+                } else obj[path.split("/")[stage]] = this._recursive_op(obj[path.split("/")[stage]], path, action, stage + 1);
+                return obj;
             },
             sync: () => true,
             unmount: () => true,

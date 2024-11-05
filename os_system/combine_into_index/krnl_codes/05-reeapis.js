@@ -818,9 +818,15 @@ function reeAPIs() {
                         let resend = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
                         websocket.addEventListener("message", function self(e) {
                             try {
-                                let data = JSON.parse(e.data);
-                                if (data.packetID == packetId && data.event == "AddressUnreachable") reject(new Error("ADDRESS_UNREACHABLE"));
-                                if (data.from == address && data.data.type == "pong" && data.data.resend == resend) resolve("success");
+                                let packet = JSON.parse(e.data);
+                                if (packet.packetID == packetId && packet.event == "AddressUnreachable") {
+                                    reject(new Error("ADDRESS_UNREACHABLE"));
+                                    removeEventListener("message", self);
+                                }
+                                if (packet.from == address && packet.data.type == "pong" && packet.data.resend == resend) {
+                                    resolve("success");
+                                    removeEventListener("message", self);
+                                }
                             } catch {}
                         });
                         websocket.send(JSON.stringify({
@@ -850,6 +856,56 @@ function reeAPIs() {
                     if (!privileges.includes("LULL_SYSTEM")) throw new Error("UNAUTHORIZED_ACTION");
                     if (modules.session.active != ses && !privileges.includes("LULL_SYSTEM_FORCE")) throw new Error("UNAUTHORIZED_ACTION");
                     await modules.lull();
+                },
+                connlessListen: async function(gate) {
+                    if (!privileges.includes("CONNLESS_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
+                    if (!gate.startsWith("user_") && !privileges.includes("CONNLESS_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
+                    let websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+                    if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+                    let websocket = modules.websocket._handles[websocketHandle].ws;
+                    if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+                    return new Promise(async function(resolve) {
+                        websocket.addEventListener("message", function self(e) {
+                            try {
+                                let packet = JSON.parse(e.data);
+                                if (packet.data.type == "connectionless" && packet.data.gate == gate) {
+                                    removeEventListener("message", self);
+                                    resolve(packet.data.content);
+                                }
+                            } catch {}
+                        });
+                    });
+                },
+                connlessSend: async function(sendOpts) {
+                    if (!privileges.includes("CONNLESS_SEND")) throw new Error("UNAUTHORIZED_ACTION");
+                    let websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+                    if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+                    let websocket = modules.websocket._handles[websocketHandle].ws;
+                    if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+                    let { gate, address, content } = sendOpts;
+                    let packetId = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
+                    websocket.send(JSON.stringify({
+                        receiver: address,
+                        data: {
+                            type: "connectionless",
+                            gate: gate,
+                            content: content
+                        },
+                        id: packetId
+                    }));
+                    return new Promise(async function(resolve, reject) {
+                        websocket.addEventListener("message", function self(e) {
+                            try {
+                                let packet = JSON.parse(e.data);
+                                if (packet.from) return;
+                                if (packet.packetID == packetId) {
+                                    removeEventListener("message", self);
+                                    if (packet.event == "PacketPong") return resolve("success");
+                                    reject(new Error("ADDRESS_UNREACHABLE"));
+                                }
+                            } catch {}
+                        });
+                    });
                 }
             }
         }

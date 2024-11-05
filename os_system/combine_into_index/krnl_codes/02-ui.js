@@ -10,7 +10,7 @@ function loadUi() {
 
     .taskbar {
         width: 100%;
-        background: rgba(128, 128, 128, 0.85);
+        background: ${modules.core.bootMode == "safe" ? "rgb(128, 128, 128)" : "rgba(128, 128, 128, 0.85)"};
         left: 0;
         bottom: 0;
         position: absolute;
@@ -29,9 +29,9 @@ function loadUi() {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background-color: rgba(240, 240, 240, 0.5);
+        background-color: ${modules.core.bootMode == "safe" ? "rgb(240, 240, 240)" : "rgba(240, 240, 240, 0.5)"};
         border: 1px solid #ccc;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        box-shadow: ${modules.core.bootMode == "safe" ? "none" : "0 0 5px rgba(0, 0, 0, 0.3)"};
         z-index: 1;
         resize: both;
         width: 320px;
@@ -39,20 +39,20 @@ function loadUi() {
         display: flex;
         flex-direction: column;
         overflow: auto;
-        backdrop-filter: blur(8px);
-        animation: fade-in 0.1s ease-in forwards;
+        backdrop-filter: ${modules.core.bootMode == "safe" ? "none" : "blur(8px)"};
+        animation: ${modules.core.bootMode == "safe" ? "none" : "fade-in 0.1s ease-in forwards"};
         border-radius: 4px;
     }
 
     .window.dark {
-        background-color: rgba(55, 55, 55, 0.5);
+        background-color: ${modules.core.bootMode == "safe" ? "rgb(55, 55, 55)" : "rgba(55, 55, 55, 0.5)"};
         color: white;
         border: 1px solid #1b1b1b;
     }
 
     .window .title-bar {
         padding: 6px;
-        background-color: rgba(204, 204, 204, 0.5);
+        background-color: ${modules.core.bootMode == "safe" ? "rgb(204, 204, 204)" : "rgba(204, 204, 204, 0.5)"};
         cursor: move;
         display: flex;
         flex: 1;
@@ -60,7 +60,7 @@ function loadUi() {
     }
 
     .window.dark .title-bar {
-        background-color: rgba(27, 27, 27, 0.5);
+        background-color: ${modules.core.bootMode == "safe" ? "rgb(27, 27, 27)" : "rgba(27, 27, 27, 0.5)"};
     }
 
     .window .button {
@@ -128,15 +128,15 @@ function loadUi() {
         height: 100%;
         background: black;
         cursor: default;
-        animation: fade-in 0.1s ease-in forwards;
+        animation: ${modules.core.bootMode == "safe" ? "none" : "fade-in 0.1s ease-in forwards"};
     }
 
     .session.secure {
-        background: none;
-        backdrop-filter: blur(8px) brightness(50%);
-        animation: fade 0.1s ease-out forwards;
+        background: none${modules.core.bootMode == "safe" ? " !important" : ""};
+        backdrop-filter: ${modules.core.bootMode == "safe" ? "none" : "blur(8px) brightness(50%)"};
+        animation: ${modules.core.bootMode == "safe" ? "none" : "fade 0.1s ease-out forwards"};
     }
-        
+
     .hidden {
         display: none;
     }

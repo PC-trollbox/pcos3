@@ -16,7 +16,7 @@ async function requireLogon() {
     let insertedLockMessage = false;
     while (!modules.shuttingDown) {
         let useDefaultUser = await modules.fs.permissions(modules.defaultSystem + "/etc/security/automaticLogon");
-        useDefaultUser = !useDefaultUser.world.includes("w") && useDefaultUser.owner == "root" && useDefaultUser.group == "root";
+        useDefaultUser = !useDefaultUser.world.includes("w");
         let defaultUser;
         try {
             if (useDefaultUser) defaultUser = await modules.fs.read(modules.defaultSystem + "/etc/security/automaticLogon");

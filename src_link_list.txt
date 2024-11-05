@@ -1,4 +1,4 @@
-# up-to-date for build 1000
+# up-to-date for build 1014
 ./how-to/create-system-id.md
 ./how-to/change-my-password-cliroute.md
 ./how-to/reset-root-password.md
@@ -138,6 +138,7 @@
 ./os_system/history/build525.js
 ./os_system/history/build619.js
 ./os_system/history/build847.js
+./os_system/history/build1007.js
 ./os_system/history/build487.js
 ./os_system/history/build418.js
 ./os_system/history/build953.js
@@ -192,6 +193,7 @@
 ./os_system/history/build726.js
 ./os_system/history/build532.js
 ./os_system/history/build791.js
+./os_system/history/build1013.js
 ./os_system/history/build519.js
 ./os_system/history/build518.js
 ./os_system/history/build662.js
@@ -209,6 +211,7 @@
 ./os_system/history/build636.js
 ./os_system/history/build926.js
 ./os_system/history/build801.js
+./os_system/history/build1011.js
 ./os_system/history/build955.js
 ./os_system/history/build786live.js
 ./os_system/history/build581.js
@@ -264,6 +267,7 @@
 ./os_system/history/build594.js
 ./os_system/history/build586.js
 ./os_system/history/build976.js
+./os_system/history/build1002.js
 ./os_system/history/build730.js
 ./os_system/history/build905.js
 ./os_system/history/build630.js
@@ -290,6 +294,7 @@
 ./os_system/history/build773.js
 ./os_system/history/build601.js
 ./os_system/history/build821.js
+./os_system/history/build1014.js
 ./os_system/history/build582.js
 ./os_system/history/build656.js
 ./os_system/history/build680.js
@@ -326,10 +331,12 @@
 ./os_system/history/build843.js
 ./os_system/history/build692.js
 ./os_system/history/build627.js
+./os_system/history/build1009.js
 ./os_system/history/build714.js
 ./os_system/history/build742.js
 ./os_system/history/build526.js
 ./os_system/history/build542.js
+./os_system/history/build1010.js
 ./os_system/history/build591.js
 ./os_system/history/build751.js
 ./os_system/history/build558.js
@@ -348,6 +355,7 @@
 ./os_system/history/build653.js
 ./os_system/history/build949.js
 ./os_system/history/build894.js
+./os_system/history/build1004.js
 ./os_system/history/build621.js
 ./os_system/history/build654.js
 ./os_system/history/build881.js
@@ -396,6 +404,7 @@
 ./os_system/history/build675.js
 ./os_system/history/build702.js
 ./os_system/history/build576.js
+./os_system/history/build1001.js
 ./os_system/history/build544.js
 ./os_system/history/build707.js
 ./os_system/history/build884.js
@@ -516,10 +525,12 @@
 ./os_system/history/build600.js
 ./os_system/history/build659.js
 ./os_system/history/build419.js
+./os_system/history/build1005.js
 ./os_system/history/build904.js
 ./os_system/history/build868.js
 ./os_system/history/build844.js
 ./os_system/history/build765.js
+./os_system/history/build1008.js
 ./os_system/history/build811.js
 ./os_system/history/build618.js
 ./os_system/history/build572.js
@@ -544,6 +555,7 @@
 ./os_system/history/build579.js
 ./os_system/history/build611.js
 ./os_system/history/build710.js
+./os_system/history/build1012.js
 ./os_system/history/build734.js
 ./os_system/history/build831.js
 ./os_system/history/build877.js
@@ -614,6 +626,7 @@
 ./os_system/history/build706.js
 ./os_system/history/build612.js
 ./os_system/history/build645.js
+./os_system/history/build1006.js
 ./os_system/history/build805.js
 ./os_system/history/build642.js
 ./os_system/history/build523.js
@@ -621,6 +634,7 @@
 ./os_system/history/build876.js
 ./os_system/history/build972.js
 ./os_system/history/build863.js
+./os_system/history/build1003.js
 ./os_system/history/build729.js
 ./os_system/history/build769.js
 ./os_system/history/build979.js
