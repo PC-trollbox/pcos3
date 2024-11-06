@@ -428,9 +428,9 @@ function reeAPIs() {
                     return true;
                 },
                 removeTokenPrivileges: async function(arg) {
-                    let {token, privileges} = arg;
+                    let {token} = arg;
                     if (!privileges.includes("MANAGE_TOKENS")) throw new Error("UNAUTHORIZED_ACTION");
-                    await modules.tokens.removePrivileges(token, privileges);
+                    await modules.tokens.removePrivileges(token, arg.privileges);
                     return true;
                 },
                 estimateStorage: async function() {
