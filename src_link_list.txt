@@ -1,4 +1,4 @@
-# up-to-date for build 1015
+# up-to-date for build 1019
 ./how-to/create-system-id.md
 ./how-to/change-my-password-cliroute.md
 ./how-to/reset-root-password.md
@@ -283,6 +283,7 @@
 ./os_system/history/build610.js
 ./os_system/history/build615.js
 ./os_system/history/build839.js
+./os_system/history/build1018.js
 ./os_system/history/build779.js
 ./os_system/history/build980.js
 ./os_system/history/build421.js
@@ -324,6 +325,7 @@
 ./os_system/history/build637.js
 ./os_system/history/build941.js
 ./os_system/history/build530.js
+./os_system/history/build1019.js
 ./os_system/history/build379.js
 ./os_system/history/build880.js
 ./os_system/history/build732.js
@@ -335,6 +337,7 @@
 ./os_system/history/build714.js
 ./os_system/history/build742.js
 ./os_system/history/build526.js
+./os_system/history/build1017.js
 ./os_system/history/build542.js
 ./os_system/history/build1010.js
 ./os_system/history/build591.js
@@ -406,6 +409,7 @@
 ./os_system/history/build576.js
 ./os_system/history/build1001.js
 ./os_system/history/build544.js
+./os_system/history/build1016.js
 ./os_system/history/build707.js
 ./os_system/history/build884.js
 ./os_system/history/build562.js

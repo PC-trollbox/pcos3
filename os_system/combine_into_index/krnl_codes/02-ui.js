@@ -209,8 +209,8 @@ function loadUi() {
         titleBar.ontouchstart = dragMouseDown;
 
         function dragMouseDown(e) {
-            e.preventDefault();
-            if (e.type == "touchmove") e = e.touches[0];
+            if (e.type != "touchstart") e.preventDefault();
+            if (e.type == "touchstart") e = e.touches[0];
             pos3 = e.clientX;
             pos4 = e.clientY;
 
