@@ -644,11 +644,11 @@ function reeAPIs() {
                 },
                 lldaIDBWrite: async function(arg) {
                     if (!privileges.includes("LLDISK_IDB_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
-                    return modules.core.idb.writePart(arg.key, arg.value);
+                    await modules.core.idb.writePart(arg.key, arg.value);
                 },
                 lldaIDBRemove: async function(arg) {
                     if (!privileges.includes("LLDISK_IDB_REMOVE")) throw new Error("UNAUTHORIZED_ACTION");
-                    return modules.core.idb.removePart(arg.key);
+                    await modules.core.idb.removePart(arg.key);
                 },
                 lldaIDBList: async function() {
                     if (!privileges.includes("LLDISK_IDB_LIST")) throw new Error("UNAUTHORIZED_ACTION"); 
@@ -660,7 +660,7 @@ function reeAPIs() {
                 },
                 lldaIDBSync: async function() {
                     if (!privileges.includes("LLDISK_IDB_SYNC")) throw new Error("UNAUTHORIZED_ACTION");
-                    return modules.core.idb.sync();
+                    await modules.core.idb.sync();
                 },
                 fs_mount: async function(arg) {
                     if (!privileges.includes("FS_MOUNT")) throw new Error("UNAUTHORIZED_ACTION");

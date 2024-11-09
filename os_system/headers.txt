@@ -301,12 +301,15 @@ attachCLI()
 toMyCLI(String data)
 fromMyCLI()
 clearMyCLI()
-cliSize()
+cliSize() -> [ Number columns, Number rows ]
 detachCLI()
 windowVisibility(Boolean visible)
 windowTitleSet(String title)
 windowResize([ Number width, Number height ]) // GRAB_ATTENTION
-windowSize()
+windowSize() -> {
+    width: Number,
+    height: Number
+}
 windowRelocate([ Number x, Number y ]) // GRAB_ATTENTION
 windowFullscreen(Boolean fullscreen) // GRAB_ATTENTION
 closeability(Boolean closeable)
