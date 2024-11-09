@@ -689,6 +689,7 @@ async function prefmgr() {
             }
         } else if (choice == "18") {
             localStorage.removeItem("runtime_prefs");
+            prefs.be_cache = {};
             tty_bios_api.println("Defaults loaded.");
         } else if (choice == "19") {
             tty_bios_api.println("Please wait.");

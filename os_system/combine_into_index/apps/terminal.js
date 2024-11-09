@@ -254,6 +254,7 @@ let user_spawn_token = null;
                             await availableAPIs.waitTermination(spawnedTask);
                             otherProcessAttached = false;
                         } catch (e) {
+                            otherProcessAttached = false;
                             await availableAPIs.toMyCLI(runFile + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
                         }
                     } else await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("REAL_TERMINAL_LOGON_REQUIRED")).replace("%s", default_user) + "\r\n");

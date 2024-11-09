@@ -159,6 +159,7 @@
             });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REMOVING_2STAGE"));
             await availableAPIs.fs_rm({ path: defaultSystem + "/boot/17-installer-secondstage.js" });
+            await availableAPIs.fs_rm({ path: defaultSystem + "/apps/secondstage.js" });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REMOVING_SETUP_STATE"));
             await availableAPIs.fs_rm({ path: defaultSystem + "/boot/01-setup-state.js" });
             await availableAPIs.runKlvlCode("delete modules.settingUp;");
@@ -166,6 +167,8 @@
             await availableAPIs.fs_rm({ path: defaultSystem + "/boot/15-apps.js" });
             await availableAPIs.fs_rm({ path: defaultSystem + "/boot/16-wallpaper.js" });
             await availableAPIs.fs_rm({ path: defaultSystem + "/boot/16-sfxpack.js" });
+            await availableAPIs.fs_rm({ path: defaultSystem + "/apps/autoinstaller.js" });
+            await availableAPIs.fs_rm({ path: defaultSystem + "/apps/installer.js" });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_LOGON"));
             await availableAPIs.fs_write({
                 path: defaultSystem + "/boot/14-logon-requirement-enforce.js",

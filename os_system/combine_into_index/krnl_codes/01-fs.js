@@ -90,8 +90,8 @@ function loadFs() {
         isDirectory: async function(path, sessionToken) {
             let mount = path.split("/")[0];
             if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
-            if (!this.mounts[mount].directory_supported) throw new Error("NO_DIRECTORY_SUPPORT");
             if (!path.split("/").slice(1).join("/")) return true;
+            if (!this.mounts[mount].directory_supported) return false;
             return await this.mounts[mount].isDirectory(path.split("/").slice(1).join("/"), sessionToken);
         },
         mountInfo: async function(mount) {
@@ -759,6 +759,32 @@ function loadFs() {
             ramFiles: new Map()
         };
     }
+    
+    function preferenceMount(options) {
+        return {
+            read: a => JSON.stringify(modules.core.prefs.read(a), null, "\t"),
+            write: (a, b) => modules.core.prefs.write(a, JSON.parse(b)),
+            rm: a => modules.core.prefs.rm(a),
+            ls: a => modules.core.prefs.ls(a),
+            permissions: function() {
+                let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+                return {
+                    owner: randomNames,
+                    group: randomNames,
+                    world: "",
+                };
+            },
+            chown: _ => !1,
+            chgrp: _ => !1,
+            chmod: _ => !1,
+            sync: () => true,
+            unmount: () => true,
+            directory_supported: false,
+            read_only: !!options.read_only,
+            filesystem: "preffs",
+            permissions_supported: true
+        };
+    }
 
     async function SFSPMount(options) {
         let session, serverData;
@@ -1053,6 +1079,7 @@ function loadFs() {
         PCFSiDBMount,
         PCFSiDBAESCryptMount,
         ramMount,
+        preferenceMount,
         SFSPMount,
         IPCMount
     };
