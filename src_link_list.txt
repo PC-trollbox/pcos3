@@ -1,4 +1,4 @@
-# up-to-date for build 1019
+# up-to-date for build 1026
 ./how-to/create-system-id.md
 ./how-to/change-my-password-cliroute.md
 ./how-to/reset-root-password.md
@@ -195,6 +195,7 @@
 ./os_system/history/build791.js
 ./os_system/history/build1013.js
 ./os_system/history/build519.js
+./os_system/history/build1023.js
 ./os_system/history/build518.js
 ./os_system/history/build662.js
 ./os_system/history/build541.js
@@ -228,6 +229,7 @@
 ./os_system/history/build772.js
 ./os_system/history/build845.js
 ./os_system/history/build623.js
+./os_system/history/build1022.js
 ./os_system/history/build764.js
 ./os_system/history/build517.js
 ./os_system/history/build669.js
@@ -359,6 +361,7 @@
 ./os_system/history/build949.js
 ./os_system/history/build894.js
 ./os_system/history/build1004.js
+./os_system/history/build1025.js
 ./os_system/history/build621.js
 ./os_system/history/build654.js
 ./os_system/history/build881.js
@@ -422,6 +425,7 @@
 ./os_system/history/build776.js
 ./os_system/history/build500.js
 ./os_system/history/build666.js
+./os_system/history/build1024.js
 ./os_system/history/build828.js
 ./os_system/history/build922.js
 ./os_system/history/build917.js
@@ -520,6 +524,7 @@
 ./os_system/history/build793.js
 ./os_system/history/build739.js
 ./os_system/history/build835.js
+./os_system/history/build1021.js
 ./os_system/history/build836.js
 ./os_system/history/build824.js
 ./os_system/history/build866live.js
@@ -527,6 +532,7 @@
 ./os_system/history/build590.js
 ./os_system/history/build920.js
 ./os_system/history/build600.js
+./os_system/history/build1020.js
 ./os_system/history/build659.js
 ./os_system/history/build419.js
 ./os_system/history/build1005.js
@@ -626,6 +632,7 @@
 ./os_system/history/build987.js
 ./os_system/history/build995.js
 ./os_system/history/build720.js
+./os_system/history/build1026.js
 ./os_system/history/build733.js
 ./os_system/history/build706.js
 ./os_system/history/build612.js
@@ -665,6 +672,7 @@
 ./os_system/netsfsp/.gitignore
 ./os_system/netsfsp/package-lock.json
 ./os_system/netsfsp/package.json
+./os_system/imagemaker.js
 ./os_system/npm_pkgs/.gitignore
 ./os_system/npm_pkgs/package-lock.json
 ./os_system/npm_pkgs/package.json
