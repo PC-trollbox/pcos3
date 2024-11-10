@@ -264,7 +264,7 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 
         compute.onclick = function() {
             let fraction1 = fraction(BigInt(operandNumerator.value), BigInt(operandDenominator.value)).simplify();
-            let cleanNum = fraction1.cleanNumerator();
+            let cleanNum = abs(fraction1.cleanNumerator());
             let wholes = fraction1.getWholes();
             resultWholes.value = wholes;
             resultNumerator.value = cleanNum;
@@ -319,7 +319,8 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
         page.appendChild(container);
 
         compute.onclick = function() {
-            let fraction1 = fraction(BigInt(operandDenominator.value) * BigInt(operandWholes.value) + BigInt(operandNumerator.value), BigInt(operandDenominator.value)).simplify();
+            let sign = operandWholes.value < 0 ? -1 : 1;
+            let fraction1 = fraction(BigInt(operandDenominator.value) * BigInt(operandWholes.value) + BigInt(operandNumerator.value * sign), BigInt(operandDenominator.value)).simplify();
             resultNumerator.value = fraction1.numerator;
             resultDenominator.value = fraction1.denominator;
         }
@@ -432,7 +433,7 @@ function fraction(a, b) {
 		subtract: function(otherFraction) {
 			let cleanOtherFraction = otherFraction.simplify();
 			let lcm = (cleanOtherFraction.denominator * b) / gcd(cleanOtherFraction.denominator, b);
-			let adaptedNumerator1 = a * (b / lcm);
+			let adaptedNumerator1 = a * (lcm / b);
 			let adaptedNumerator2 = cleanOtherFraction.numerator * (lcm / cleanOtherFraction.denominator);
 			return fraction(adaptedNumerator1 - adaptedNumerator2, lcm).simplify();
 		},
