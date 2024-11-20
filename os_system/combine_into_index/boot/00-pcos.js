@@ -1,8 +1,8 @@
 // @pcos-app-mode native
-const pcos_version = "1032";
+const pcos_version = "1033";
  
 let modules = {
-    core: coreExports
+	core: coreExports
 };
 globalThis.modules = modules;
 modules.pcos_version = pcos_version;
@@ -33,13 +33,13 @@ async function panic(code, component) {
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE1);
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE2.replace("%s", (code || currentLocales.PANIC_UNSPECIFIED_ERROR)));
 	if (component) {
-        if (component.name) modules.core.tty_bios_api.println(currentLocales.PROBLEMATIC_COMPONENT.replace("%s", component.name));
-        if (component.params) modules.core.tty_bios_api.println(currentLocales.PROBLEMATIC_PARAMS.replace("%s", JSON.stringify(component.params, null, "\t")));
-        if (component.underlyingJS) {
+		if (component.name) modules.core.tty_bios_api.println(currentLocales.PROBLEMATIC_COMPONENT.replace("%s", component.name));
+		if (component.params) modules.core.tty_bios_api.println(currentLocales.PROBLEMATIC_PARAMS.replace("%s", JSON.stringify(component.params, null, "\t")));
+		if (component.underlyingJS) {
 			modules.core.tty_bios_api.println(currentLocales.PROBLEMATIC_JS.replace("%s", component.underlyingJS.name).replace("%s", component.underlyingJS.message));
-        	if (component.underlyingJS.stack) modules.core.tty_bios_api.println(component.underlyingJS.stack);
+			if (component.underlyingJS.stack) modules.core.tty_bios_api.println(component.underlyingJS.stack);
 		}
-    }
+	}
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE3);
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE4);
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE5);

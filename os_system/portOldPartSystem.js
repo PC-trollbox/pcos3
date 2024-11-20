@@ -16,21 +16,21 @@ dataPort.setData(data);
 tty.println("New partition ID: " + id);
 tty.println("Relocating files...");
 function println(str) {
-    tty.println(str);
-    return new Promise(function(resolve) {
-        requestAnimationFrame(resolve);
-    })
+	tty.println(str);
+	return new Promise(function(resolve) {
+		requestAnimationFrame(resolve);
+	})
 }
 let idb_keys = coreExports.idb._db.transaction("disk").objectStore("disk").getAllKeys();
 idb_keys = await new Promise(function(resolve) {
-    idb_keys.onsuccess = () => resolve(idb_keys.result);
+	idb_keys.onsuccess = () => resolve(idb_keys.result);
 });
 idb_keys.splice(idb_keys.indexOf("disk"), 1);
 tty.println("Found " + idb_keys.length + " files...");
 for (let key of idb_keys) {
-    let data = await coreExports.idb.readPart(key);
-    await coreExports.idb.writePart(id + "-" + key, data);
-    await coreExports.idb.removePart(key);
-    await println("Relocated " + key);
+	let data = await coreExports.idb.readPart(key);
+	await coreExports.idb.writePart(id + "-" + key, data);
+	await coreExports.idb.removePart(key);
+	await println("Relocated " + key);
 }
 await println("Successful porting!");

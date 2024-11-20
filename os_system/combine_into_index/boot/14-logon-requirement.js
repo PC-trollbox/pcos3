@@ -1,454 +1,454 @@
 async function requireLogon() {
-    // @pcos-app-mode native
-    try {
-        let startupSoundPerm = await modules.fs.permissions(modules.defaultSystem + "/etc/sounds/startup.aud");
-        if (!startupSoundPerm.world.includes("r")) throw new Error("Not allowed to read startup.aud");
-        let startupSound = await modules.fs.read(modules.defaultSystem + "/etc/sounds/startup.aud");
-        let startupAudio = new Audio();
-        startupAudio.src = startupSound;
-        startupAudio.play();
-    } catch (e) {
-        console.error("Failed to play startup sound:", e);
-    }
-    let liu = {};
-    modules.liu = liu;
-    serviceLogon();
-    let insertedLockMessage = false;
-    while (!modules.shuttingDown) {
-        let useDefaultUser = await modules.fs.permissions(modules.defaultSystem + "/etc/security/automaticLogon");
-        useDefaultUser = !useDefaultUser.world.includes("w");
-        let defaultUser;
-        try {
-            if (useDefaultUser) defaultUser = await modules.fs.read(modules.defaultSystem + "/etc/security/automaticLogon");
-        } catch {}
-        let sysDom = modules.session.tracker[modules.session.systemSession].html;
-        let lockWallpaper = "";
-        let lockIsDark = false;
-        try {
-            lockWallpaper = await modules.fs.read(modules.defaultSystem + "/etc/wallpapers/lockscreen.pic");
-        } catch (e) {
-            console.error("Failed to read lockscreen.pic:", e);
-        }
-        try {
-            lockIsDark = (await modules.fs.read(modules.defaultSystem + "/etc/darkLockScreen")) == "true";
-        } catch (e) {
-            console.error("Failed to read darkLockScreen:", e);
-        }
-        if (modules.core.bootMode == "safe") {
-            lockIsDark = true;
-            lockWallpaper = "";
-            if (!insertedLockMessage) {
-                insertedLockMessage = true;
-                let message = document.createElement("span");
-                message.innerText = modules.locales.get("SAFE_MODE_MSG");
-                message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-                sysDom.appendChild(message);
-                let message2 = document.createElement("span");
-                message2.innerText = modules.locales.get("SAFE_MODE_MSG");
-                message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-                sysDom.appendChild(message2);
-            }
-        }
-        sysDom.style.background = "url(" + JSON.stringify(lockWallpaper) + ")";
-        if (modules.core.bootMode == "safe") sysDom.style.background = "black";
-        sysDom.style.backgroundSize = "100% 100%";
-        modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
-        let logon, resolvedLogon;
-        while (!modules.shuttingDown) {
-            logon = await modules.authui(modules.session.systemSession, defaultUser, undefined, true);
-            resolvedLogon = await waitForLogon(logon);
-            if (resolvedLogon.success) break;
-        }
-        if (!resolvedLogon.success) break;
-        modules.session.muteAllSessions();
-        let userInfo = await modules.tokens.info(resolvedLogon.token);
-        let session;
-        let liuUser = userInfo.user;
-        let wasLiuLoaded = false;
-        if (liu.hasOwnProperty(userInfo.user)) {
-            session = liu[userInfo.user].session;
-            await modules.tokens.revoke(resolvedLogon.token);
-            resolvedLogon = liu[userInfo.user].logon;
-            userInfo = await modules.tokens.info(resolvedLogon.token);
-            wasLiuLoaded = true;
-        } else {
-            session = modules.session.mksession();
-            liu[userInfo.user] = {
-                session,
-                logon: resolvedLogon,
-            }
-        }
-        modules.session.activateSession(session);
-        let dom = modules.session.tracker[session].html;
-        let bgPic = "";
-        let isDark = false;
-        try {
-            let permissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.wallpaper", resolvedLogon.token);
-            if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-                throw new Error("Permission denied reading wallpaper");
-            }
-            bgPic = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.wallpaper", resolvedLogon.token);
-        } catch (e) {
-            console.error("Failed to read wallpaper:", e);
-        }
-        try {
-            let permissionsdm = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.darkmode", resolvedLogon.token);
-            if (permissionsdm.owner != userInfo.user && !userInfo.groups.includes(permissionsdm.group) && !(permissionsdm.world.includes("r") && permissionsdm.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-                throw new Error("Permission denied reading dark mode preference");
-            }
-            isDark = (await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.darkmode", resolvedLogon.token)) == "true";
-        } catch (e) {
-            console.error("Failed to read dark mode preference:", e);
-        }
-        if (modules.core.bootMode == "safe") {
-            isDark = true;
-            if (!wasLiuLoaded) {
-                let message = document.createElement("span");
-                message.innerText = modules.locales.get("SAFE_MODE_MSG");
-                message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-                dom.appendChild(message);
-                let message2 = document.createElement("span");
-                message2.innerText = modules.locales.get("SAFE_MODE_MSG");
-                message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-                dom.appendChild(message2);
-            }
-            bgPic = "";
-        }
-        modules.session.attrib(session, "dark", isDark);
-        dom.style.background = "url(" + JSON.stringify(bgPic) + ")";
-        if (modules.core.bootMode == "safe") dom.style.background = "black";
-        dom.style.backgroundSize = "100% 100%";
-        let autoRunNecessities = [];
-        let autorunNecessityFailure = false;
-        try {
-            let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
-            if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-                throw new Error("Permission denied reading autorun necessities");
-            }
-            if (modules.core.bootMode != "safe") autoRunNecessities = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
-        } catch (e) {
-            console.error("Failed to read autorun necessities:", e);
-        }
-        function breakNecessityFailure() {
-            let failureMessage = modules.window(session);
-            autorunNecessityFailure = true;
-            failureMessage.title.innerText = modules.locales.get("PERMISSION_DENIED");
-            failureMessage.content.style.padding = "8px";
-            failureMessage.content.innerText = modules.locales.get("AUTORUN_NECESSITIES_FAILED");
-            failureMessage.closeButton.onclick = async function() {
-                failureMessage.windowDiv.remove();
-                await modules.logOut(userInfo.user);
-            }
-        }
-        for (let autoRunNecessity of autoRunNecessities) {
-            let necessityPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
-            if (necessityPermissions.owner != userInfo.user && !userInfo.groups.includes(necessityPermissions.group) && !(necessityPermissions.world.includes("r") && necessityPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-                breakNecessityFailure();
-                break;
-            }
-            let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
-            try {
-                link = JSON.parse(link);
-            } catch (e) {
-                console.error("Failed to parse autorun necessity:", e);
-                breakNecessityFailure();
-                break;
-            }
-            if (link.disabled) continue;
-            try {
-                let ipcPipe = modules.ipc.create();
-                modules.ipc.declareAccess(ipcPipe, {
-                    owner: userInfo.user,
-                    group: userInfo.groups[0],
-                    world: false
-                });
-                let forkedToken;
-                if (link.automaticLogon) {
-                    try {
-                        let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
-                        logon = await logon.getNextPrompt();
-                        for (let response of link.automaticLogon.responses)
-                            if (logon.success == "intermediate") logon = await logon.input(response);
-                        if (!logon.success) throw new Error(logon.message);
-                        forkedToken = logon.token;
-                    } catch {}
-                    if (necessityPermissions.world.includes("r") && forkedToken) {
-                        let ownUser = await modules.tokens.info(forkedToken);
-                        let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
-                        ownUserInfo.securityChecks = [];
-                        await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
-                        await modules.tokens.revoke(forkedToken);
-                        forkedToken = null;
-                    }
-                }
-                if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
-                let appWindow = modules.window(session);
-                let ipcResult = modules.ipc.listenFor(ipcPipe);
-                let taskId = await modules.tasks.exec(link.path, [ ...(link.args || []), ipcPipe ], appWindow, forkedToken, true);
-                let finishTaskPromise = new Promise(function(resolve) {
-                    modules.tasks.tracker[taskId].ree.beforeCloseDown(() => resolve());
-                })
-                ipcResult = await Promise.race([ipcResult, finishTaskPromise]);
-                if (!ipcResult) throw new Error("Software rejected autorun necessity.");
-                if (modules.tasks.tracker.hasOwnProperty(taskId)) await modules.tasks.sendSignal(taskId, 9);
-            } catch (e) {
-                console.error("Failed to execute autorun necessity:", e);
-                breakNecessityFailure();
-                break;
-            }
-        }
-        
-        let autoRun = [];
-        try {
-            let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
-            if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-                throw new Error("Permission denied reading autorun");
-            }
-            if (modules.core.bootMode != "safe" && !autorunNecessityFailure) autoRun = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
-        } catch (e) {
-            console.error("Failed to read autorun:", e);
-        }
-        for (let autoRunFile of autoRun) {
-            let autoRunItemPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
-            if (autoRunItemPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunItemPermissions.group) && !(autoRunItemPermissions.world.includes("r") && autoRunItemPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) continue;
-            let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
-            try {
-                link = JSON.parse(link);
-            } catch {}
-            if (link.disabled) continue;
-            try {
-                let forkedToken;
-                if (link.automaticLogon) {
-                    try {
-                        let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
-                        logon = await logon.getNextPrompt();
-                        for (let response of link.automaticLogon.responses)
-                            if (logon.success == "intermediate") logon = await logon.input(response);
-                        if (!logon.success) throw new Error(logon.message);
-                        forkedToken = logon.token;
-                    } catch {}
-                    if (autoRunItemPermissions.world.includes("r") && forkedToken) {
-                        let ownUser = await modules.tokens.info(forkedToken);
-                        let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
-                        ownUserInfo.securityChecks = [];
-                        await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
-                        await modules.tokens.revoke(forkedToken);
-                        forkedToken = null;
-                    }
-                }
-                if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
-                let appWindow = modules.window(session);
-                await modules.tasks.exec(link.path, [ ...(link.args || []) ], appWindow, forkedToken);
-            } catch {}
-        }
-        if (!wasLiuLoaded && !autorunNecessityFailure) {
-            let startMenuChannel = modules.ipc.create();
-            modules.ipc.declareAccess(startMenuChannel, {
-                owner: userInfo.user,
-                group: userInfo.groups[0],
-                world: false
-            });
-            let taskbar = document.createElement("div");
-            let clock = document.createElement("span");
-            let startButton = document.createElement("button");
-            let startMenu = modules.window(session);
-            let forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
-            let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
-            let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-            let encryptionValue = u8aToHex(crypto.getRandomValues(new Uint8Array(32)));
-            let importedKey = await crypto.subtle.importKey("raw", hexToU8A(encryptionValue), {
-                name: "AES-GCM",
-                length: 256
-            }, false, ["encrypt", "decrypt"]);
+	// @pcos-app-mode native
+	try {
+		let startupSoundPerm = await modules.fs.permissions(modules.defaultSystem + "/etc/sounds/startup.aud");
+		if (!startupSoundPerm.world.includes("r")) throw new Error("Not allowed to read startup.aud");
+		let startupSound = await modules.fs.read(modules.defaultSystem + "/etc/sounds/startup.aud");
+		let startupAudio = new Audio();
+		startupAudio.src = startupSound;
+		startupAudio.play();
+	} catch (e) {
+		console.error("Failed to play startup sound:", e);
+	}
+	let liu = {};
+	modules.liu = liu;
+	serviceLogon();
+	let insertedLockMessage = false;
+	while (!modules.shuttingDown) {
+		let useDefaultUser = await modules.fs.permissions(modules.defaultSystem + "/etc/security/automaticLogon");
+		useDefaultUser = !useDefaultUser.world.includes("w");
+		let defaultUser;
+		try {
+			if (useDefaultUser) defaultUser = await modules.fs.read(modules.defaultSystem + "/etc/security/automaticLogon");
+		} catch {}
+		let sysDom = modules.session.tracker[modules.session.systemSession].html;
+		let lockWallpaper = "";
+		let lockIsDark = false;
+		try {
+			lockWallpaper = await modules.fs.read(modules.defaultSystem + "/etc/wallpapers/lockscreen.pic");
+		} catch (e) {
+			console.error("Failed to read lockscreen.pic:", e);
+		}
+		try {
+			lockIsDark = (await modules.fs.read(modules.defaultSystem + "/etc/darkLockScreen")) == "true";
+		} catch (e) {
+			console.error("Failed to read darkLockScreen:", e);
+		}
+		if (modules.core.bootMode == "safe") {
+			lockIsDark = true;
+			lockWallpaper = "";
+			if (!insertedLockMessage) {
+				insertedLockMessage = true;
+				let message = document.createElement("span");
+				message.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
+				sysDom.appendChild(message);
+				let message2 = document.createElement("span");
+				message2.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
+				sysDom.appendChild(message2);
+			}
+		}
+		sysDom.style.background = "url(" + JSON.stringify(lockWallpaper) + ")";
+		if (modules.core.bootMode == "safe") sysDom.style.background = "black";
+		sysDom.style.backgroundSize = "100% 100%";
+		modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
+		let logon, resolvedLogon;
+		while (!modules.shuttingDown) {
+			logon = await modules.authui(modules.session.systemSession, defaultUser, undefined, true);
+			resolvedLogon = await waitForLogon(logon);
+			if (resolvedLogon.success) break;
+		}
+		if (!resolvedLogon.success) break;
+		modules.session.muteAllSessions();
+		let userInfo = await modules.tokens.info(resolvedLogon.token);
+		let session;
+		let liuUser = userInfo.user;
+		let wasLiuLoaded = false;
+		if (liu.hasOwnProperty(userInfo.user)) {
+			session = liu[userInfo.user].session;
+			await modules.tokens.revoke(resolvedLogon.token);
+			resolvedLogon = liu[userInfo.user].logon;
+			userInfo = await modules.tokens.info(resolvedLogon.token);
+			wasLiuLoaded = true;
+		} else {
+			session = modules.session.mksession();
+			liu[userInfo.user] = {
+				session,
+				logon: resolvedLogon,
+			}
+		}
+		modules.session.activateSession(session);
+		let dom = modules.session.tracker[session].html;
+		let bgPic = "";
+		let isDark = false;
+		try {
+			let permissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.wallpaper", resolvedLogon.token);
+			if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+				throw new Error("Permission denied reading wallpaper");
+			}
+			bgPic = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.wallpaper", resolvedLogon.token);
+		} catch (e) {
+			console.error("Failed to read wallpaper:", e);
+		}
+		try {
+			let permissionsdm = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.darkmode", resolvedLogon.token);
+			if (permissionsdm.owner != userInfo.user && !userInfo.groups.includes(permissionsdm.group) && !(permissionsdm.world.includes("r") && permissionsdm.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+				throw new Error("Permission denied reading dark mode preference");
+			}
+			isDark = (await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.darkmode", resolvedLogon.token)) == "true";
+		} catch (e) {
+			console.error("Failed to read dark mode preference:", e);
+		}
+		if (modules.core.bootMode == "safe") {
+			isDark = true;
+			if (!wasLiuLoaded) {
+				let message = document.createElement("span");
+				message.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
+				dom.appendChild(message);
+				let message2 = document.createElement("span");
+				message2.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
+				dom.appendChild(message2);
+			}
+			bgPic = "";
+		}
+		modules.session.attrib(session, "dark", isDark);
+		dom.style.background = "url(" + JSON.stringify(bgPic) + ")";
+		if (modules.core.bootMode == "safe") dom.style.background = "black";
+		dom.style.backgroundSize = "100% 100%";
+		let autoRunNecessities = [];
+		let autorunNecessityFailure = false;
+		try {
+			let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
+			if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+				throw new Error("Permission denied reading autorun necessities");
+			}
+			if (modules.core.bootMode != "safe") autoRunNecessities = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
+		} catch (e) {
+			console.error("Failed to read autorun necessities:", e);
+		}
+		function breakNecessityFailure() {
+			let failureMessage = modules.window(session);
+			autorunNecessityFailure = true;
+			failureMessage.title.innerText = modules.locales.get("PERMISSION_DENIED");
+			failureMessage.content.style.padding = "8px";
+			failureMessage.content.innerText = modules.locales.get("AUTORUN_NECESSITIES_FAILED");
+			failureMessage.closeButton.onclick = async function() {
+				failureMessage.windowDiv.remove();
+				await modules.logOut(userInfo.user);
+			}
+		}
+		for (let autoRunNecessity of autoRunNecessities) {
+			let necessityPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
+			if (necessityPermissions.owner != userInfo.user && !userInfo.groups.includes(necessityPermissions.group) && !(necessityPermissions.world.includes("r") && necessityPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+				breakNecessityFailure();
+				break;
+			}
+			let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
+			try {
+				link = JSON.parse(link);
+			} catch (e) {
+				console.error("Failed to parse autorun necessity:", e);
+				breakNecessityFailure();
+				break;
+			}
+			if (link.disabled) continue;
+			try {
+				let ipcPipe = modules.ipc.create();
+				modules.ipc.declareAccess(ipcPipe, {
+					owner: userInfo.user,
+					group: userInfo.groups[0],
+					world: false
+				});
+				let forkedToken;
+				if (link.automaticLogon) {
+					try {
+						let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
+						logon = await logon.getNextPrompt();
+						for (let response of link.automaticLogon.responses)
+							if (logon.success == "intermediate") logon = await logon.input(response);
+						if (!logon.success) throw new Error(logon.message);
+						forkedToken = logon.token;
+					} catch {}
+					if (necessityPermissions.world.includes("r") && forkedToken) {
+						let ownUser = await modules.tokens.info(forkedToken);
+						let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
+						ownUserInfo.securityChecks = [];
+						await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
+						await modules.tokens.revoke(forkedToken);
+						forkedToken = null;
+					}
+				}
+				if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
+				let appWindow = modules.window(session);
+				let ipcResult = modules.ipc.listenFor(ipcPipe);
+				let taskId = await modules.tasks.exec(link.path, [ ...(link.args || []), ipcPipe ], appWindow, forkedToken, true);
+				let finishTaskPromise = new Promise(function(resolve) {
+					modules.tasks.tracker[taskId].ree.beforeCloseDown(() => resolve());
+				})
+				ipcResult = await Promise.race([ipcResult, finishTaskPromise]);
+				if (!ipcResult) throw new Error("Software rejected autorun necessity.");
+				if (modules.tasks.tracker.hasOwnProperty(taskId)) await modules.tasks.sendSignal(taskId, 9);
+			} catch (e) {
+				console.error("Failed to execute autorun necessity:", e);
+				breakNecessityFailure();
+				break;
+			}
+		}
+		
+		let autoRun = [];
+		try {
+			let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
+			if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+				throw new Error("Permission denied reading autorun");
+			}
+			if (modules.core.bootMode != "safe" && !autorunNecessityFailure) autoRun = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
+		} catch (e) {
+			console.error("Failed to read autorun:", e);
+		}
+		for (let autoRunFile of autoRun) {
+			let autoRunItemPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
+			if (autoRunItemPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunItemPermissions.group) && !(autoRunItemPermissions.world.includes("r") && autoRunItemPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) continue;
+			let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
+			try {
+				link = JSON.parse(link);
+			} catch {}
+			if (link.disabled) continue;
+			try {
+				let forkedToken;
+				if (link.automaticLogon) {
+					try {
+						let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
+						logon = await logon.getNextPrompt();
+						for (let response of link.automaticLogon.responses)
+							if (logon.success == "intermediate") logon = await logon.input(response);
+						if (!logon.success) throw new Error(logon.message);
+						forkedToken = logon.token;
+					} catch {}
+					if (autoRunItemPermissions.world.includes("r") && forkedToken) {
+						let ownUser = await modules.tokens.info(forkedToken);
+						let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
+						ownUserInfo.securityChecks = [];
+						await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
+						await modules.tokens.revoke(forkedToken);
+						forkedToken = null;
+					}
+				}
+				if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
+				let appWindow = modules.window(session);
+				await modules.tasks.exec(link.path, [ ...(link.args || []) ], appWindow, forkedToken);
+			} catch {}
+		}
+		if (!wasLiuLoaded && !autorunNecessityFailure) {
+			let startMenuChannel = modules.ipc.create();
+			modules.ipc.declareAccess(startMenuChannel, {
+				owner: userInfo.user,
+				group: userInfo.groups[0],
+				world: false
+			});
+			let taskbar = document.createElement("div");
+			let clock = document.createElement("span");
+			let startButton = document.createElement("button");
+			let startMenu = modules.window(session);
+			let forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
+			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+			let encryptionValue = u8aToHex(crypto.getRandomValues(new Uint8Array(32)));
+			let importedKey = await crypto.subtle.importKey("raw", hexToU8A(encryptionValue), {
+				name: "AES-GCM",
+				length: 256
+			}, false, ["encrypt", "decrypt"]);
 
-            startButton.innerText = modules.locales.get("START_MENU_BTN");
-            startButton.style = "padding: 4px;";
-            startButton.disabled = true;
-            try {
-                await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [ startMenuChannel ], startMenu, forkedStartMenuToken, true, encryptionValue);
-            } catch (e) {
-                console.error("Failed to start start menu:", e);
-            }
+			startButton.innerText = modules.locales.get("START_MENU_BTN");
+			startButton.style = "padding: 4px;";
+			startButton.disabled = true;
+			try {
+				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [ startMenuChannel ], startMenu, forkedStartMenuToken, true, encryptionValue);
+			} catch (e) {
+				console.error("Failed to start start menu:", e);
+			}
 
-            async function sendToStartMenu(data) {
-                let iv = crypto.getRandomValues(new Uint8Array(16));
-                let ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, importedKey, new TextEncoder().encode(JSON.stringify(data))));
-                modules.ipc.send(startMenuChannel, u8aToHex(iv) + u8aToHex(ct));
-            }
-            
-            startButton.onclick = async function() {
-                sendToStartMenu({ open: true });
-            };
+			async function sendToStartMenu(data) {
+				let iv = crypto.getRandomValues(new Uint8Array(16));
+				let ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, importedKey, new TextEncoder().encode(JSON.stringify(data))));
+				modules.ipc.send(startMenuChannel, u8aToHex(iv) + u8aToHex(ct));
+			}
+			
+			startButton.onclick = async function() {
+				sendToStartMenu({ open: true });
+			};
 
-            (async function() {
-                while (true) {
-                    let listen = await modules.ipc.listenFor(startMenuChannel);
-                    try {
-                        listen = await crypto.subtle.decrypt({ name: "AES-GCM", iv: hexToU8A(listen.slice(0, 32)) }, importedKey, hexToU8A(listen.slice(32)));
-                        listen = JSON.parse(new TextDecoder().decode(listen));
-                    } catch (e) {
-                        console.error("Failed to decrypt:", e);
-                        continue;
-                    }
-                    if (listen.run) {
-                        try {
-                            let forkedToken;
-                            if (listen.run.automaticLogon) {
-                                try {
-                                    let logon = await modules.users.access(listen.run.automaticLogon.username, resolvedLogon.token);
-                                    logon = await logon.getNextPrompt();
-                                    for (let response of listen.run.automaticLogon.responses)
-                                        if (logon.success == "intermediate") logon = await logon.input(response);
-                                    if (!logon.success) throw new Error(logon.message);
-                                    forkedToken = logon.token;
-                                } catch {}
-                            }
-                            if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
-                            let appWindow = modules.window(session);
-                            await modules.tasks.exec(listen.run.path, [ ...(listen.run.args || []) ], appWindow, forkedToken);
-                        } catch {}
-                    } else if (listen.success) startButton.disabled = false;
-                    else if (listen.dying) {
-                        startButton.disabled = true;
-                        startMenu = modules.window(session);
-                        forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
-                        try {
-                            await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [ startMenuChannel ], startMenu, forkedStartMenuToken, true, encryptionValue);
-                        } catch (e) {
-                            console.error("Failed to start start menu:", e);
-                        }
-                    }
-                }
-            })();
+			(async function() {
+				while (true) {
+					let listen = await modules.ipc.listenFor(startMenuChannel);
+					try {
+						listen = await crypto.subtle.decrypt({ name: "AES-GCM", iv: hexToU8A(listen.slice(0, 32)) }, importedKey, hexToU8A(listen.slice(32)));
+						listen = JSON.parse(new TextDecoder().decode(listen));
+					} catch (e) {
+						console.error("Failed to decrypt:", e);
+						continue;
+					}
+					if (listen.run) {
+						try {
+							let forkedToken;
+							if (listen.run.automaticLogon) {
+								try {
+									let logon = await modules.users.access(listen.run.automaticLogon.username, resolvedLogon.token);
+									logon = await logon.getNextPrompt();
+									for (let response of listen.run.automaticLogon.responses)
+										if (logon.success == "intermediate") logon = await logon.input(response);
+									if (!logon.success) throw new Error(logon.message);
+									forkedToken = logon.token;
+								} catch {}
+							}
+							if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
+							let appWindow = modules.window(session);
+							await modules.tasks.exec(listen.run.path, [ ...(listen.run.args || []) ], appWindow, forkedToken);
+						} catch {}
+					} else if (listen.success) startButton.disabled = false;
+					else if (listen.dying) {
+						startButton.disabled = true;
+						startMenu = modules.window(session);
+						forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
+						try {
+							await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [ startMenuChannel ], startMenu, forkedStartMenuToken, true, encryptionValue);
+						} catch (e) {
+							console.error("Failed to start start menu:", e);
+						}
+					}
+				}
+			})();
 
-            taskbar.className = "taskbar";
-            clock.className = "clock";
+			taskbar.className = "taskbar";
+			clock.className = "clock";
 
-            liu[liuUser].clockInterval = setInterval(function() {
-                clock.innerText = new Date().toTimeString().split(" ")[0];
-            }, 500);
-            
-            taskbar.appendChild(startButton);
-            taskbar.appendChild(clock);
-            dom.appendChild(taskbar);
-        }
-        if (useDefaultUser && defaultUser) {
-            let newWindow = modules.window(modules.session.systemSession);
-            newWindow.title.innerText = modules.locales.get("LOG_IN_INVITATION");
-            let button = document.createElement("button");
-            button.innerText = modules.locales.get("LOG_IN_INVITATION");
-            newWindow.content.appendChild(button);
-            newWindow.closeButton.classList.toggle("hidden", true);
-            await hookButtonClick(button);
-            newWindow.windowDiv.remove();
-        }
-    }
+			liu[liuUser].clockInterval = setInterval(function() {
+				clock.innerText = new Date().toTimeString().split(" ")[0];
+			}, 500);
+			
+			taskbar.appendChild(startButton);
+			taskbar.appendChild(clock);
+			dom.appendChild(taskbar);
+		}
+		if (useDefaultUser && defaultUser) {
+			let newWindow = modules.window(modules.session.systemSession);
+			newWindow.title.innerText = modules.locales.get("LOG_IN_INVITATION");
+			let button = document.createElement("button");
+			button.innerText = modules.locales.get("LOG_IN_INVITATION");
+			newWindow.content.appendChild(button);
+			newWindow.closeButton.classList.toggle("hidden", true);
+			await hookButtonClick(button);
+			newWindow.windowDiv.remove();
+		}
+	}
 }
 
 async function serviceLogon() {
-    let session = modules.session.mksession();
-    modules.session.attrib(session, "dark", true);
-    let dom = modules.session.tracker[session].html;
-    dom.style.backgroundColor = "black";
-    let message = document.createElement("span");
-    message.innerText = "Service Desktop";
-    message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-    dom.appendChild(message);
-    let startButton = document.createElement("button");
-    startButton.innerText = modules.locales.get("START_MENU_BTN");
-    startButton.style = "padding: 4px;";
-    startButton.onclick = async function() {
-        let startMenu = modules.window(session);
-        startMenu.title.innerText = modules.locales.get("START_MENU");
-        startMenu.content.style.padding = "8px";
-        startMenu.closeButton.onclick = () => startMenu.windowDiv.remove();
-        let lockButton = document.createElement("button");
-        lockButton.innerText = modules.locales.get("LOCK_BUTTON");
-        startMenu.content.appendChild(lockButton);
-        lockButton.onclick = async function() {
-            startMenu.windowDiv.remove();
-            await modules.session.muteAllSessions();
-            await modules.session.activateSession(modules.session.systemSession);
-        }
-    }
-    let taskbar = document.createElement("div");
-    let clock = document.createElement("span");
-    taskbar.className = "taskbar";
-    clock.className = "clock";
+	let session = modules.session.mksession();
+	modules.session.attrib(session, "dark", true);
+	let dom = modules.session.tracker[session].html;
+	dom.style.backgroundColor = "black";
+	let message = document.createElement("span");
+	message.innerText = "Service Desktop";
+	message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
+	dom.appendChild(message);
+	let startButton = document.createElement("button");
+	startButton.innerText = modules.locales.get("START_MENU_BTN");
+	startButton.style = "padding: 4px;";
+	startButton.onclick = async function() {
+		let startMenu = modules.window(session);
+		startMenu.title.innerText = modules.locales.get("START_MENU");
+		startMenu.content.style.padding = "8px";
+		startMenu.closeButton.onclick = () => startMenu.windowDiv.remove();
+		let lockButton = document.createElement("button");
+		lockButton.innerText = modules.locales.get("LOCK_BUTTON");
+		startMenu.content.appendChild(lockButton);
+		lockButton.onclick = async function() {
+			startMenu.windowDiv.remove();
+			await modules.session.muteAllSessions();
+			await modules.session.activateSession(modules.session.systemSession);
+		}
+	}
+	let taskbar = document.createElement("div");
+	let clock = document.createElement("span");
+	taskbar.className = "taskbar";
+	clock.className = "clock";
 
-    setInterval(function() {
-        clock.innerText = new Date().toTimeString().split(" ")[0];
-    }, 500);
+	setInterval(function() {
+		clock.innerText = new Date().toTimeString().split(" ")[0];
+	}, 500);
 
-    taskbar.appendChild(startButton);
-    taskbar.appendChild(clock);
-    dom.appendChild(taskbar);
-    modules.serviceSession = session;
-    if (modules.core.bootMode != "safe") {
-        let serviceList = [];
-        try {
-            serviceList = await modules.fs.ls(modules.defaultSystem + "/apps/services");
-        } catch (e) {
-            console.error("Failed to list services:", e);
-        }
-        for (let service of serviceList) {
-            let serviceConfig;
-            let triggerPasswordReset = false;
-            try {
-                let permissions = await modules.fs.permissions(modules.defaultSystem + "/apps/services/" + service);
-                if (permissions.world.includes("r")) triggerPasswordReset = true;
-            } catch {}
-            try {
-                serviceConfig = await modules.fs.read(modules.defaultSystem + "/apps/services/" + service);
-                serviceConfig = JSON.parse(serviceConfig);
-            } catch (e) {
-                console.error("Failed to read service config of", service, ":", e);
-                continue;
-            }
-            if (serviceConfig.disabled) continue;
-            let serviceName = (serviceConfig.localeReferenceName ? modules.locales.get(serviceConfig.localeReferenceName) : null) || (serviceConfig.localeDatabaseName ? (serviceConfig.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()] || serviceConfig.localeDatabaseName[modules.locales.defaultLocale]) : null) || serviceConfig.name;
-            if (!serviceConfig.automaticLogon) {
-                console.error("Service", serviceName, "(", service, ") does not have logon credentials set");
-                continue;
-            }
-            let forkedToken;
-            try {
-                let logon = await modules.users.access(serviceConfig.automaticLogon.username);
-                logon = await logon.getNextPrompt();
-                for (let response of serviceConfig.automaticLogon.responses)
-                    if (logon.success == "intermediate") logon = await logon.input(response);
-                if (!logon.success) throw new Error(logon.message);
-                forkedToken = logon.token;
-            } catch (e) {
-                console.error("Failed to create a logon session for", serviceName, "(", service, "):", e);
-                continue;
-            }
-            if (triggerPasswordReset) {
-                let ownUser = await modules.tokens.info(forkedToken);
-                let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
-                ownUserInfo.securityChecks = [];
-                await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
-                await modules.tokens.revoke(forkedToken);
-                console.error("Exposed credentials for", serviceName, "(", service, ") have been made invalid");
-                continue;
-            }
-            try {
-                await modules.tasks.exec(serviceConfig.path, [ ...(serviceConfig.args || []) ], modules.window(session), forkedToken, true);
-            } catch (e) {
-                console.error("Failed to start service", serviceName, "(", service, "):", e);
-            }
-        }
-    }
+	taskbar.appendChild(startButton);
+	taskbar.appendChild(clock);
+	dom.appendChild(taskbar);
+	modules.serviceSession = session;
+	if (modules.core.bootMode != "safe") {
+		let serviceList = [];
+		try {
+			serviceList = await modules.fs.ls(modules.defaultSystem + "/apps/services");
+		} catch (e) {
+			console.error("Failed to list services:", e);
+		}
+		for (let service of serviceList) {
+			let serviceConfig;
+			let triggerPasswordReset = false;
+			try {
+				let permissions = await modules.fs.permissions(modules.defaultSystem + "/apps/services/" + service);
+				if (permissions.world.includes("r")) triggerPasswordReset = true;
+			} catch {}
+			try {
+				serviceConfig = await modules.fs.read(modules.defaultSystem + "/apps/services/" + service);
+				serviceConfig = JSON.parse(serviceConfig);
+			} catch (e) {
+				console.error("Failed to read service config of", service, ":", e);
+				continue;
+			}
+			if (serviceConfig.disabled) continue;
+			let serviceName = (serviceConfig.localeReferenceName ? modules.locales.get(serviceConfig.localeReferenceName) : null) || (serviceConfig.localeDatabaseName ? (serviceConfig.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()] || serviceConfig.localeDatabaseName[modules.locales.defaultLocale]) : null) || serviceConfig.name;
+			if (!serviceConfig.automaticLogon) {
+				console.error("Service", serviceName, "(", service, ") does not have logon credentials set");
+				continue;
+			}
+			let forkedToken;
+			try {
+				let logon = await modules.users.access(serviceConfig.automaticLogon.username);
+				logon = await logon.getNextPrompt();
+				for (let response of serviceConfig.automaticLogon.responses)
+					if (logon.success == "intermediate") logon = await logon.input(response);
+				if (!logon.success) throw new Error(logon.message);
+				forkedToken = logon.token;
+			} catch (e) {
+				console.error("Failed to create a logon session for", serviceName, "(", service, "):", e);
+				continue;
+			}
+			if (triggerPasswordReset) {
+				let ownUser = await modules.tokens.info(forkedToken);
+				let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
+				ownUserInfo.securityChecks = [];
+				await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
+				await modules.tokens.revoke(forkedToken);
+				console.error("Exposed credentials for", serviceName, "(", service, ") have been made invalid");
+				continue;
+			}
+			try {
+				await modules.tasks.exec(serviceConfig.path, [ ...(serviceConfig.args || []) ], modules.window(session), forkedToken, true);
+			} catch (e) {
+				console.error("Failed to start service", serviceName, "(", service, "):", e);
+			}
+		}
+	}
 }
 
 function waitForLogon(toHook) {
-    return new Promise(function(resolve) {
-        toHook.hook(resolve);
-    });
+	return new Promise(function(resolve) {
+		toHook.hook(resolve);
+	});
 }
 
 async function hookButtonClick(button) {
-    return new Promise(function(resolve) {
-        button.onclick = (e) => resolve(e);
-    });
+	return new Promise(function(resolve) {
+		button.onclick = (e) => resolve(e);
+	});
 }

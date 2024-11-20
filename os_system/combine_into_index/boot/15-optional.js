@@ -10,40 +10,40 @@ function opt(){
 // =====END breakout COMPONENT METADATA=====
 // =====BEGIN breakout COMPONENT INSTALLER=====
 async function installer(target, token) {
-    let fs = modules.fs;
-    let existing = (await fs.ls(target, token)).includes("apps");
-    if (!existing) await fs.mkdir(target + "/apps", token);
-    await fs.chown(target + "/apps", "root", token);
-    await fs.chgrp(target + "/apps", "root", token);
-    await fs.chmod(target + "/apps", "rx", token);
-    let existing2 = (await fs.ls(target + "/apps", token)).includes("links");
-    if (!existing2) await fs.mkdir(target + "/apps/links", token);
-    await fs.chown(target + "/apps/links", "root", token);
-    await fs.chgrp(target + "/apps/links", "root", token);
-    await fs.chmod(target + "/apps/links", "rx", token);
-    await fs.write(target + "/apps/links/arcadeBreakout.lnk", JSON.stringify({
-        name: "Breakout",
-        path: target + "/apps/arcadeBreakout.js"
-    }), token);
-    await fs.chown(target + "/apps/links/arcadeBreakout.lnk", "root", token);
-    await fs.chgrp(target + "/apps/links/arcadeBreakout.lnk", "root", token);
-    await fs.chmod(target + "/apps/links/arcadeBreakout.lnk", "rx", token);
-    await fs.write(target + "/apps/arcadeBreakout.js", `// =====BEGIN MANIFEST=====
+	let fs = modules.fs;
+	let existing = (await fs.ls(target, token)).includes("apps");
+	if (!existing) await fs.mkdir(target + "/apps", token);
+	await fs.chown(target + "/apps", "root", token);
+	await fs.chgrp(target + "/apps", "root", token);
+	await fs.chmod(target + "/apps", "rx", token);
+	let existing2 = (await fs.ls(target + "/apps", token)).includes("links");
+	if (!existing2) await fs.mkdir(target + "/apps/links", token);
+	await fs.chown(target + "/apps/links", "root", token);
+	await fs.chgrp(target + "/apps/links", "root", token);
+	await fs.chmod(target + "/apps/links", "rx", token);
+	await fs.write(target + "/apps/links/arcadeBreakout.lnk", JSON.stringify({
+		name: "Breakout",
+		path: target + "/apps/arcadeBreakout.js"
+	}), token);
+	await fs.chown(target + "/apps/links/arcadeBreakout.lnk", "root", token);
+	await fs.chgrp(target + "/apps/links/arcadeBreakout.lnk", "root", token);
+	await fs.chmod(target + "/apps/links/arcadeBreakout.lnk", "rx", token);
+	await fs.write(target + "/apps/arcadeBreakout.js", `// =====BEGIN MANIFEST=====
 // allow: GRAB_ATTENTION
 // signer: automaticSigner
 // signature: 6ee8bf560628ea010c65b90c2ccb4eccca482e8bee01091db7632d91c083a2783c3c7f5372ea9e1aec4a2bd50b96926ca642196d79bd4348f79d7e6728b529fa
 // =====END MANIFEST=====
 (async function() {
-        // @pcos-app-mode isolatable
-        // Gamedev-Canvas-workshop by Andrzej Mazur and Mozilla Contributors (https://developer.mozilla.org/en-US/docs/MDN/About#Copyrights_and_licenses) is licensed under CC-BY-SA 2.5 (http://creativecommons.org/licenses/by-sa/2.5/).
-        // Any copyright to code samples and snippets is dedicated to the Public Domain (http://creativecommons.org/publicdomain/zero/1.0/).
-        // Adapted to PCOS v3 by PC
-        await availableAPIs.windowTitleSet("Breakout");
+		// @pcos-app-mode isolatable
+		// Gamedev-Canvas-workshop by Andrzej Mazur and Mozilla Contributors (https://developer.mozilla.org/en-US/docs/MDN/About#Copyrights_and_licenses) is licensed under CC-BY-SA 2.5 (http://creativecommons.org/licenses/by-sa/2.5/).
+		// Any copyright to code samples and snippets is dedicated to the Public Domain (http://creativecommons.org/publicdomain/zero/1.0/).
+		// Adapted to PCOS v3 by PC
+		await availableAPIs.windowTitleSet("Breakout");
 		await availableAPIs.windowResize([ 480, 357 ]);
-        document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-        document.body.style.background = "white";
-        let startButton = document.createElement("button");
-        startButton.innerText = "Start";
+		document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+		document.body.style.background = "white";
+		let startButton = document.createElement("button");
+		startButton.innerText = "Start";
 let canvas = document.createElement("canvas");
 canvas.width = 480;
 canvas.height = 320;
@@ -120,7 +120,7 @@ function collisionDetection() {
 					b.status = 0;
 					score++;
 					if (score == brickRowCount * brickColumnCount) {
-                        throw new Error("stop game");
+						throw new Error("stop game");
 					}
 				}
 			}
@@ -194,7 +194,7 @@ function draw() {
 		} else {
 			lives--;
 			if (!lives) {
-                throw new Error("stop game");
+				throw new Error("stop game");
 			} else {
 				x = canvas.width / 2;
 				y = canvas.height - 30;
@@ -216,32 +216,32 @@ function draw() {
 	requestAnimationFrame(draw);
 }
 startButton.onclick = function() {
-    startButton.remove();
-    draw();
+	startButton.remove();
+	draw();
 }
-    })();
-    addEventListener("signal", async function(e) {
-        if (e.detail == 15) await window.availableAPIs.terminate();
-    }); null;`, token);
-    await fs.chown(target + "/apps/arcadeBreakout.js", "root", token);
-    await fs.chgrp(target + "/apps/arcadeBreakout.js", "root", token);
-    await fs.chmod(target + "/apps/arcadeBreakout.js", "rx", token);
+	})();
+	addEventListener("signal", async function(e) {
+		if (e.detail == 15) await window.availableAPIs.terminate();
+	}); null;`, token);
+	await fs.chown(target + "/apps/arcadeBreakout.js", "root", token);
+	await fs.chgrp(target + "/apps/arcadeBreakout.js", "root", token);
+	await fs.chmod(target + "/apps/arcadeBreakout.js", "rx", token);
 }
 // =====END breakout COMPONENT INSTALLER=====
 // =====BEGIN breakout COMPONENT REMOVER=====
 async function remover(target, token) {
-    let fs = modules.fs;
-    await fs.rm(target + "/apps/links/arcadeBreakout.lnk", token);
-    await fs.rm(target + "/apps/arcadeBreakout.js", token);
+	let fs = modules.fs;
+	await fs.rm(target + "/apps/links/arcadeBreakout.lnk", token);
+	await fs.rm(target + "/apps/arcadeBreakout.js", token);
 }
 // =====END breakout COMPONENT REMOVER=====
 // =====BEGIN breakout COMPONENT CHECKER=====
 async function checker(target, token) {
-    let fs = modules.fs;
-    let existing1 = await fs.ls(target + "/apps/links", token);
-    let existing2 = await fs.ls(target + "/apps", token);
-    if (!existing1.includes("arcadeBreakout.lnk") || !existing2.includes("arcadeBreakout.js")) return false;
-    return true;
+	let fs = modules.fs;
+	let existing1 = await fs.ls(target + "/apps/links", token);
+	let existing2 = await fs.ls(target + "/apps", token);
+	if (!existing1.includes("arcadeBreakout.lnk") || !existing2.includes("arcadeBreakout.js")) return false;
+	return true;
 }
 // =====END breakout COMPONENT CHECKER=====
 }

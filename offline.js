@@ -10,7 +10,7 @@ self.addEventListener('install', function (e) {
 		caches.open('runtime').then(function (cache) {
 			return cache.addAll([
 				"/",
-                "/index.html"
+				"/index.html"
 			]);
 		})
 	);

@@ -16,6 +16,6 @@ function generateString(num, chars) {
 }
 
 module.exports = function decode(b64) {
-    let decodeResult = generateString(findInputNumberString(b64, base64Charset), hexCharset);
-    return Buffer.from(Uint8Array.from(decodeResult.match(/.{1,2}/g).map(a => parseInt(a, 16)))).toString("hex");
+	let decodeResult = generateString(findInputNumberString(b64, base64Charset), hexCharset);
+	return Buffer.from(Uint8Array.from(decodeResult.match(/.{1,2}/g).map(a => parseInt(a, 16)))).toString("hex");
 }
