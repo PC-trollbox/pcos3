@@ -32,3 +32,9 @@ fs.writeFileSync("./keypair.json", JSON.stringify({
         format: "jwk"
     })
 }));
+
+
+fs.writeFileSync("./combine_into_index/etc/keys/automaticSigner", JSON.stringify({
+    signature: keypairSignature,
+    keyInfo: keyInfo
+}));

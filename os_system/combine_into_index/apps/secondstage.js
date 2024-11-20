@@ -165,8 +165,6 @@
             await availableAPIs.runKlvlCode("delete modules.settingUp;");
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REMOVING_INSTALLERS"));
             await availableAPIs.fs_rm({ path: defaultSystem + "/boot/15-apps.js" });
-            await availableAPIs.fs_rm({ path: defaultSystem + "/boot/16-wallpaper.js" });
-            await availableAPIs.fs_rm({ path: defaultSystem + "/boot/16-sfxpack.js" });
             await availableAPIs.fs_rm({ path: defaultSystem + "/apps/autoinstaller.js" });
             await availableAPIs.fs_rm({ path: defaultSystem + "/apps/installer.js" });
             description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_LOGON"));

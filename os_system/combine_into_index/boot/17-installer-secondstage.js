@@ -14,14 +14,8 @@ async function secondstage() {
     windowDiv.content.appendChild(krnlDiv);
     let appScripts = await modules.fs.read(modules.defaultSystem + "/boot/15-apps.js");
     let apps = appScripts.match(/async function (.+)Installer\(target, token\)/g).map(a => a.split(" ")[2].split("(")[0]);
-    progressBar.max = apps.length + 2;
+    progressBar.max = apps.length;
     progressBar.value = 0;
-    description.innerHTML = modules.locales.get("INSTALLING_PCOS").replace("%s", modules.locales.get("INSTALLING_WPS"));
-    await installWallpapers(modules.defaultSystem);
-    progressBar.value++;
-    description.innerHTML = modules.locales.get("INSTALLING_PCOS").replace("%s", modules.locales.get("INSTALLING_SFX"));
-    await installSfx(modules.defaultSystem);
-    progressBar.value++;
     description.innerHTML = modules.locales.get("INSTALLING_PCOS").replace("%s", modules.locales.get("INSTALLING_APPS"));
     let fireAfterInstall = null;
     let firesAfterInstall = new Promise(r => fireAfterInstall = r);

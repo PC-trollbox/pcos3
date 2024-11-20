@@ -17,6 +17,7 @@ let onClose = () => availableAPIs.terminate();
         await availableAPIs.closeability(false);
     }
     const licenseText = `Copyright (c) 2024 PCsoft
+Original Source Code Repository: https://github.com/PC-trollbox/pcos3
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -278,14 +279,11 @@ Used libraries:
             content.innerHTML = "";
             content.style.height = "";
             await availableAPIs.runKlvlCode(`(async function() {
-                let wallpapers = await modules.fs.read(modules.defaultSystem + "/boot/16-wallpaper.js");
-                let sfx = await modules.fs.read(modules.defaultSystem + "/boot/16-sfxpack.js");
                 let appScripts = await modules.fs.read(modules.defaultSystem + "/boot/15-apps.js");
                 let apps = appScripts.match(/async function (.+)Installer\\(target, token\\)/g).map(a => a.split(" ")[2].split("(")[0]);
                 let fireAfterInstall = null;
                 let firesAfterInstall = new Promise(r => fireAfterInstall = r);
-                let installerCode = "(async function() {\\n" + appScripts + "\\n" + sfx + "\\n" + wallpapers + "\\n";
-                installerCode += "await installSfx(modules.defaultSystem);\\nawait installWallpapers(modules.defaultSystem);\\n";
+                let installerCode = "(async function() {\\n" + appScripts + "\\n";
                 for (let app of apps) installerCode += \`await \${app}(modules.defaultSystem);\\n\`;
                 installerCode += "fireAfterInstall(); })();";
                 eval(installerCode);

@@ -133,8 +133,6 @@ async function setupbase() {
                     "14-logon-requirement-enforce.js": "/* no-op */",
                     "15-apps.js": appFnCode + "\n",
                     "15-optional.js": opt.toString() + "\nopt();\n",
-                    "16-wallpaper.js": installWallpapers.toString() + "\n",
-                    "16-sfxpack.js": installSfx.toString() + "\n",
                     "17-installer-secondstage.js": secondstage.toString() + "\nsecondstage();\n",
                     "99-finished.js": systemKillWaiter.toString() + "\nreturn await systemKillWaiter();"
                 },
@@ -190,7 +188,7 @@ async function setupbase() {
     modules.defaultSystem = "roinstaller";
     modules.fs.mounts.installer = modules.mounts.ramMount({});
     await prepare4Running();
-    await keypairInstaller("installer");
+    await mediaInstaller("installer");
     await installerInstaller("installer");
     fsmount = null;
     delete modules.fs.mounts["roinstaller"];

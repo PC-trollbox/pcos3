@@ -35,21 +35,15 @@
     osArchive = new TextDecoder().decode(osArchive);
     let files = osArchive.split(/\/\/ [0-9]+-.+.js\n/g).slice(1);
     let names = osArchive.match(/\/\/ [0-9]+-.+.js/g);
-    let wallpaperIndex = names.indexOf("// 1" + "6" + "-wall" + "paper.js");
-    let sfxIndex = names.indexOf("// 1" + "6" + "-sf" + "xpack.js");
     let appIndex = names.indexOf("// " + "1" + "5-ap" + "ps.js");
     let apps = files[appIndex].match(/async function (.+)Installer\(target, token\)/g).map(a => a.split(" ")[2].split("(")[0]);
-    let otherInstalls = osArchive.match(/async function install(.{3,})\(target, token\)/g).map(a => a.split(" ")[2].split("(")[0]);
     let ipcPipe = await availableAPIs.createPipe();
     let pipeResult = availableAPIs.listenToPipe(ipcPipe);
     let installerCode = "";
     for (let app of apps) installerCode += `await ${app}(modules.defaultSystem, ${JSON.stringify(await availableAPIs.getProcessToken())});\n`;
-    for (let install of otherInstalls) installerCode += `await ${install}(modules.defaultSystem, ${JSON.stringify(await availableAPIs.getProcessToken())});\n`;
     await availableAPIs.runKlvlCode(`(async function() {
         try {
             ${files[appIndex]}
-            ${files[wallpaperIndex]}
-            ${files[sfxIndex]}
             ${installerCode}
             modules.ipc.send(${JSON.stringify(ipcPipe)}, true);
         } catch (e) {
@@ -71,12 +65,6 @@
     let secondStageIndex = names.indexOf("// 1" + "7" + "-instal" + "ler-seconds" + "tage.js");
     files.splice(secondStageIndex, 1);
     names.splice(secondStageIndex, 1);
-    wallpaperIndex = names.indexOf("// 1" + "6" + "-wall" + "paper.js");
-    files.splice(wallpaperIndex, 1);
-    names.splice(wallpaperIndex, 1);
-    sfxIndex = names.indexOf("// 1" + "6" + "-sf" + "xpack.js");
-    files.splice(sfxIndex, 1);
-    names.splice(sfxIndex, 1);
     for (let file in files) {
         let name = names[file].split(" ").slice(1).join(" ");
         let content = files[file];

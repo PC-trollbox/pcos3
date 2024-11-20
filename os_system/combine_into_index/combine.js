@@ -27,6 +27,25 @@ const args = util.parseArgs({
     }
 });
 let keypair = false;
+let ext2mime = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "mp4": "video/mp4",
+    "webm": "video/webm",
+    "mkv": "video/x-matroska",
+    "flv": "video/x-flv",
+    "mp3": "audio/mpeg",
+    "ogg": "audio/ogg",
+    "wav": "audio/wav",
+    "flac": "audio/flac"
+};
+let mimeBase2pcos = {
+    "image": "pic",
+    "video": "vid",
+    "audio": "aud"
+};
 try {
     keypair = JSON.parse(fs.readFileSync(__dirname + "/../keypair.json"));
 } catch {
@@ -37,18 +56,37 @@ if (!keypair.ksk_private && !keypair.automaticSigner_private) {
     console.log("keypair.json is in v1, run node ../port-keypair-to-v2.js");
     process.exit(1);
 }
-let pcosHeader = fs.readFileSync(__dirname + "/krnl_codes/00-pcos.js").toString().split("\n");
+let pcosHeader = fs.readFileSync(__dirname + "/boot/00-pcos.js").toString().split("\n");
 let version = pcosHeader[1].match(/\d+/)[0];
 version = parseInt(version);
 if (!args.values["no-increment"]) version++;
 version = version + args.values.branch;
 pcosHeader[1] = "const pcos_version = " + JSON.stringify(version) + ";";
 pcosHeader = pcosHeader.join("\n");
-if (!args.values["no-increment"]) fs.writeFileSync(__dirname + "/krnl_codes/00-pcos.js", pcosHeader);
+if (!args.values["no-increment"]) fs.writeFileSync(__dirname + "/boot/00-pcos.js", pcosHeader);
 let newBuild = "// This is a generated file. Please modify the corresponding files, not this file directly.\n";
 newBuild += "// (c) Copyright 2024 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
+function createMediaStructure(currentlyScanning = __dirname, notFirstStep = false) {
+    let readdir = fs.readdirSync(currentlyScanning);
+    if (!notFirstStep) readdir = readdir.filter(a => a != "apps" && a != "boot" && a != "combine.js");
+    let structure = {};
+    for (let file of readdir) {
+        let stats = fs.statSync(currentlyScanning + "/" + file);
+        if (stats.isDirectory()) structure[file] = createMediaStructure(currentlyScanning + "/" + file, true);
+        if (stats.isFile()) {
+            let extension = path.extname(file).slice(1);
+            let filenameWithoutExt = path.basename(file, extension);
+            if (ext2mime.hasOwnProperty(extension)) {
+                let mime = ext2mime[extension];
+                let newExt = mimeBase2pcos[mime.split("/")[0]];
+                structure[filenameWithoutExt + newExt] = "data:" + mime + ";base64," + fs.readFileSync(currentlyScanning + "/" + file).toString("base64");
+            } else structure[file] = fs.readFileSync(currentlyScanning + "/" + file).toString();
+        }
+    }
+    return structure;
+}
 let appFiles = fs.readdirSync(__dirname + "/apps");
-let buildFiles = fs.readdirSync(__dirname + "/krnl_codes");
+let buildFiles = fs.readdirSync(__dirname + "/boot");
 let appFns = [];
 for (let buildFile of buildFiles) {
     if (buildFile == path.basename(__filename)) continue;
@@ -58,35 +96,32 @@ for (let buildFile of buildFiles) {
         newBuild += pcosHeader;
         continue;
     }
-    let bfc = fs.readFileSync(__dirname + "/krnl_codes/" + buildFile).toString();
+    let bfc = fs.readFileSync(__dirname + "/boot/" + buildFile).toString();
     if (buildFile == "06-ksk.js") {
         bfc = bfc.replace("{stub:\"present\"}", JSON.stringify(keypair.ksk));
     }
     if (buildFile == "15-apps.js") {
-        let publicAS = keypair.automaticSigner;
-        appFns.push("keypairInstaller");
+        let mediaStructure = createMediaStructure();
+        appFns.push("mediaInstaller");
         bfc = bfc + `
         // dynamically inserted
-        async function keypairInstaller(target, token) {
-            let neededEtc = await modules.fs.ls(target + "/");
-            if (!neededEtc.includes("etc")) await modules.fs.mkdir(target + "/etc");
-            await modules.fs.chown(target + "/etc", "root");
-            await modules.fs.chgrp(target + "/etc", "root");
-            await modules.fs.chmod(target + "/etc", "rx");
-            let neededEtcKeys = await modules.fs.ls(target + "/etc/");
-            if (!neededEtcKeys.includes("keys")) await modules.fs.mkdir(target + "/etc/keys");
-            await modules.fs.chown(target + "/etc/keys", "root");
-            await modules.fs.chgrp(target + "/etc/keys", "root");
-            await modules.fs.chmod(target + "/etc/keys", "rx");
-            await modules.fs.write(target + "/etc/keys/automaticSigner", JSON.stringify(${JSON.stringify(publicAS)}));
-            await modules.fs.chown(target + "/etc/keys/automaticSigner", "root");
-            await modules.fs.chgrp(target + "/etc/keys/automaticSigner", "root");
-            await modules.fs.chmod(target + "/etc/keys/automaticSigner", "rx");
-            let neededEtcKeysKsrl = await modules.fs.ls(target + "/etc/keys");
-            if (!neededEtcKeysKsrl.includes("ksrl")) await modules.fs.mkdir(target + "/etc/keys/ksrl");
-            await modules.fs.chown(target + "/etc/keys/ksrl", "root");
-            await modules.fs.chgrp(target + "/etc/keys/ksrl", "root");
-            await modules.fs.chmod(target + "/etc/keys/ksrl", "rx");
+        async function mediaInstaller(target, token) {
+            let mediaStructure = ${JSON.stringify(mediaStructure)};
+            async function extractMedia(target, mediaStructure, token) {
+                for (let key in mediaStructure) {
+                    let value = mediaStructure[key];
+                    if (typeof value == "object") {
+                        try {
+                            await modules.fs.mkdir(target + "/" + key, token);
+                        } catch {}
+                        await extractMedia(target + "/" + key, value, token);
+                    } else await modules.fs.write(target + "/" + key, value, token);
+                    await modules.fs.chown(target + "/" + key, "root", token);
+                    await modules.fs.chgrp(target + "/" + key, "root", token);
+                    await modules.fs.chmod(target + "/" + key, "rx", token);
+                }
+            }
+            return await extractMedia(target, mediaStructure, token);
         }
         `;
         for (let appFile of appFiles) {
