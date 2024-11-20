@@ -4,6 +4,7 @@
 // allow: FS_READ, FS_LIST_PARTITIONS, ELEVATE_PRIVILEGES, START_TASK, GET_LOCALE, GET_THEME, MANAGE_TOKENS, FS_REMOVE, FS_BYPASS_PERMISSIONS, FS_UNMOUNT, FS_CHANGE_PERMISSION, FS_MOUNT, GET_FILESYSTEMS, FS_WRITE, LLDISK_LIST_PARTITIONS, GET_USER_INFO
 // =====END MANIFEST=====
 let globalToken;
+let cachedIcons = {};
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("FILE_EXPLORER"));
@@ -318,7 +319,25 @@ let globalToken;
 				for (let file of ls) {
 					if (file.startsWith(".") && hideHiddenFiles) continue;
 					let openButton = document.createElement("button");
+					let fileIcon = document.createElement("img");
+					fileIcon.style.width = "12px";
+					fileIcon.style.height = "12px";
+					try {
+						let availableIcons = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/etc/icons" });
+						let fileType = file.split(".").slice(-1)[0];
+						let isDir = await isDirectory(path + "/" + file);
+						let wantedIcon;
+						
+						if (isDir == "directory") wantedIcon = "foldericon.pic";
+						else if (availableIcons.includes(fileType + ".pic")) wantedIcon = fileType + ".pic";
+						else wantedIcon = "fileicon.pic";
+
+						if (!cachedIcons.hasOwnProperty(wantedIcon)) cachedIcons[wantedIcon] = await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/etc/icons/" + wantedIcon });
+						
+						fileIcon.src = cachedIcons[wantedIcon];
+					} catch {}
 					openButton.innerText = file;
+					openButton.insertAdjacentElement("afterbegin", fileIcon);
 					openButton.onclick = function() {
 						pathElement.value = path + "/" + file;
 						browse();
