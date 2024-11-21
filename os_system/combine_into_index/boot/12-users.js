@@ -236,6 +236,10 @@ async function setupUsers() {
 				})
 			}
 			return handleAuthentication(user, credentials);
+		},
+		getUsers: async function(token) {
+			let userDB = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/security/users"), token);
+			return Object.keys(userDB);
 		}
 	}
 }

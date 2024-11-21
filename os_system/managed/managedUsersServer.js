@@ -50,7 +50,7 @@ let tokens = {
 		this._tokens[token].groups = managedUsers[user].groups || [];
 		this._tokens[token].privileges = ["FS_READ", "FS_WRITE", "FS_REMOVE", "FS_CHANGE_PERMISSION", "FS_LIST_PARTITIONS", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "IPC_SEND_PIPE", "IPC_CHANGE_PERMISSION", "ELEVATE_PRIVILEGES", "GET_USER_INFO", "SET_SECURITY_CHECKS", "START_TASK", "LIST_TASKS", "SIGNAL_TASK", "FETCH_SEND", "CSP_OPERATIONS", "IDENTIFY_SYSTEM", "WEBSOCKETS_OPEN", "WEBSOCKETS_LISTEN", "WEBSOCKETS_SEND", "WEBSOCKET_SET_PERMISSIONS", "MANAGE_TOKENS", "WEBSOCKET_INFO", "GRAB_ATTENTION", "CLI_MODIFICATIONS", "GET_THEME", "GET_LOCALE", "GET_FILESYSTEMS", "GET_BUILD", "GET_SERVER_URL", "START_BACKGROUND_TASK", "GET_BOOT_MODE", "GET_SCREEN_INFO", "LOGOUT", "LULL_SYSTEM"];
 		this._tokens[token].privileges.push(...(managedUsers[user].additionalPrivilegeSet || []));
-		if (user == fullAbledUser) this._tokens[token].privileges.push("FS_UNMOUNT", "SYSTEM_SHUTDOWN", "SWITCH_USERS_AUTOMATICALLY", "USER_INFO_OTHERS", "SET_USER_INFO", "FS_BYPASS_PERMISSIONS", "IPC_BYPASS_PERMISSIONS", "TASK_BYPASS_PERMISSIONS", "SENSITIVE_USER_INFO_OTHERS", "SYSTEM_STABILITY", "RUN_KLVL_CODE", "IDENTIFY_SYSTEM_SENSITIVE", "WEBSOCKET_BYPASS_PERMISSIONS", "LLDISK_READ", "LLDISK_WRITE", "LLDISK_LIST_PARTITIONS", "LLDISK_REMOVE", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "FS_MOUNT", "SET_DEFAULT_SYSTEM", "GET_SYSTEM_RESOURCES", "LLDISK_INIT_PARTITIONS", "LOGOUT_OTHERS", "LULL_SYSTEM_FORCE");
+		if (user == fullAbledUser) this._tokens[token].privileges.push("FS_UNMOUNT", "SYSTEM_SHUTDOWN", "SWITCH_USERS_AUTOMATICALLY", "USER_INFO_OTHERS", "SET_USER_INFO", "FS_BYPASS_PERMISSIONS", "IPC_BYPASS_PERMISSIONS", "TASK_BYPASS_PERMISSIONS", "SENSITIVE_USER_INFO_OTHERS", "SYSTEM_STABILITY", "RUN_KLVL_CODE", "IDENTIFY_SYSTEM_SENSITIVE", "WEBSOCKET_BYPASS_PERMISSIONS", "LLDISK_READ", "LLDISK_WRITE", "LLDISK_LIST_PARTITIONS", "LLDISK_REMOVE", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "FS_MOUNT", "SET_DEFAULT_SYSTEM", "GET_SYSTEM_RESOURCES", "LLDISK_INIT_PARTITIONS", "LOGOUT_OTHERS", "LULL_SYSTEM_FORCE", "GET_USER_LIST");
 	},
 	halfInitialize: function(token, user) {
 		if (!this._tokens.hasOwnProperty(token)) throw new Error();
@@ -324,6 +324,14 @@ app.post("/managedUsers/userAccessSubmit", bodyParser, async function(req, res) 
 		accessSessions[req.body.userAccessSession] = await accessSessions[req.body.userAccessSession].input(req.body.input);
 		res.json(accessSessions[req.body.userAccessSession].success == "intermediate" || accessSessions[req.body.userAccessSession].success);
 	} catch { res.status(500).send("Fail Auth"); }
+});
+
+app.post("/managedUsers/getUsers", bodyParser, async function(req, res) {
+	if (!req.body.token) return res.status(400).send("Fail Get");
+	try {
+		if (!tokens.info(req.body.token).privileges.includes("GET_USER_LIST")) return res.status(403).send("Fail Get");
+		res.json(Object.keys(managedUsers));
+	} catch (e) { res.status(500).send("Fail Get"); }
 });
 
 app.post("/managedUsers/tokenRevoke", bodyParser, async function(req, res) {

@@ -906,6 +906,10 @@ function reeAPIs() {
 							} catch {}
 						});
 					});
+				},
+				getUsers: async function(token) {
+					if (!privileges.includes("GET_USER_LIST")) throw new Error("UNAUTHORIZED_ACTION");;
+					return await modules.users.getUsers(token || processToken);
 				}
 			}
 		}

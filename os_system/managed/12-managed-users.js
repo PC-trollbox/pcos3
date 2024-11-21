@@ -114,7 +114,16 @@ async function setupUsers() {
 		configured: _ => true,
 		access: async function(user, token) {
 			return handleAuthentication(user, token);
-		}
+		},
+		getUsers: async function(token) {
+			return (await fetch(server + "getUsers", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({ token })
+			})).json();
+		},
 	}
 }
 await setupUsers();

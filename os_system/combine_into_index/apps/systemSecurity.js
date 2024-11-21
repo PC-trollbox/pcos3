@@ -1,13 +1,13 @@
 // =====BEGIN MANIFEST=====
 // link: lrn:SYSTEM_SECURITY_TITLE
 // signer: automaticSigner
-// allow: GET_USER_INFO, USER_INFO_OTHERS, SENSITIVE_USER_INFO_OTHERS, SET_USER_INFO, GET_LOCALE, GET_THEME, CSP_OPERATIONS, SET_SECURITY_CHECKS, FS_LIST_PARTITIONS, FS_READ, FS_REMOVE, FS_WRITE, FS_CHANGE_PERMISSION, START_TASK, FS_BYPASS_PERMISSIONS, MANAGE_TOKENS, SWITCH_USERS_AUTOMATICALLY, ELEVATE_PRIVILEGES
+// allow: GET_USER_INFO, USER_INFO_OTHERS, SENSITIVE_USER_INFO_OTHERS, SET_USER_INFO, GET_LOCALE, GET_THEME, CSP_OPERATIONS, SET_SECURITY_CHECKS, FS_LIST_PARTITIONS, FS_READ, FS_REMOVE, FS_WRITE, FS_CHANGE_PERMISSION, START_TASK, FS_BYPASS_PERMISSIONS, MANAGE_TOKENS, SWITCH_USERS_AUTOMATICALLY, ELEVATE_PRIVILEGES, GET_USER_LIST
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("SYSTEM_SECURITY_TITLE"));
 	let privileges = await availableAPIs.getPrivileges();
-	let checklist = [ "GET_USER_INFO", "USER_INFO_OTHERS", "SENSITIVE_USER_INFO_OTHERS", "SET_USER_INFO", "FS_LIST_PARTITIONS", "FS_READ", "FS_REMOVE", "FS_WRITE", "FS_CHANGE_PERMISSION", "START_TASK", "FS_BYPASS_PERMISSIONS", "MANAGE_TOKENS", "SWITCH_USERS_AUTOMATICALLY", "ELEVATE_PRIVILEGES" ];
+	let checklist = [ "GET_USER_INFO", "USER_INFO_OTHERS", "SENSITIVE_USER_INFO_OTHERS", "SET_USER_INFO", "FS_LIST_PARTITIONS", "FS_READ", "FS_REMOVE", "FS_WRITE", "FS_CHANGE_PERMISSION", "START_TASK", "FS_BYPASS_PERMISSIONS", "MANAGE_TOKENS", "SWITCH_USERS_AUTOMATICALLY", "ELEVATE_PRIVILEGES", "GET_USER_LIST" ];
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	if (!checklist.every(p => privileges.includes(p))) {
@@ -41,6 +41,16 @@
 		usernameField.placeholder = await availableAPIs.lookupLocale("USERNAME");
 		actionSpecificField.appendChild(usernameField);
 		actionSpecificField.appendChild(editButton);
+		actionSpecificField.appendChild(document.createElement("hr"));
+		for (let user of await availableAPIs.getUsers()) {
+			let userButton = document.createElement("button");
+			userButton.innerText = user;
+			userButton.addEventListener("click", async function() {
+				usernameField.value = user;
+				editButton.click();
+			});
+			actionSpecificField.appendChild(userButton);
+		}
 		editButton.addEventListener("click", async function() {
 			if (!usernameField.value) return;
 			username = usernameField.value;
