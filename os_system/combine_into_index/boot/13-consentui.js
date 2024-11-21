@@ -14,10 +14,20 @@ async function consentui(ses = modules.session.active, config, token, isLogonScr
 	let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/consentui.js", [ ipc, config.user || "", JSON.stringify({ path: config.path, args: config.args, submittedIntent: config.intent, submittedName: config.name }) ], windowObject, appToken);
 	if (isLogonScreen) windowObject.closeButton.classList.toggle("hidden", true);
 	async function waitForIt() {
-		let msg = await modules.ipc.listenFor(ipc);
+		let msg = await Promise.race([
+			modules.ipc.listenFor(ipc),
+			modules.tasks.waitTermination(authTask)
+		]);
 		delete modules.ipc._ipc[ipc];
-		await modules.tasks.sendSignal(authTask, 9);
-		hook(msg);
+		try {
+			await modules.tasks.sendSignal(authTask, 9);
+			hook(msg);
+		} catch {
+			hook({
+				success: false,
+				cancelled: true
+			});
+		}
 	}
 	waitForIt();
 	return { hook: (e) => hook = e };

@@ -14,52 +14,7 @@ async function requireLogon() {
 	modules.liu = liu;
 	serviceLogon();
 	let insertedLockMessage = false;
-	while (!modules.shuttingDown) {
-		let useDefaultUser = await modules.fs.permissions(modules.defaultSystem + "/etc/security/automaticLogon");
-		useDefaultUser = !useDefaultUser.world.includes("w");
-		let defaultUser;
-		try {
-			if (useDefaultUser) defaultUser = await modules.fs.read(modules.defaultSystem + "/etc/security/automaticLogon");
-		} catch {}
-		let sysDom = modules.session.tracker[modules.session.systemSession].html;
-		let lockWallpaper = "";
-		let lockIsDark = false;
-		try {
-			lockWallpaper = await modules.fs.read(modules.defaultSystem + "/etc/wallpapers/lockscreen.pic");
-		} catch (e) {
-			console.error("Failed to read lockscreen.pic:", e);
-		}
-		try {
-			lockIsDark = (await modules.fs.read(modules.defaultSystem + "/etc/darkLockScreen")) == "true";
-		} catch (e) {
-			console.error("Failed to read darkLockScreen:", e);
-		}
-		if (modules.core.bootMode == "safe") {
-			lockIsDark = true;
-			lockWallpaper = "";
-			if (!insertedLockMessage) {
-				insertedLockMessage = true;
-				let message = document.createElement("span");
-				message.innerText = modules.locales.get("SAFE_MODE_MSG");
-				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-				sysDom.appendChild(message);
-				let message2 = document.createElement("span");
-				message2.innerText = modules.locales.get("SAFE_MODE_MSG");
-				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-				sysDom.appendChild(message2);
-			}
-		}
-		sysDom.style.background = "url(" + JSON.stringify(lockWallpaper) + ")";
-		if (modules.core.bootMode == "safe") sysDom.style.background = "black";
-		sysDom.style.backgroundSize = "100% 100%";
-		modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
-		let logon, resolvedLogon;
-		while (!modules.shuttingDown) {
-			logon = await modules.authui(modules.session.systemSession, defaultUser, undefined, true);
-			resolvedLogon = await waitForLogon(logon);
-			if (resolvedLogon.success) break;
-		}
-		if (!resolvedLogon.success) break;
+	async function handleLogin(resolvedLogon, liu) {
 		modules.session.muteAllSessions();
 		let userInfo = await modules.tokens.info(resolvedLogon.token);
 		let session;
@@ -82,6 +37,19 @@ async function requireLogon() {
 		let dom = modules.session.tracker[session].html;
 		let bgPic = "";
 		let isDark = false;
+		let basicPrivilegeChecklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "CSP_OPERATIONS", "START_TASK" ];
+		if (!basicPrivilegeChecklist.every(privilege => userInfo.privileges.includes(privilege))) {
+			let failureMessage = modules.window(session);
+			failureMessage.title.innerText = "Permission denied";
+			failureMessage.content.style.padding = "8px";
+			failureMessage.content.innerText = "There were not enough privileges to log you in. Please contact your system administrator.";
+			failureMessage.closeButton.onclick = async function() {
+				failureMessage.windowDiv.remove();
+				await modules.logOut(userInfo.user);
+			}
+			return;
+		}
+
 		try {
 			let permissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.wallpaper", resolvedLogon.token);
 			if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
@@ -118,130 +86,229 @@ async function requireLogon() {
 		dom.style.background = "url(" + JSON.stringify(bgPic) + ")";
 		if (modules.core.bootMode == "safe") dom.style.background = "black";
 		dom.style.backgroundSize = "100% 100%";
-		let autoRunNecessities = [];
-		let autorunNecessityFailure = false;
-		try {
-			let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
-			if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-				throw new Error("Permission denied reading autorun necessities");
-			}
-			if (modules.core.bootMode != "safe") autoRunNecessities = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
-		} catch (e) {
-			console.error("Failed to read autorun necessities:", e);
-		}
-		function breakNecessityFailure() {
-			let failureMessage = modules.window(session);
-			autorunNecessityFailure = true;
-			failureMessage.title.innerText = modules.locales.get("PERMISSION_DENIED");
-			failureMessage.content.style.padding = "8px";
-			failureMessage.content.innerText = modules.locales.get("AUTORUN_NECESSITIES_FAILED");
-			failureMessage.closeButton.onclick = async function() {
-				failureMessage.windowDiv.remove();
-				await modules.logOut(userInfo.user);
-			}
-		}
-		for (let autoRunNecessity of autoRunNecessities) {
-			let necessityPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
-			if (necessityPermissions.owner != userInfo.user && !userInfo.groups.includes(necessityPermissions.group) && !(necessityPermissions.world.includes("r") && necessityPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-				breakNecessityFailure();
-				break;
-			}
-			let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
+		if (!wasLiuLoaded) {
+			let autoRunNecessities = [];
 			try {
-				link = JSON.parse(link);
-			} catch (e) {
-				console.error("Failed to parse autorun necessity:", e);
-				breakNecessityFailure();
-				break;
-			}
-			if (link.disabled) continue;
-			try {
-				let ipcPipe = modules.ipc.create();
-				modules.ipc.declareAccess(ipcPipe, {
-					owner: userInfo.user,
-					group: userInfo.groups[0],
-					world: false
-				});
-				let forkedToken;
-				if (link.automaticLogon) {
-					try {
-						let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
-						logon = await logon.getNextPrompt();
-						for (let response of link.automaticLogon.responses)
-							if (logon.success == "intermediate") logon = await logon.input(response);
-						if (!logon.success) throw new Error(logon.message);
-						forkedToken = logon.token;
-					} catch {}
-					if (necessityPermissions.world.includes("r") && forkedToken) {
-						let ownUser = await modules.tokens.info(forkedToken);
-						let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
-						ownUserInfo.securityChecks = [];
-						await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
-						await modules.tokens.revoke(forkedToken);
-						forkedToken = null;
-					}
+				let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
+				if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+					throw new Error("Permission denied reading autorun necessities");
 				}
-				if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
-				let appWindow = modules.window(session);
-				let ipcResult = modules.ipc.listenFor(ipcPipe);
-				let taskId = await modules.tasks.exec(link.path, [ ...(link.args || []), ipcPipe ], appWindow, forkedToken, true);
-				let finishTaskPromise = new Promise(function(resolve) {
-					modules.tasks.tracker[taskId].ree.beforeCloseDown(() => resolve());
-				})
-				ipcResult = await Promise.race([ipcResult, finishTaskPromise]);
-				if (!ipcResult) throw new Error("Software rejected autorun necessity.");
-				if (modules.tasks.tracker.hasOwnProperty(taskId)) await modules.tasks.sendSignal(taskId, 9);
+				if (modules.core.bootMode != "safe") autoRunNecessities = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity", resolvedLogon.token);
 			} catch (e) {
-				console.error("Failed to execute autorun necessity:", e);
-				breakNecessityFailure();
-				break;
+				console.error("Failed to read autorun necessities:", e);
 			}
-		}
-		
-		let autoRun = [];
-		try {
-			let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
-			if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-				throw new Error("Permission denied reading autorun");
-			}
-			if (modules.core.bootMode != "safe" && !autorunNecessityFailure) autoRun = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
-		} catch (e) {
-			console.error("Failed to read autorun:", e);
-		}
-		for (let autoRunFile of autoRun) {
-			let autoRunItemPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
-			if (autoRunItemPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunItemPermissions.group) && !(autoRunItemPermissions.world.includes("r") && autoRunItemPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) continue;
-			let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
-			try {
-				link = JSON.parse(link);
-			} catch {}
-			if (link.disabled) continue;
-			try {
-				let forkedToken;
-				if (link.automaticLogon) {
-					try {
-						let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
-						logon = await logon.getNextPrompt();
-						for (let response of link.automaticLogon.responses)
-							if (logon.success == "intermediate") logon = await logon.input(response);
-						if (!logon.success) throw new Error(logon.message);
-						forkedToken = logon.token;
-					} catch {}
-					if (autoRunItemPermissions.world.includes("r") && forkedToken) {
-						let ownUser = await modules.tokens.info(forkedToken);
-						let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
-						ownUserInfo.securityChecks = [];
-						await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
-						await modules.tokens.revoke(forkedToken);
-						forkedToken = null;
-					}
+			function breakNecessityFailure() {
+				let failureMessage = modules.window(session);
+				failureMessage.title.innerText = modules.locales.get("PERMISSION_DENIED");
+				failureMessage.content.style.padding = "8px";
+				failureMessage.content.innerText = modules.locales.get("AUTORUN_NECESSITIES_FAILED");
+				failureMessage.closeButton.onclick = async function() {
+					failureMessage.windowDiv.remove();
+					await modules.logOut(userInfo.user);
 				}
-				if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
-				let appWindow = modules.window(session);
-				await modules.tasks.exec(link.path, [ ...(link.args || []) ], appWindow, forkedToken);
-			} catch {}
-		}
-		if (!wasLiuLoaded && !autorunNecessityFailure) {
+			}
+			for (let autoRunNecessity of autoRunNecessities) {
+				let necessityPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
+				if (necessityPermissions.owner != userInfo.user && !userInfo.groups.includes(necessityPermissions.group) && !(necessityPermissions.world.includes("r") && necessityPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+					return breakNecessityFailure();
+				}
+				let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorunNecessity/" + autoRunNecessity, resolvedLogon.token);
+				try {
+					link = JSON.parse(link);
+				} catch (e) {
+					console.error("Failed to parse autorun necessity:", e);
+					return breakNecessityFailure();
+				}
+				if (link.disabled) continue;
+				try {
+					let ipcPipe = modules.ipc.create();
+					modules.ipc.declareAccess(ipcPipe, {
+						owner: userInfo.user,
+						group: userInfo.groups[0],
+						world: false
+					});
+					let forkedToken;
+					if (link.automaticLogon) {
+						try {
+							let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
+							logon = await logon.getNextPrompt();
+							for (let response of link.automaticLogon.responses)
+								if (logon.success == "intermediate") logon = await logon.input(response);
+							if (!logon.success) throw new Error(logon.message);
+							forkedToken = logon.token;
+						} catch {}
+						if (necessityPermissions.world.includes("r") && forkedToken) {
+							let ownUser = await modules.tokens.info(forkedToken);
+							let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
+							ownUserInfo.securityChecks = [];
+							await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
+							await modules.tokens.revoke(forkedToken);
+							forkedToken = null;
+						}
+					}
+					if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
+					let appWindow = modules.window(session);
+					let ipcResult = modules.ipc.listenFor(ipcPipe);
+					let taskId = await modules.tasks.exec(link.path, [ ...(link.args || []), ipcPipe ], appWindow, forkedToken, true);
+					let finishTaskPromise = new Promise(function(resolve) {
+						modules.tasks.tracker[taskId].ree.beforeCloseDown(() => resolve());
+					})
+					ipcResult = await Promise.race([ipcResult, finishTaskPromise]);
+					if (!ipcResult) throw new Error("Software rejected autorun necessity.");
+					if (modules.tasks.tracker.hasOwnProperty(taskId)) await modules.tasks.sendSignal(taskId, 9);
+				} catch (e) {
+					console.error("Failed to execute autorun necessity:", e);
+					return breakNecessityFailure();
+				}
+			}
+			
+			let autoRun = [];
+			try {
+				let autoRunPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
+				if (autoRunPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunPermissions.group) && !(autoRunPermissions.world.includes("r") && autoRunPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+					throw new Error("Permission denied reading autorun");
+				}
+				if (modules.core.bootMode != "safe") autoRun = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun", resolvedLogon.token);
+			} catch (e) {
+				console.error("Failed to read autorun:", e);
+			}
+			for (let autoRunFile of autoRun) {
+				let autoRunItemPermissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
+				if (autoRunItemPermissions.owner != userInfo.user && !userInfo.groups.includes(autoRunItemPermissions.group) && !(autoRunItemPermissions.world.includes("r") && autoRunItemPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) continue;
+				let link = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.autorun/" + autoRunFile, resolvedLogon.token);
+				try {
+					link = JSON.parse(link);
+				} catch {}
+				if (link.disabled) continue;
+				try {
+					let forkedToken;
+					if (link.automaticLogon) {
+						try {
+							let logon = await modules.users.access(link.automaticLogon.username, resolvedLogon.token);
+							logon = await logon.getNextPrompt();
+							for (let response of link.automaticLogon.responses)
+								if (logon.success == "intermediate") logon = await logon.input(response);
+							if (!logon.success) throw new Error(logon.message);
+							forkedToken = logon.token;
+						} catch {}
+						if (autoRunItemPermissions.world.includes("r") && forkedToken) {
+							let ownUser = await modules.tokens.info(forkedToken);
+							let ownUserInfo = await modules.users.getUserInfo(ownUser.user, true, forkedToken);
+							ownUserInfo.securityChecks = [];
+							await modules.users.moduser(ownUser.user, ownUserInfo, forkedToken);
+							await modules.tokens.revoke(forkedToken);
+							forkedToken = null;
+						}
+					}
+					if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
+					let appWindow = modules.window(session);
+					await modules.tasks.exec(link.path, [ ...(link.args || []) ], appWindow, forkedToken);
+				} catch {}
+			}
+
+			let icons = [];
+			let lastIconPlacement = [ 72, 72 ];
+			try {
+				let permissions = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/desktop", resolvedLogon.token);
+				if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+					throw new Error("Permission denied reading desktop icons");
+				}
+				icons = await modules.fs.ls((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/desktop", resolvedLogon.token);
+			} catch (e) {
+				console.error("Failed to read desktop icons:", e);
+			}
+			for (let icon of icons) {
+				if (icon.split("/").slice(-1)[0].startsWith(".")) continue;
+				try {
+					let iconPath = (await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/desktop/" + icon;
+					let permissions = await modules.fs.permissions(iconPath, resolvedLogon.token);
+					if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+						throw new Error("Permission denied reading desktop icon");
+					}
+					let isDir = await modules.fs.isDirectory(iconPath, resolvedLogon.token);
+					let linkName = iconPath.split("/").slice(-1)[0];
+					let appLink = { path: modules.defaultSystem + "/apps/explorer.js", args: [ iconPath ], name: linkName, placed: lastIconPlacement, icon: modules.defaultSystem + "/etc/icons/fileicon.pic" };
+					if (!isDir) {
+						if (linkName.endsWith(".lnk")) {
+							try {
+								appLink = { placed: lastIconPlacement, icon: modules.defaultSystem + "/etc/icons/lnk.pic", ...(JSON.parse(await modules.fs.read(iconPath, resolvedLogon.token))) };
+								appLink._isRealLink = true;
+							} catch {}
+						} else {
+							let ext = linkName.split(".").slice(-1)[0];
+							appLink.icon = modules.defaultSystem + "/etc/icons/" + ext + ".pic";
+							let assocsPermissions = await modules.fs.permissions(modules.defaultSystem + "/apps/associations", resolvedLogon.token);
+							if (assocsPermissions.owner != userInfo.user && !userInfo.groups.includes(assocsPermissions.group) && !(assocsPermissions.world.includes("r") && assocsPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+								throw new Error("Permission denied reading associations");
+							}
+							let associations = await modules.fs.ls(modules.defaultSystem + "/apps/associations", resolvedLogon.token);
+							if (!associations.includes(ext)) appLink.disabled = true;
+							else {
+								let associationPermissions = await modules.fs.permissions(modules.defaultSystem + "/apps/associations/" + ext, resolvedLogon.token);
+								if (!associationPermissions.world.includes("r") && !userInfo.groups.includes(associationPermissions.group) && associationPermissions.owner != userInfo.user && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+									throw new Error("Permission denied reading association");
+								}
+								appLink = { placed: lastIconPlacement, icon: appLink.icon, ...(JSON.parse(await modules.fs.read(modules.defaultSystem + "/apps/associations/" + ext, resolvedLogon.token))) };
+								appLink.args = [ ...(appLink.args || []), iconPath ];
+								appLink.name = linkName;
+								delete appLink.localeDatabaseName;
+								delete appLink.localeReferenceName;
+							}
+						}
+					}
+					if (appLink.disabled) continue;
+					if (isDir) appLink.icon = modules.defaultSystem + "/etc/icons/foldericon.pic";
+					let iconWindow = modules.window(session, false, true, function(newx, newy) {
+						if (appLink._isRealLink) {
+							appLink.placed = [ newx, newy ];
+							delete appLink._isRealLink;
+							modules.fs.write(iconPath, JSON.stringify(appLink), resolvedLogon.token);
+							appLink._isRealLink = true;
+						}
+					});
+					iconWindow.title.innerText = (appLink.localeReferenceName ? modules.locales.get(appLink.localeReferenceName) : null) || (appLink.localeDatabaseName ? (appLink.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()] || appLink.localeDatabaseName[modules.locales.defaultLocale]) : null) || appLink.name;
+					let iconEl = document.createElement("img");
+					try {
+						let permissions = await modules.fs.permissions(appLink.icon, resolvedLogon.token);
+						if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+							throw new Error("Permission denied reading desktop icon picture");
+						}
+						iconEl.src = await modules.fs.read(appLink.icon, resolvedLogon.token);
+					} catch (e) {
+						console.error("Failed to read desktop icon picture:", e);
+						continue;
+					}
+					iconEl.style = "width: 100%; height: 100%; position: absolute;";
+					iconWindow.content.appendChild(iconEl);
+					iconWindow.windowDiv.style.top = appLink.placed[1] + "px";
+					iconWindow.windowDiv.style.left = appLink.placed[0] + "px";
+					iconEl.addEventListener("click", async function() {
+						let forkedToken;
+						if (appLink.automaticLogon) {
+							try {
+								let logon = await modules.users.access(appLink.automaticLogon.username, resolvedLogon.token);
+								logon = await logon.getNextPrompt();
+								for (let response of appLink.automaticLogon.responses)
+									if (logon.success == "intermediate") logon = await logon.input(response);
+								if (!logon.success) throw new Error(logon.message);
+								forkedToken = logon.token;
+							} catch {}
+						}
+						if (!forkedToken) forkedToken = await modules.tokens.fork(resolvedLogon.token);
+						let appWindow = modules.window(session);
+						await modules.tasks.exec(appLink.path, [ ...(appLink.args || []) ], appWindow, forkedToken);
+					});
+					lastIconPlacement = appLink.placed;
+					lastIconPlacement[1] += 136;
+					if (lastIconPlacement[1] > (dom.clientHeight - 136)) {
+						lastIconPlacement[0] += 136;
+						lastIconPlacement[1] = 72;
+					}
+				} catch (e) {
+					console.error("Failed to read desktop icon:", e);
+					continue;
+				}
+			}
 			let startMenuChannel = modules.ipc.create();
 			modules.ipc.declareAccess(startMenuChannel, {
 				owner: userInfo.user,
@@ -332,6 +399,54 @@ async function requireLogon() {
 			taskbar.appendChild(clock);
 			dom.appendChild(taskbar);
 		}
+	}
+	while (!modules.shuttingDown) {
+		let useDefaultUser = await modules.fs.permissions(modules.defaultSystem + "/etc/security/automaticLogon");
+		useDefaultUser = !useDefaultUser.world.includes("w");
+		let defaultUser;
+		try {
+			if (useDefaultUser) defaultUser = await modules.fs.read(modules.defaultSystem + "/etc/security/automaticLogon");
+		} catch {}
+		let sysDom = modules.session.tracker[modules.session.systemSession].html;
+		let lockWallpaper = "";
+		let lockIsDark = false;
+		try {
+			lockWallpaper = await modules.fs.read(modules.defaultSystem + "/etc/wallpapers/lockscreen.pic");
+		} catch (e) {
+			console.error("Failed to read lockscreen.pic:", e);
+		}
+		try {
+			lockIsDark = (await modules.fs.read(modules.defaultSystem + "/etc/darkLockScreen")) == "true";
+		} catch (e) {
+			console.error("Failed to read darkLockScreen:", e);
+		}
+		if (modules.core.bootMode == "safe") {
+			lockIsDark = true;
+			lockWallpaper = "";
+			if (!insertedLockMessage) {
+				insertedLockMessage = true;
+				let message = document.createElement("span");
+				message.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
+				sysDom.appendChild(message);
+				let message2 = document.createElement("span");
+				message2.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
+				sysDom.appendChild(message2);
+			}
+		}
+		sysDom.style.background = "url(" + JSON.stringify(lockWallpaper) + ")";
+		if (modules.core.bootMode == "safe") sysDom.style.background = "black";
+		sysDom.style.backgroundSize = "100% 100%";
+		modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
+		let logon, resolvedLogon;
+		while (!modules.shuttingDown) {
+			logon = await modules.authui(modules.session.systemSession, defaultUser, undefined, true);
+			resolvedLogon = await waitForLogon(logon);
+			if (resolvedLogon.success) break;
+		}
+		if (!resolvedLogon.success) break;
+		handleLogin(resolvedLogon, liu);
 		if (useDefaultUser && defaultUser) {
 			let newWindow = modules.window(modules.session.systemSession);
 			newWindow.title.innerText = modules.locales.get("LOG_IN_INVITATION");

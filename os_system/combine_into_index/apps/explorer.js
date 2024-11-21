@@ -512,6 +512,7 @@ let cachedIcons = {};
 			displayResult.innerText = (await availableAPIs.lookupLocale("FILE_STRUCT_BROWSE_FAIL")).replace("%s", await availableAPIs.lookupLocale(e.message));
 		}
 	}
+	if (exec_args[0]) pathElement.value = exec_args[0];
 	browse();
 	browseButton.onclick = browse;
 })();

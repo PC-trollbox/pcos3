@@ -126,9 +126,27 @@
 			try {
 				await availableAPIs.fs_mkdir({ path: homedir });
 			} catch {}
+			try {
+				await availableAPIs.fs_mkdir({ path: homedir + "/desktop" });
+			} catch {}
 			await availableAPIs.fs_chown({ path: homedir, newUser: username });
 			await availableAPIs.fs_chgrp({ path: homedir, newGrp: username });
 			await availableAPIs.fs_chmod({ path: homedir, newPermissions: "rx" });
+			await availableAPIs.fs_chown({ path: homedir + "/desktop", newUser: username });
+			await availableAPIs.fs_chgrp({ path: homedir + "/desktop", newGrp: username });
+			await availableAPIs.fs_chmod({ path: homedir + "/desktop", newPermissions: "rx" });
+			if (!exec_args.includes("usersConfigured")) {
+				await availableAPIs.fs_write({
+					path: homedir + "/desktop/updateos.lnk",
+					data: JSON.stringify({
+						localeReferenceName: "UPDATE_BUTTON",
+						path: defaultSystem + "/apps/updateos.js"
+					})
+				});
+				await availableAPIs.fs_chown({ path: homedir + "/desktop/updateos.lnk", newUser: username });
+				await availableAPIs.fs_chgrp({ path: homedir + "/desktop/updateos.lnk", newGrp: username });
+				await availableAPIs.fs_chmod({ path: homedir + "/desktop/updateos.lnk", newPermissions: "rx" });
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2U"));
 			await availableAPIs.fs_write({
 				path: homedir + "/.wallpaper",

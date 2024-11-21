@@ -44,6 +44,15 @@ function loadUi() {
 		border-radius: 4px;
 	}
 
+
+	.window.icon {
+		top: 72px;
+		left: 72px;
+		resize: none;
+		width: 128px;
+		height: 128px;
+	}
+
 	.window.dark {
 		background-color: ${modules.core.bootMode == "safe" ? "rgb(55, 55, 55)" : "rgba(55, 55, 55, 0.5)"};
 		color: white;
@@ -162,11 +171,12 @@ function loadUi() {
 	}`;
 	document.head.appendChild(uiStyle);
 
-	function createWindow(sessionId, makeFullscreenOnAllScreens) {
+	function createWindow(sessionId, makeFullscreenOnAllScreens, asIconWindow, reportMovement) {
 		let fullscreen = makeFullscreenOnAllScreens || matchMedia("(max-width: 600px)").matches;
+		if (asIconWindow) fullscreen = false;
 		let id = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 		let windowDiv = document.createElement('div');
-		windowDiv.className = 'window ' + (fullscreen ? "fullscreen" : "");
+		windowDiv.className = 'window ' + (fullscreen ? "fullscreen " : "") + " " + (asIconWindow ? "icon" : "");
 		if (session.attrib(sessionId, "dark")) windowDiv.classList.add("dark");
 		windowDiv.id = 'window-' + id;
 		let titleBar = document.createElement('div');
@@ -177,7 +187,7 @@ function loadUi() {
 		closeButton.className = 'button close-button';
 		closeButton.innerHTML = '&#10005;';
 		titleBar.appendChild(title);
-		if (!fullscreen) {
+		if (!fullscreen && !asIconWindow) {
 			let fullscreenButton = document.createElement('button');
 			fullscreenButton.className = 'button';
 			fullscreenButton.innerHTML = '&#x25a1;';
@@ -186,13 +196,13 @@ function loadUi() {
 			}
 			titleBar.appendChild(fullscreenButton);
 		}
-		titleBar.appendChild(closeButton);
+		if (!asIconWindow) titleBar.appendChild(closeButton);
 		windowDiv.appendChild(titleBar);
 		let content = document.createElement('div');
 		content.className = 'content';
 		windowDiv.appendChild(content);
 		session.tracker[sessionId].html.appendChild(windowDiv);
-		if (!fullscreen) makeDraggable(windowDiv, titleBar);
+		if (!fullscreen) makeDraggable(windowDiv, titleBar, reportMovement);
 		return {
 			windowDiv,
 			title,
@@ -202,7 +212,7 @@ function loadUi() {
 		};
 	}
 
-	function makeDraggable(windowDiv, titleBar) {
+	function makeDraggable(windowDiv, titleBar, reportMovement) {
 		let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
 		titleBar.onmousedown = dragMouseDown;
@@ -230,6 +240,7 @@ function loadUi() {
 			pos4 = e.clientY;
 
 			if (!windowDiv.classList.contains("fullscreen")) {
+				if (reportMovement) reportMovement(windowDiv.offsetLeft - pos1, windowDiv.offsetTop - pos2);
 				windowDiv.style.top = windowDiv.offsetTop - pos2 + 'px';
 				windowDiv.style.left = windowDiv.offsetLeft - pos1 + 'px';
 			}

@@ -30,8 +30,6 @@ async function installer(target, token) {
 	await fs.chmod(target + "/apps/links/arcadeBreakout.lnk", "rx", token);
 	await fs.write(target + "/apps/arcadeBreakout.js", `// =====BEGIN MANIFEST=====
 // allow: GRAB_ATTENTION
-// signer: automaticSigner
-// signature: 6ee8bf560628ea010c65b90c2ccb4eccca482e8bee01091db7632d91c083a2783c3c7f5372ea9e1aec4a2bd50b96926ca642196d79bd4348f79d7e6728b529fa
 // =====END MANIFEST=====
 (async function() {
 		// @pcos-app-mode isolatable
