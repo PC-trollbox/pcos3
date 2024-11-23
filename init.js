@@ -365,16 +365,24 @@ async function sysHaltedHook() {
 	delete window.a;
 	tty_bios_api.print("\tExported API access...");
 	try {
-		ree.exportAPI("ree-test", () => tty_bios_api.println("\tavailable (good)") && ree_points++);
-		await ree.eval("window.availableAPIs['ree-test'](); null");
+		await new Promise(async function(resolve, reject) {
+			try {
+				ree.exportAPI("ree-test", () => resolve() || (tty_bios_api.println("\tavailable (good)") && ree_points++));
+				await ree.eval("window.availableAPIs['ree-test'](); null");
+			} catch (e) { reject(e); }
+		});
 	} catch (e) {
 		console.error(e);
 		tty_bios_api.println("\tfailed (bad)");
 	}
 	tty_bios_api.print("\tAPI authentication...");
 	try {
-		ree.exportAPI("ree-test-security", (param) => param.caller == ree.iframeId ? (tty_bios_api.println("\tworks (good)") && ree_points++) : tty_bios_api.println("\tauth failed (bad)"));
-		await ree.eval("window.availableAPIs['ree-test-security'](); null");
+		await new Promise(async function(resolve, reject) {
+			try {
+				ree.exportAPI("ree-test-security", (param) => resolve() || (param.caller == ree.iframeId ? (tty_bios_api.println("\tworks (good)") && ree_points++) : tty_bios_api.println("\tauth failed (bad)")));
+				await ree.eval("window.availableAPIs['ree-test-security'](); null");
+			} catch (e) { reject(e); }
+		});
 	} catch (e) {
 		console.error(e);
 		tty_bios_api.println("\tdefine/call failed (bad)");

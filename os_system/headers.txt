@@ -297,6 +297,7 @@ connlessSend({
     address: String,
     content: any
 }) // CONNLESS_SEND
+getUsers(String token) -> String[]
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()

@@ -77,6 +77,10 @@ async function setupbase() {
 		backend: {
 			files: {
 				etc: {
+					appHarden: JSON.stringify({
+						requireSignature: true,
+						requireAllowlist: true
+					}),
 					security: {
 						users: JSON.stringify({
 							root: {
@@ -150,6 +154,11 @@ async function setupbase() {
 					world: "rx"
 				},
 				"etc": {
+					owner: "root",
+					group: "root",
+					world: "rx"
+				},
+				"etc/appHarden": {
 					owner: "root",
 					group: "root",
 					world: "rx"

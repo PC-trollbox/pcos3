@@ -615,7 +615,7 @@ function loadFs() {
 				}
 				if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
 				if (typeof files === "string") this.ramFiles.delete(files);
-				this.backend = this._recursive_op(this.backend, "files/" + key, { type: "remove" }, 0);
+				this.backend = this._recursive_op(this.backend, "files/" + key, { type: "delete" });
 			},
 			ls: async function(directory) {
 				directory = String(directory);
@@ -641,7 +641,7 @@ function loadFs() {
 					if (!files) throw new Error("NO_SUCH_DIR");
 				}
 				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
-				this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} }, 0);
+				this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} });
 			},
 			permissions: async function(file) {
 				file = String(file);
