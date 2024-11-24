@@ -542,8 +542,10 @@ function imaging() {
 			selectedFile.disabled = true;
 			selectedFileButton.disabled = true;
 			restoreBtn.disabled = true;
-			progressBar.hidden = false;
+			rebootOnRestore.disabled = true;
+			mergeFlag.disabled = true;
 			outcome.hidden = true;
+			progressBar.hidden = false;
 			progressBar.max = 0;
 			progressBar.value = 0;
 			await availableAPIs.closeability(false);
@@ -553,8 +555,10 @@ function imaging() {
 				selectedFile.disabled = false;
 				selectedFileButton.disabled = false;
 				restoreBtn.disabled = false;
-				progressBar.hidden = true;
+				rebootOnRestore.disabled = false;
+				mergeFlag.disabled = false;
 				outcome.hidden = false;
+				progressBar.hidden = true;
 				outcome.innerText = oc;
 				await availableAPIs.closeability(true);
 			}
