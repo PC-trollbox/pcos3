@@ -1,4 +1,4 @@
-# up-to-date for build 1062
+# up-to-date for build 1063
 ./how-to/create-system-id.md
 ./how-to/change-my-password-cliroute.md
 ./how-to/reset-root-password.md
@@ -339,6 +339,7 @@
 ./os_system/history/build638.js
 ./os_system/history/build648.js
 ./os_system/history/build777.js
+./os_system/history/build1063.js
 ./os_system/history/build668.js
 ./os_system/history/build605.js
 ./os_system/history/build551.js

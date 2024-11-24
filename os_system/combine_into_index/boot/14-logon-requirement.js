@@ -222,7 +222,7 @@ async function requireLogon() {
 				try {
 					let iconPath = (await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/desktop/" + icon;
 					let permissions = await modules.fs.permissions(iconPath, resolvedLogon.token);
-					if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+					if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("r") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
 						throw new Error("Permission denied reading desktop icon");
 					}
 					let isDir = await modules.fs.isDirectory(iconPath, resolvedLogon.token);
@@ -258,11 +258,14 @@ async function requireLogon() {
 					}
 					if (appLink.disabled) continue;
 					if (isDir) appLink.icon = modules.defaultSystem + "/etc/icons/foldericon.pic";
-					let iconWindow = modules.window(session, false, true, function(newx, newy) {
+					let iconWindow = modules.window(session, false, true, async function(newx, newy) {
 						if (appLink._isRealLink) {
 							appLink.placed = [ newx, newy ];
 							delete appLink._isRealLink;
-							modules.fs.write(iconPath, JSON.stringify(appLink), resolvedLogon.token);
+							if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("w") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+								throw new Error("Permission denied reading desktop icon");
+							}
+							await modules.fs.write(iconPath, JSON.stringify(appLink), resolvedLogon.token);
 							appLink._isRealLink = true;
 						}
 					});
@@ -270,7 +273,7 @@ async function requireLogon() {
 					let iconEl = document.createElement("img");
 					try {
 						let permissions = await modules.fs.permissions(appLink.icon, resolvedLogon.token);
-						if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !(permissions.world.includes("r") && permissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+						if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("r") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
 							throw new Error("Permission denied reading desktop icon picture");
 						}
 						iconEl.src = await modules.fs.read(appLink.icon, resolvedLogon.token);

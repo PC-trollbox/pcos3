@@ -30,7 +30,7 @@ app.use("/os_system/keypair.json", function(req, res) {
 		d: "no hablo unauthorized accesses"
 	});
 });
-app.use("/os_system/managed", function(req, res) {
+app.use("/os_system/managed/managedDB.json", function(req, res) {
 	res.status(403).send("no hablo unauthorized accesses");
 });
 
