@@ -1,6 +1,7 @@
 async function networkd() {
 	let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 	let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+	modules.network = { connected: false, address: null, openCFPorts: [], ws: null };
 	try {
 		let config = await modules.fs.read(modules.defaultSystem + "/etc/network.json");
 		config = JSON.parse(config);
@@ -14,6 +15,9 @@ async function networkd() {
 		let handle = Array.from(crypto.getRandomValues(new Uint8Array(64))).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 		ws.binaryType = "arraybuffer";
 		async function onclose() {
+			modules.network.connected = false;
+			modules.network.address = null;
+			modules.network.openCFPorts = [];
 			ws = new WebSocket(config.url);
 			stage = 0;
 			try { await modules.fs.rm("ram/run/network.ws"); } catch {}
@@ -58,11 +62,18 @@ async function networkd() {
 						world: true
 					}
 				}
+				modules.network.connected = true;
+				modules.network.address = messageData.address;
+				modules.network.ws = handle;
 				await modules.fs.write("ram/run/network.ws", handle);
 				await modules.fs.write("ram/run/networkAddress", messageData.address);
 				stage++;
 			} else if (stage == 3) {
 				if (messageData.event == "DisconnectionComplete") {
+					modules.network.connected = false;
+					modules.network.address = null;
+					modules.network.openCFPorts = [];
+					modules.network.ws = null;
 					ws.onclose = null;
 					try { await modules.fs.rm("ram/run/network.ws"); } catch {}
 					try { await modules.fs.rm("ram/run/networkAddress"); } catch {}
@@ -81,6 +92,7 @@ async function networkd() {
 		ws.onmessage = onmessage;
 		ws.onclose = onclose;
 	} catch {
+		modules.network.serviceStopped = true;
 		modules.core.tty_bios_api.println("network: not starting network");
 	}
 }

@@ -454,7 +454,12 @@ function localization() {
 			"WRITING_DATA_FAILED": "Failed to write data.",
 			"DELETING_PARTITION_FAILED": "Failed to delete partition %s",
 			"DELETING_DATA_FAILED": "Failed to delete data.",
-			"SHUTTING_DOWN_FAILED": "Failed to shut the system down."
+			"SHUTTING_DOWN_FAILED": "Failed to shut the system down.",
+			"NETWORK_STATUS_ONLINE": "You are connected to a local area network.",
+			"NETWORK_STATUS_OFFLINE": "You aren't connected to any sort of network.",
+			"PCOS_NETWORK_STATUS_ONLINE": "You are connected to PCOS Network. (address: %s)",
+			"PCOS_NETWORK_STATUS_OFFLINE": "You are disconnected from PCOS Network.",
+			"PCOS_NETWORK_STATUS_STOPPED": "The PCOS Network service was stopped."
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -909,7 +914,12 @@ function localization() {
 			"WRITING_DATA_FAILED": "Не удалось записать данные.",
 			"DELETING_PARTITION_FAILED": "Не удалось удалить раздел %s",
 			"DELETING_DATA_FAILED": "Не удалось удалить данные.",
-			"SHUTTING_DOWN_FAILED": "Не удалось завершить работу системы."
+			"SHUTTING_DOWN_FAILED": "Не удалось завершить работу системы.",
+			"NETWORK_STATUS_ONLINE": "Вы подключены к локальной вычислительной сети.",
+			"NETWORK_STATUS_OFFLINE": "Вы не подключены ни к какой сети.",
+			"PCOS_NETWORK_STATUS_ONLINE": "Вы подключены к PCOS Network. (адрес: %s)",
+			"PCOS_NETWORK_STATUS_OFFLINE": "Вы отключены от PCOS Network.",
+			"PCOS_NETWORK_STATUS_STOPPED": "Служба PCOS Network была остановлена."
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

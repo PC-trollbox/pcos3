@@ -284,11 +284,12 @@ getScreenInfo() -> {
 waitTermination(String taskID) // LIST_TASKS
 consentGetToken({
     desiredUser: String,
-    intent: String
+    intent: String,
+    name: String
 }) -> String // ELEVATE_PRIVILEGES
 networkPing(String address) // NETWORK_PING
 logOut(String user) // LOGOUT (may require also LOGOUT_OTHERS)
-lock(String user) // LOGOUT (may require also LOGOUT_OTHERS)
+lock() // LOGOUT (may require also LOGOUT_OTHERS)
 getPrivateData() -> any
 lull() // LULL_SYSTEM (may require also LULL_SYSTEM_FORCE)
 connlessListen(String gate) -> any // CONNLESS_LISTEN (may also require CONNLESS_LISTEN_GLOBAL)
@@ -298,6 +299,7 @@ connlessSend({
     content: any
 }) // CONNLESS_SEND
 getUsers(String token) -> String[]
+getNetworkAddress() -> String || null // GET_NETWORK_ADDRESS
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()

@@ -3,9 +3,12 @@
 // allow: IPC_SEND_PIPE, GET_LOCALE, GET_THEME, ELEVATE_PRIVILEGES, FS_READ, FS_LIST_PARTITIONS, CSP_OPERATIONS
 // =====END MANIFEST=====
 
-let ipc = exec_args[0];
+let ipc;
 (async function() {
 	// @pcos-app-mode isolatable
+	exec_args = await availableAPIs.getPrivateData() || [];
+	if (!(exec_args instanceof Array)) return availableAPIs.terminate();
+	ipc = exec_args[0];
 	if (!ipc) return availableAPIs.terminate();
 	let user = exec_args[1];
 	try {

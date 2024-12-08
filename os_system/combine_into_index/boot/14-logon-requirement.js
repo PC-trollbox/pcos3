@@ -263,7 +263,7 @@ async function requireLogon() {
 							appLink.placed = [ newx, newy ];
 							delete appLink._isRealLink;
 							if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("w") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-								throw new Error("Permission denied reading desktop icon");
+								throw new Error("Permission denied writing desktop icon");
 							}
 							await modules.fs.write(iconPath, JSON.stringify(appLink), resolvedLogon.token);
 							appLink._isRealLink = true;
@@ -335,7 +335,10 @@ async function requireLogon() {
 			startButton.style = "padding: 4px;";
 			startButton.disabled = true;
 			try {
-				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [ startMenuChannel ], startMenu, forkedStartMenuToken, true, encryptionValue);
+				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, {
+					encryptionKey: encryptionValue,
+					ipcChannel: startMenuChannel
+				});
 			} catch (e) {
 				console.error("Failed to start start menu:", e);
 			}
@@ -383,7 +386,10 @@ async function requireLogon() {
 						startMenu = modules.window(session);
 						forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
 						try {
-							await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [ startMenuChannel ], startMenu, forkedStartMenuToken, true, encryptionValue);
+							await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, {
+								encryptionKey: encryptionValue,
+								ipcChannel: startMenuChannel
+							});
 						} catch (e) {
 							console.error("Failed to start start menu:", e);
 						}
@@ -393,12 +399,34 @@ async function requireLogon() {
 
 			taskbar.className = "taskbar";
 			clock.className = "clock";
+			let filler = document.createElement("div");
+			filler.className = "filler";
+			let networkIcon = document.createElement("div");
+			let pcosNetworkIcon = document.createElement("div");
+			let iconCache = {};
+			for (let iconFile of ["network_", "network_offline_", "pcos_network_", "pcos_network_offline_"]) {
+				let permissions = await modules.fs.permissions(modules.defaultSystem + "/etc/icons/" + iconFile + "icon.pic", resolvedLogon.token);
+				if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("r") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+					throw new Error("Permission denied reading taskbar icon picture");
+				}
+				iconCache[iconFile] = await modules.fs.read(modules.defaultSystem + "/etc/icons/" + iconFile + "icon.pic", resolvedLogon.token);
+			}
 
 			liu[liuUser].clockInterval = setInterval(function() {
 				clock.innerText = new Date().toTimeString().split(" ")[0];
+				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
+				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"))
+				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
+				pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_" + (modules.network.connected ? "ONLINE" : "OFFLINE")).replace("%s", userInfo.privileges.includes("GET_NETWORK_ADDRESS") ? (modules.network.address || "0").match(/.{1,4}/g).join(":") : modules.locales.get("UNKNOWN_PLACEHOLDER"));
+				if (modules.network.serviceStopped) pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_STOPPED");
 			}, 500);
 			
+			networkIcon.className = "icon";
+			pcosNetworkIcon.className = "icon";
 			taskbar.appendChild(startButton);
+			taskbar.appendChild(filler);
+			taskbar.appendChild(networkIcon);
+			taskbar.appendChild(pcosNetworkIcon);
 			taskbar.appendChild(clock);
 			dom.appendChild(taskbar);
 		}

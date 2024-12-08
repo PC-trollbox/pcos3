@@ -17,11 +17,22 @@ function loadUi() {
 		padding: 4px;
 		box-sizing: border-box;
 		border-radius: 4px;
+		display: flex;
 	}
 
-	.clock {
-		float: right;
+	.taskbar .clock {
 		margin-right: 4px;
+	}
+
+	.taskbar .icon {
+		width: 27px;
+		height: 27px;
+		background-size: contain;
+		margin: 0 4px;
+	}
+
+	.filler {
+		flex: 1;
 	}
 
 	.window {

@@ -2,7 +2,7 @@
 // signer: automaticSigner
 // allow: FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, IPC_LISTEN_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS, SYSTEM_SHUTDOWN, GET_USER_INFO, LOGOUT, GET_SCREEN_INFO, GRAB_ATTENTION, CSP_OPERATIONS, LULL_SYSTEM
 // =====END MANIFEST=====
-let ipcChannel = exec_args[0];
+let ipcChannel;
 let shouldShutdown = false;
 let visibilityState = true;
 let encryptionKey;
@@ -10,7 +10,15 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 (async function() {
 	// @pcos-app-mode isolatable
-	encryptionKey = await availableAPIs.getPrivateData();
+	let privateData = { ...(await availableAPIs.getPrivateData()) };
+	if (typeof privateData === "string") {
+		encryptionKey = privateData;
+		ipcChannel = exec_args[0];
+	}
+	if (typeof privateData === "object" && Object.keys(privateData).length > 0) {
+		encryptionKey = privateData.encryptionKey;
+		ipcChannel = privateData.ipcChannel;
+	}
 	if (!encryptionKey) return availableAPIs.terminate();
 	if (!ipcChannel) return availableAPIs.terminate();
 	await visibility(false);
@@ -137,7 +145,9 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 				}
 			});
 			listen = JSON.parse(new TextDecoder().decode(listen));
-		} catch {}
+		} catch {
+			continue;
+		}
 		if (listen.open) {
 			await visibility();
 			shapeshift();

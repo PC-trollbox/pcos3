@@ -26,6 +26,8 @@ function reeAPIs() {
 		let processPipes = [];
 		let websockets = [];
 		let automatedLogonSessions = {};
+		let networkListens = {};
+		let connections = {};
 		privileges = await denyUnmanifested(limitations, token);
 
 		async function fs_action(action, privilegeCheck, path, ...xtra) {
@@ -46,6 +48,7 @@ function reeAPIs() {
 		}
 		ree.beforeCloseDown(async function() {
 			for (let processPipe of processPipes) delete modules.ipc._ipc[processPipe];
+			for (let networkListen in networkListens) networkListens[networkListen].ws.removeEventListener(networkListens[networkListen].fn);
 			for (let websocket of websockets) modules.websocket.close(websocket);
 			await modules.tokens.revoke(token);
 			for (let i in modules.csps) if (modules.csps[i].hasOwnProperty("removeSameGroupKeys")) modules.csps[i].removeSameGroupKeys(null, taskId);
@@ -809,26 +812,32 @@ function reeAPIs() {
 				},
 				networkPing: async function(address) {
 					if (!privileges.includes("PCOS_NETWORK_PING")) throw new Error("UNAUTHORIZED_ACTION");
-					let websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
 					return new Promise(async function(resolve, reject) {
+						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
 						let packetId = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
 						let resend = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
-						websocket.addEventListener("message", function self(e) {
+						function eventListener(e) {
 							try {
 								let packet = JSON.parse(e.data);
 								if (packet.packetID == packetId && packet.event == "AddressUnreachable") {
 									reject(new Error("ADDRESS_UNREACHABLE"));
-									removeEventListener("message", self);
+									delete networkListens[networkListenID];
+									websocket.removeEventListener("message", eventListener);
 								}
 								if (packet.from == address && packet.data.type == "pong" && packet.data.resend == resend) {
 									resolve("success");
-									removeEventListener("message", self);
+									delete networkListens[networkListenID];
+									websocket.removeEventListener("message", eventListener);
 								}
 							} catch {}
-						});
+						}
+						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
+						websocket.addEventListener("message", eventListener);
 						websocket.send(JSON.stringify({
 							receiver: address,
 							data: {
@@ -860,25 +869,31 @@ function reeAPIs() {
 				connlessListen: async function(gate) {
 					if (!privileges.includes("CONNLESS_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!gate.startsWith("user_") && !privileges.includes("CONNLESS_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
-					let websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
 					return new Promise(async function(resolve) {
-						websocket.addEventListener("message", function self(e) {
+						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+						function eventListener(e) {
 							try {
 								let packet = JSON.parse(e.data);
 								if (packet.data.type == "connectionless" && packet.data.gate == gate) {
-									removeEventListener("message", self);
+									websocket.removeEventListener("message", eventListener);
+									delete networkListens[networkListenID];
 									resolve(packet.data.content);
 								}
 							} catch {}
-						});
+						}
+						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
+						websocket.addEventListener("message", eventListener);
 					});
 				},
 				connlessSend: async function(sendOpts) {
 					if (!privileges.includes("CONNLESS_SEND")) throw new Error("UNAUTHORIZED_ACTION");
-					let websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -894,22 +909,30 @@ function reeAPIs() {
 						id: packetId
 					}));
 					return new Promise(async function(resolve, reject) {
-						websocket.addEventListener("message", function self(e) {
+						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+						function eventListener(e) {
 							try {
 								let packet = JSON.parse(e.data);
 								if (packet.from) return;
 								if (packet.packetID == packetId) {
-									removeEventListener("message", self);
+									websocket.removeEventListener("message", eventListener);
+									delete networkListens[networkListenID];
 									if (packet.event == "PacketPong") return resolve("success");
 									reject(new Error("ADDRESS_UNREACHABLE"));
 								}
 							} catch {}
-						});
+						}
+						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
+						websocket.addEventListener("message", eventListener);
 					});
 				},
 				getUsers: async function(token) {
-					if (!privileges.includes("GET_USER_LIST")) throw new Error("UNAUTHORIZED_ACTION");;
+					if (!privileges.includes("GET_USER_LIST")) throw new Error("UNAUTHORIZED_ACTION");
 					return await modules.users.getUsers(token || processToken);
+				},
+				getNetworkAddress: async function() {
+					if (!privileges.includes("GET_NETWORK_ADDRESS")) throw new Error("UNAUTHORIZED_ACTION");
+					return modules.network.address;
 				}
 			}
 		}

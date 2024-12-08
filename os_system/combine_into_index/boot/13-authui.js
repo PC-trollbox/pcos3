@@ -11,7 +11,7 @@ async function authui(ses = modules.session.active, user, token, isLogonScreen) 
 	let ipc = await modules.ipc.create();
 	modules.ipc.declareAccess(ipc, { owner: "authui", group: "authui", world: false });
 	let windowObject = modules.window(ses);
-	let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/authui.js", [ ipc, user || "" ], windowObject, appToken);
+	let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/authui.js", [], windowObject, appToken, false, [ ipc, user || "" ]);
 	if (isLogonScreen) windowObject.closeButton.classList.toggle("hidden", true);
 	async function waitForIt() {
 		let msg = await Promise.race([

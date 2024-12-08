@@ -1,4 +1,4 @@
-async function consentui(ses = modules.session.active, config, token, isLogonScreen) {
+async function consentui(ses = modules.session.active, config, token) {
 	// @pcos-app-mode native
 	if (modules.shuttingDown) return { hook: _ => _ };
 	let appToken;
@@ -11,8 +11,16 @@ async function consentui(ses = modules.session.active, config, token, isLogonScr
 	let ipc = await modules.ipc.create();
 	modules.ipc.declareAccess(ipc, { owner: "authui", group: "authui", world: false });
 	let windowObject = modules.window(ses);
-	let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/consentui.js", [ ipc, config.user || "", JSON.stringify({ path: config.path, args: config.args, submittedIntent: config.intent, submittedName: config.name }) ], windowObject, appToken);
-	if (isLogonScreen) windowObject.closeButton.classList.toggle("hidden", true);
+	let authTask = await modules.tasks.exec(modules.defaultSystem + "/apps/consentui.js", [], windowObject, appToken, false, [
+		ipc,
+		config.user || "",
+		JSON.stringify({
+			path: config.path,
+			args: config.args,
+			submittedIntent: config.intent,
+			submittedName: config.name
+		})
+	]);
 	async function waitForIt() {
 		let msg = await Promise.race([
 			modules.ipc.listenFor(ipc),
