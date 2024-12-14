@@ -198,10 +198,11 @@ function loadFs() {
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-				return this.backend.permissions[properFile] || {
-					owner: randomNames,
-					group: randomNames,
-					world: "",
+				let permissions = this.backend.permissions[properFile] || {};
+				return {
+					owner: permissions.owner || randomNames,
+					group: permissions.group || randomNames,
+					world: permissions.world || "",
 				};
 			},
 			chown: async function(file, owner) {
@@ -452,10 +453,11 @@ function loadFs() {
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-				return (await this.getBackend()).permissions[properFile] || {
-					owner: randomNames,
-					group: randomNames,
-					world: "",
+				let permissions = (await this.getBackend()).permissions[properFile] || {};
+				return {
+					owner: permissions.owner || randomNames,
+					group: permissions.group || randomNames,
+					world: permissions.world || "",
 				};
 			},
 			chown: async function(file, owner) {
@@ -650,10 +652,11 @@ function loadFs() {
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-				return this.backend.permissions[properFile] || {
-					owner: randomNames,
-					group: randomNames,
-					world: "",
+				let permissions = this.backend.permissions[properFile] || {};
+				return {
+					owner: permissions.owner || randomNames,
+					group: permissions.group || randomNames,
+					world: permissions.world || "",
 				};
 			},
 			chown: async function(file, owner) {

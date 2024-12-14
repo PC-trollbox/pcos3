@@ -817,7 +817,7 @@ function reeAPIs() {
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
-					return new Promise(async function(resolve, reject) {
+					return Promise.race([ new Promise(async function(resolve, reject) {
 						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
 						let packetId = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
 						let resend = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(a => a.toString(16).padStart(2, "0")).join("");
@@ -846,7 +846,7 @@ function reeAPIs() {
 							},
 							id: packetId
 						}))
-					});
+					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
 				},
 				logOut: async function(desiredUser) {
 					if (desiredUser != user && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
@@ -874,7 +874,7 @@ function reeAPIs() {
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
-					return new Promise(async function(resolve) {
+					return Promise.race([ new Promise(async function(resolve) {
 						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
 						function eventListener(e) {
 							try {
@@ -882,13 +882,13 @@ function reeAPIs() {
 								if (packet.data.type == "connectionless" && packet.data.gate == gate) {
 									websocket.removeEventListener("message", eventListener);
 									delete networkListens[networkListenID];
-									resolve(packet.data.content);
+									resolve(packet);
 								}
 							} catch {}
 						}
 						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
 						websocket.addEventListener("message", eventListener);
-					});
+					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
 				},
 				connlessSend: async function(sendOpts) {
 					if (!privileges.includes("CONNLESS_SEND")) throw new Error("UNAUTHORIZED_ACTION");
@@ -908,7 +908,7 @@ function reeAPIs() {
 						},
 						id: packetId
 					}));
-					return new Promise(async function(resolve, reject) {
+					return Promise.race([ new Promise(async function(resolve, reject) {
 						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
 						function eventListener(e) {
 							try {
@@ -924,7 +924,7 @@ function reeAPIs() {
 						}
 						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
 						websocket.addEventListener("message", eventListener);
-					});
+					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
 				},
 				getUsers: async function(token) {
 					if (!privileges.includes("GET_USER_LIST")) throw new Error("UNAUTHORIZED_ACTION");
@@ -933,6 +933,29 @@ function reeAPIs() {
 				getNetworkAddress: async function() {
 					if (!privileges.includes("GET_NETWORK_ADDRESS")) throw new Error("UNAUTHORIZED_ACTION");
 					return modules.network.address;
+				},
+				connfulListen: async function(gate) {
+					if (!privileges.includes("CONNFULL_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
+					if (!gate.startsWith("user_") && !privileges.includes("CONNFUL_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					return Promise.race([ new Promise(async function(resolve) {
+						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+						function eventListener(e) {
+							try {
+								let packet = JSON.parse(e.data);
+								if (packet.data.type == "connectionful" && packet.data.gate == gate) {
+									websocket.removeEventListener("message", eventListener);
+								}
+							} catch {}
+						}
+						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
+						websocket.addEventListener("message", eventListener);
+						resolve(networkListenID);
+					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
 				}
 			}
 		}

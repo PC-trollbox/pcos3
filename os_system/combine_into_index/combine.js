@@ -116,8 +116,6 @@ for (let buildFile of buildFiles) {
 						} catch {}
 						await extractMedia(target + "/" + key, value, token);
 					} else await modules.fs.write(target + "/" + key, value, token);
-					await modules.fs.chown(target + "/" + key, "root", token);
-					await modules.fs.chgrp(target + "/" + key, "root", token);
 					await modules.fs.chmod(target + "/" + key, "rx", token);
 				}
 			}
@@ -159,18 +157,12 @@ for (let buildFile of buildFiles) {
 			async function ${fnName}(target, token) {
 				let neededApps = await modules.fs.ls(target + "/", token);
 				if (!neededApps.includes("apps")) await modules.fs.mkdir(target + "/apps", token);
-				await modules.fs.chown(target + "/apps", "root", token);
-				await modules.fs.chgrp(target + "/apps", "root", token);
 				await modules.fs.chmod(target + "/apps", "rx", token);
 				let neededAppsLinks = await modules.fs.ls(target + "/apps", token);
 				if (!neededAppsLinks.includes("links")) await modules.fs.mkdir(target + "/apps/links", token);
-				await modules.fs.chown(target + "/apps/links", "root", token);
-				await modules.fs.chgrp(target + "/apps/links", "root", token);
 				await modules.fs.chmod(target + "/apps/links", "rx", token);
 				let neededAppsAssocs = await modules.fs.ls(target + "/apps", token);
 				if (!neededAppsAssocs.includes("associations")) await modules.fs.mkdir(target + "/apps/associations", token);
-				await modules.fs.chown(target + "/apps/associations", "root", token);
-				await modules.fs.chgrp(target + "/apps/associations", "root", token);
 				await modules.fs.chmod(target + "/apps/associations", "rx", token);
 				let appPath = target + "/apps/" + ${JSON.stringify(appName)} + ".js";
 				let linkPath = target + "/apps/links/" + ${JSON.stringify(appName)} + ".lnk";
@@ -183,8 +175,6 @@ for (let buildFile of buildFiles) {
 						localeReferenceName: lrn,
 						name
 					}), token);
-					await modules.fs.chown(linkPath, "root", token);
-					await modules.fs.chgrp(linkPath, "root", token);
 					await modules.fs.chmod(linkPath, "rx", token);
 				}
 				for (let assoc of assocs) {
@@ -198,13 +188,9 @@ for (let buildFile of buildFiles) {
 						localeReferenceName: lrn,
 						name
 					}), token);
-					await modules.fs.chown(target + "/apps/associations/" + assoc, "root", token);
-					await modules.fs.chgrp(target + "/apps/associations/" + assoc, "root", token);
 					await modules.fs.chmod(target + "/apps/associations/" + assoc, "rx", token);
 				}
 				await modules.fs.write(appPath, ${JSON.stringify(app)}, token);
-				await modules.fs.chown(appPath, "root", token);
-				await modules.fs.chgrp(appPath, "root", token);
 				await modules.fs.chmod(appPath, "rx", token);
 			}
 			`;

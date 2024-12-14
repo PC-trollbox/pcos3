@@ -1,53 +1,24 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, IPC_LISTEN_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS, SYSTEM_SHUTDOWN, GET_USER_INFO, LOGOUT, GET_SCREEN_INFO, GRAB_ATTENTION, CSP_OPERATIONS, LULL_SYSTEM
+// allow: FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, IPC_LISTEN_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS, SYSTEM_SHUTDOWN, GET_USER_INFO, LOGOUT, GET_SCREEN_INFO, GRAB_ATTENTION, LULL_SYSTEM
 // =====END MANIFEST=====
 let ipcChannel;
 let shouldShutdown = false;
 let visibilityState = true;
-let encryptionKey;
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 (async function() {
 	// @pcos-app-mode isolatable
-	let privateData = { ...(await availableAPIs.getPrivateData()) };
-	if (typeof privateData === "string") {
-		encryptionKey = privateData;
-		ipcChannel = exec_args[0];
-	}
-	if (typeof privateData === "object" && Object.keys(privateData).length > 0) {
-		encryptionKey = privateData.encryptionKey;
-		ipcChannel = privateData.ipcChannel;
-	}
-	if (!encryptionKey) return availableAPIs.terminate();
+	ipcChannel = await availableAPIs.getPrivateData();
 	if (!ipcChannel) return availableAPIs.terminate();
 	await visibility(false);
 	await window.availableAPIs.windowTitleSet(await window.availableAPIs.lookupLocale("START_MENU"));
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	let privileges = await availableAPIs.getPrivileges();
-	let checklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "CSP_OPERATIONS" ];
+	let checklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE" ];
 	if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
-	try {
-		let encryptionKey2 = await availableAPIs.cspOperation({
-			cspProvider: "basic",
-			operation: "importKey",
-			cspArgument: {
-				format: "raw",
-				keyData: hexToU8A(encryptionKey),
-				algorithm: {
-					name: "AES-GCM",
-					length: 256
-				},
-				extractable: false,
-				keyUsages: ["encrypt", "decrypt"]
-			}
-		});
-		encryptionKey = encryptionKey2;
-	} catch {
-		return availableAPIs.terminate();
-	}
-	await sendOverPipe({ success: true });    
+	await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { success: true } });
 	document.body.innerText = "";
 	let logoutButton = document.createElement("button");
 	logoutButton.innerText = (await availableAPIs.lookupLocale("LOG_OUT_BUTTON")).replace("%s", await availableAPIs.getUser());
@@ -102,7 +73,7 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 			appBtn.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
 			appBtn.onclick = async function() {
 				await visibility(false);
-				await sendOverPipe({ run: appLink });
+				await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { run: appLink } });
 			}
 			document.body.appendChild(appBtn);
 		}
@@ -119,7 +90,7 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 			appBtn.innerText = (appLink.localeReferenceName ? await availableAPIs.lookupLocale(appLink.localeReferenceName) : null) || (appLink.localeDatabaseName ? (appLink.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()] || appLink.localeDatabaseName[await availableAPIs.osLocale()]) : null) || appLink.name;
 			appBtn.onclick = async function() {
 				await visibility(false);
-				await sendOverPipe({ run: appLink });
+				await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { run: appLink } });
 			}
 			document.body.appendChild(appBtn);
 		}
@@ -131,23 +102,6 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 
 	while (true) {
 		let listen = await availableAPIs.listenToPipe(ipcChannel);
-		try {
-			listen = await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "decrypt",
-				cspArgument: {
-					algorithm: {
-						name: "AES-GCM",
-						iv: hexToU8A(listen.slice(0, 32))
-					},
-					key: encryptionKey,
-					data: hexToU8A(listen.slice(32))
-				}
-			});
-			listen = JSON.parse(new TextDecoder().decode(listen));
-		} catch {
-			continue;
-		}
 		if (listen.open) {
 			await visibility();
 			shapeshift();
@@ -168,36 +122,10 @@ async function shapeshift() {
 	await availableAPIs.windowRelocate([ screenInfo.height - (winSize.height / 2) - 35 - 8, winSize.width / 2 + 8 ]);
 }
 
-async function sendOverPipe(data) {
-	let iv = await availableAPIs.cspOperation({
-		cspProvider: "basic",
-		operation: "random",
-		cspArgument: new Uint8Array(16)
-	});
-	let encrypted = await availableAPIs.cspOperation({
-		cspProvider: "basic",
-		operation: "encrypt",
-		cspArgument: {
-			algorithm: {
-				name: "AES-GCM",
-				iv: iv
-			},
-			key: encryptionKey,
-			data: new TextEncoder().encode(JSON.stringify(data))
-		}
-	});
-	await availableAPIs.sendToPipe({ pipe: ipcChannel, data: u8aToHex(iv) + u8aToHex(new Uint8Array(encrypted)) });
-}
-
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) {
 		await visibility(false);
-		await sendOverPipe({ dying: true });
-		await availableAPIs.cspOperation({
-			cspProvider: "basic",
-			operation: "unloadKey",
-			cspArgument: encryptionKey
-		});
+		await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { dying: true } });
 		await availableAPIs.terminate();
 	}
 }); null;

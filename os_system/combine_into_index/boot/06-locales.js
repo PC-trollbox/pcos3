@@ -459,7 +459,8 @@ function localization() {
 			"NETWORK_STATUS_OFFLINE": "You aren't connected to any sort of network.",
 			"PCOS_NETWORK_STATUS_ONLINE": "You are connected to PCOS Network. (address: %s)",
 			"PCOS_NETWORK_STATUS_OFFLINE": "You are disconnected from PCOS Network.",
-			"PCOS_NETWORK_STATUS_STOPPED": "The PCOS Network service was stopped."
+			"PCOS_NETWORK_STATUS_STOPPED": "The PCOS Network service was stopped.",
+			"START_MENU_FAILED": "The start menu has failed to launch. You can log out instead."
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -919,7 +920,8 @@ function localization() {
 			"NETWORK_STATUS_OFFLINE": "Вы не подключены ни к какой сети.",
 			"PCOS_NETWORK_STATUS_ONLINE": "Вы подключены к PCOS Network. (адрес: %s)",
 			"PCOS_NETWORK_STATUS_OFFLINE": "Вы отключены от PCOS Network.",
-			"PCOS_NETWORK_STATUS_STOPPED": "Служба PCOS Network была остановлена."
+			"PCOS_NETWORK_STATUS_STOPPED": "Служба PCOS Network была остановлена.",
+			"START_MENU_FAILED": "Не удалось запустить меню \"Пуск\". Вместо этого можно выполнить выход из системы."
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

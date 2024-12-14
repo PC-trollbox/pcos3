@@ -20,6 +20,8 @@ function loadTasks() {
 			if (modules.core.bootMode == "safe") appRedirecting = {};
 			if (appRedirecting.hasOwnProperty(file)) file = appRedirecting[file];
 			windowObject.title.innerText = modules.locales.get("UNTITLED_APP");
+			windowObject.content.innerText = "";
+			windowObject.content.style = "";
 			let taskId = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 			let executablePermissions, executable;
 			try {
@@ -28,6 +30,7 @@ function loadTasks() {
 			} catch (e) {
 				windowObject.title.innerText = modules.locales.get("APP_STARTUP_CRASH_TITLE");
 				windowObject.content.innerText = modules.locales.get("APP_STARTUP_CRASH");
+				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
 				if (silent) windowObject.windowDiv.remove();
@@ -37,6 +40,7 @@ function loadTasks() {
 			if (!executablePermissions.world.includes("r") || !executablePermissions.world.includes("x")) {
 				windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
 				windowObject.content.innerText = modules.locales.get("MORE_PERMISSION_DENIED");
+				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
 				if (silent) windowObject.windowDiv.remove();
@@ -46,6 +50,7 @@ function loadTasks() {
 			if (!executable.includes("// @pcos-app-mode isolat" + "able")) {
 				windowObject.title.innerText = modules.locales.get("COMPATIBILITY_ISSUE_TITLE");
 				windowObject.content.innerText = modules.locales.get("COMPATIBILITY_ISSUE");
+				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
 				if (silent) windowObject.windowDiv.remove();
@@ -86,6 +91,7 @@ function loadTasks() {
 			if (!limitations.some(lim => lim.lineType == "allow") && appHardening.requireAllowlist && !disableHarden) {
 				windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
 				windowObject.content.innerText = modules.locales.get("NO_APP_ALLOWLIST");
+				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
 				if (silent) windowObject.windowDiv.remove();
@@ -151,6 +157,7 @@ function loadTasks() {
 					console.error(e);
 					windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
 					windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED").replace("%s", execSignature.signer || modules.locales.get("UNKNOWN_PLACEHOLDER"));
+					windowObject.content.style.padding = "8px";
 					windowObject.closeButton.disabled = false;
 					windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
 					if (silent) windowObject.windowDiv.remove();
@@ -316,6 +323,7 @@ function loadTasks() {
 				ree.closeDown();
 				windowObject.title.innerText = modules.locales.get("APP_STARTUP_CRASH_TITLE");
 				windowObject.content.innerText = modules.locales.get("APP_STARTUP_CRASH");
+				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.windowDiv.classList.toggle("hidden", false);
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();

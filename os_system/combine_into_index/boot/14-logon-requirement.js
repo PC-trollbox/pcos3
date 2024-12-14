@@ -37,7 +37,7 @@ async function requireLogon() {
 		let dom = modules.session.tracker[session].html;
 		let bgPic = "";
 		let isDark = false;
-		let basicPrivilegeChecklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "CSP_OPERATIONS", "START_TASK" ];
+		let basicPrivilegeChecklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "START_TASK" ];
 		if (!basicPrivilegeChecklist.every(privilege => userInfo.privileges.includes(privilege))) {
 			let failureMessage = modules.window(session);
 			failureMessage.title.innerText = "Permission denied";
@@ -323,46 +323,38 @@ async function requireLogon() {
 			let startButton = document.createElement("button");
 			let startMenu = modules.window(session);
 			let forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
-			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
-			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-			let encryptionValue = u8aToHex(crypto.getRandomValues(new Uint8Array(32)));
-			let importedKey = await crypto.subtle.importKey("raw", hexToU8A(encryptionValue), {
-				name: "AES-GCM",
-				length: 256
-			}, false, ["encrypt", "decrypt"]);
 
+			function startMenuStub() {
+				if (startMenu.windowDiv.parentElement == null) startMenu = modules.window(session);
+				startMenu.windowDiv.classList.toggle("hidden", true);
+				startMenu.title.innerText = modules.locales.get("START_MENU");
+				startMenu.content.style.padding = "8px";
+				startMenu.content.innerText = "";
+				let description = document.createElement("span");
+				let logout = document.createElement("button");
+				description.innerText = modules.locales.get("START_MENU_FAILED");
+				logout.innerText = modules.locales.get("LOG_OUT_BUTTON").replace("%s", userInfo.user);
+				logout.onclick = _ => modules.logOut(userInfo.user);
+				startMenu.content.appendChild(description);
+				startMenu.content.appendChild(document.createElement("br"));
+				startMenu.content.appendChild(logout);
+				startMenu.closeButton.onclick = () => startMenu.windowDiv.classList.toggle("hidden", true);
+				startButton.onclick = _ => startMenu.windowDiv.classList.toggle("hidden");
+			}
+
+			startMenuStub();
 			startButton.innerText = modules.locales.get("START_MENU_BTN");
 			startButton.style = "padding: 4px;";
-			startButton.disabled = true;
 			try {
-				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, {
-					encryptionKey: encryptionValue,
-					ipcChannel: startMenuChannel
-				});
+				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, startMenuChannel);
 			} catch (e) {
 				console.error("Failed to start start menu:", e);
+				startMenuStub();
 			}
-
-			async function sendToStartMenu(data) {
-				let iv = crypto.getRandomValues(new Uint8Array(16));
-				let ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, importedKey, new TextEncoder().encode(JSON.stringify(data))));
-				modules.ipc.send(startMenuChannel, u8aToHex(iv) + u8aToHex(ct));
-			}
-			
-			startButton.onclick = async function() {
-				sendToStartMenu({ open: true });
-			};
 
 			(async function() {
 				while (true) {
 					let listen = await modules.ipc.listenFor(startMenuChannel);
-					try {
-						listen = await crypto.subtle.decrypt({ name: "AES-GCM", iv: hexToU8A(listen.slice(0, 32)) }, importedKey, hexToU8A(listen.slice(32)));
-						listen = JSON.parse(new TextDecoder().decode(listen));
-					} catch (e) {
-						console.error("Failed to decrypt:", e);
-						continue;
-					}
 					if (listen.run) {
 						try {
 							let forkedToken;
@@ -380,18 +372,17 @@ async function requireLogon() {
 							let appWindow = modules.window(session);
 							await modules.tasks.exec(listen.run.path, [ ...(listen.run.args || []) ], appWindow, forkedToken);
 						} catch {}
-					} else if (listen.success) startButton.disabled = false;
-					else if (listen.dying) {
-						startButton.disabled = true;
+					} else if (listen.success) {
+						startButton.onclick = () => modules.ipc.send(startMenuChannel, { open: true });
+					} else if (listen.dying) {
 						startMenu = modules.window(session);
+						startMenuStub();
 						forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
 						try {
-							await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, {
-								encryptionKey: encryptionValue,
-								ipcChannel: startMenuChannel
-							});
+							await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, startMenuChannel);
 						} catch (e) {
 							console.error("Failed to start start menu:", e);
+							startMenuStub();
 						}
 					}
 				}

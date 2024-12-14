@@ -1,7 +1,7 @@
 async function networkd() {
 	let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 	let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-	modules.network = { connected: false, address: null, openCFPorts: [], ws: null };
+	modules.network = { connected: false, address: null, openCFGates: [], ws: null, runOnClose: Promise.resolve(), _runOnClose: _ => 1 };
 	try {
 		let config = await modules.fs.read(modules.defaultSystem + "/etc/network.json");
 		config = JSON.parse(config);
@@ -13,17 +13,20 @@ async function networkd() {
 		}, true, ["sign"]);
 		let ws = new WebSocket(config.url);
 		let handle = Array.from(crypto.getRandomValues(new Uint8Array(64))).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+		modules.network.runOnClose = new Promise(a => modules.network._runOnClose = a);
 		ws.binaryType = "arraybuffer";
 		async function onclose() {
 			modules.network.connected = false;
 			modules.network.address = null;
-			modules.network.openCFPorts = [];
+			modules.network.openCFGates = [];
+			modules.network._runOnClose();
 			ws = new WebSocket(config.url);
 			stage = 0;
 			try { await modules.fs.rm("ram/run/network.ws"); } catch {}
 			try { await modules.fs.rm("ram/run/networkAddress"); } catch {}
 			ws.onmessage = onmessage;
 			ws.onclose = onclose;
+			modules.network.runOnClose = new Promise(a => modules.network._runOnClose = a);
 		}
 		async function onmessage(e) {
 			let messageData;
@@ -72,8 +75,9 @@ async function networkd() {
 				if (messageData.event == "DisconnectionComplete") {
 					modules.network.connected = false;
 					modules.network.address = null;
-					modules.network.openCFPorts = [];
+					modules.network.openCFGates = [];
 					modules.network.ws = null;
+					modules.network._runOnClose();
 					ws.onclose = null;
 					try { await modules.fs.rm("ram/run/network.ws"); } catch {}
 					try { await modules.fs.rm("ram/run/networkAddress"); } catch {}

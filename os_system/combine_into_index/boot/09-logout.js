@@ -3,7 +3,7 @@ async function logOut(target) {
 	let session = liu[target].session;
 	let token = liu[target].logon.token;
 	clearInterval(liu[target].clockInterval);
-	await modules.session.muteAllSessions();
+	if (modules.session.active == session) await modules.session.muteAllSessions();
 	await modules.session.activateSession(modules.session.systemSession);
 	let loggingOutWindow = modules.window(modules.session.systemSession, true);
 	loggingOutWindow.title.innerText = modules.locales.get("LOGGING_OUT");

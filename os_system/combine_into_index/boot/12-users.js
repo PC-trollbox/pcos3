@@ -72,8 +72,6 @@ async function setupUsers() {
 		init: async function(token) {
 			await this.mkrecursive(modules.defaultSystem + "/etc/security", token);
 			await modules.fs.chmod(modules.defaultSystem + "/etc", "rx", token);
-			await modules.fs.chown(modules.defaultSystem + "/etc", "root", token);
-			await modules.fs.chgrp(modules.defaultSystem + "/etc", "root", token);
 			await this.mkrecursive(modules.defaultSystem + "/root", token);
 			await modules.fs.write(modules.defaultSystem + "/etc/security/users", JSON.stringify({root: {
 				securityChecks: [],
