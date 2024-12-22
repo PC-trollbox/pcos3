@@ -300,6 +300,20 @@ connlessSend({
 }) // CONNLESS_SEND
 getUsers(String token) -> String[]
 getNetworkAddress() -> String || null // GET_NETWORK_ADDRESS
+connfulListen(String gate) -> String
+getBuildTime() -> Number
+connfulConnect({
+    gate: String,
+    address: String
+}) -> String
+connfulDisconnect(String connectionID)
+connfulWrite({
+    connectionID: String,
+    data: any
+})
+connfulRead(String connectionID) -> any
+connfulAddressGet(String connectionID) -> String
+systemUptime() -> Number
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()

@@ -6,6 +6,8 @@ let onClose = () => availableAPIs.terminate();
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("autoinstaller: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 
 	let pargs = {};
 	let ppos = [];
@@ -34,68 +36,67 @@ let onClose = () => availableAPIs.terminate();
 		return availableAPIs.terminate();
 	}
 
-	let partList = [];
 	try {
-		partList = await availableAPIs.lldaList();
-		if (pargs.initdisk) throw new Error("initdisk forced");
-	} catch {
-		await availableAPIs.lldaInitPartitions();
-	}
-
-	if (pargs.format || !partList.includes(pargs.data || "data")) {
-		let partData = await availableAPIs.lldaRead({ partition: pargs.data || "data" });
-		let partId;
+		let partList = [];
 		try {
-			partId = partData.id;
-		} catch {}
-		if (!partId) partId = (await availableAPIs.cspOperation({
-			cspProvider: "basic",
-			operation: "random",
-			cspArgument: new Uint8Array(64)
-		})).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")
-		await availableAPIs.lldaWrite({
-			partition: pargs.data || "data",
-			data: {
-				files: {},
-				permissions: {},
-				id: partId
-			}
-		});
-	}
-	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("CREATING_BOOT_PARTITION") + "\r\n");
-	await availableAPIs.lldaWrite({
-		partition: pargs.boot || "boot",
-		data: `
+			partList = await availableAPIs.lldaList();
+			if (pargs.initdisk) throw new Error("initdisk forced");
+		} catch {
+			await availableAPIs.lldaInitPartitions();
+		}
+		if (pargs.format || !partList.includes(pargs.data || "data")) {
+			let partData = await availableAPIs.lldaRead({ partition: pargs.data || "data" });
+			let partId;
 			try {
-				const AsyncFunction = (async () => {}).constructor;
-				let pre_boot_part = coreExports.disk.partition(${JSON.stringify(pargs.data || "data")}).getData();
-				let pre_boot_modules = pre_boot_part?.files;
-				if (!pre_boot_modules) {
-					coreExports.tty_bios_api.println("No files were found in the storage partition");
-					throw new Error("No files were found in the storage partition");
+				partId = partData.id;
+			} catch {}
+			if (!partId) partId = (await availableAPIs.cspOperation({
+				cspProvider: "basic",
+				operation: "random",
+				cspArgument: new Uint8Array(64)
+			})).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")
+			await availableAPIs.lldaWrite({
+				partition: pargs.data || "data",
+				data: {
+					files: {},
+					permissions: {},
+					id: partId
 				}
-				pre_boot_modules = pre_boot_modules[coreExports.bootSection || "boot"];
-				if (!pre_boot_modules) {
-					coreExports.tty_bios_api.println("No boot modules were found");
-					throw new Error("No boot modules were found");
+			});
+		}
+		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("CREATING_BOOT_PARTITION") + "\r\n");
+		await availableAPIs.lldaWrite({
+			partition: pargs.boot || "boot",
+			data: `
+				try {
+					const AsyncFunction = (async () => {}).constructor;
+					let pre_boot_part = coreExports.disk.partition(${JSON.stringify(pargs.data || "data")}).getData();
+					let pre_boot_modules = pre_boot_part?.files;
+					if (!pre_boot_modules) {
+						coreExports.tty_bios_api.println("No files were found in the storage partition");
+						throw new Error("No files were found in the storage partition");
+					}
+					pre_boot_modules = pre_boot_modules[coreExports.bootSection || "boot"];
+					if (!pre_boot_modules) {
+						coreExports.tty_bios_api.println("No boot modules were found");
+						throw new Error("No boot modules were found");
+					}
+					let pre_boot_module_list = Object.keys(pre_boot_modules);
+					pre_boot_module_list = pre_boot_module_list.sort((a, b) => a.localeCompare(b));
+					let pre_boot_module_script = "";
+					for (let module of pre_boot_module_list) {
+						if (coreExports.bootMode == "logboot") pre_boot_module_script += "coreExports.tty_bios_api.println(" + JSON.stringify(module) + ");\\n";
+						pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
+					}
+					await new AsyncFunction(pre_boot_module_script)();
+				} catch (e) {
+					coreExports.tty_bios_api.println("Boot failed");
+					coreExports.tty_bios_api.println("Press Enter to continue and log this error locally");
+					await coreExports.tty_bios_api.inputLine();
+					throw e;
 				}
-				let pre_boot_module_list = Object.keys(pre_boot_modules);
-				pre_boot_module_list = pre_boot_module_list.sort((a, b) => a.localeCompare(b));
-				let pre_boot_module_script = "";
-				for (let module of pre_boot_module_list) {
-					if (coreExports.bootMode == "logboot") pre_boot_module_script += "coreExports.tty_bios_api.println(" + JSON.stringify(module) + ");\\n";
-					pre_boot_module_script += await coreExports.idb.readPart(pre_boot_part.id + "-" + pre_boot_modules[module]);
-				}
-				await new AsyncFunction(pre_boot_module_script)();
-			} catch (e) {
-				coreExports.tty_bios_api.println("Boot failed");
-				coreExports.tty_bios_api.println("Press Enter to continue and log this error locally");
-				await coreExports.tty_bios_api.inputLine();
-				throw e;
-			}
-			`
-	});
-	try {
+				`
+		});
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("MOUNTING_DATA_PARTITION") + "\r\n");
 		await availableAPIs.fs_mount({
 			mountpoint: "target",
@@ -124,7 +125,7 @@ let onClose = () => availableAPIs.terminate();
 		if (!pargs["no-restart"]) await availableAPIs.shutdown({ isReboot: true });
 		await availableAPIs.terminate();
 	} catch (e) {
-		await availableAPIs.toMyCLI(e.name + ": " + e.message);
+		await availableAPIs.toMyCLI("autoinstaller: " + e.name + ": " + await availableAPIs.lookupLocale(e.message) + " (" + e.message + ")\r\n");
 		await availableAPIs.terminate();
 	}
 })();

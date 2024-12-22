@@ -59,7 +59,8 @@
 				userData = {
 					groups: [username],
 					homeDirectory: await availableAPIs.getSystemMount() + "/home/" + username,
-					securityChecks: []
+					securityChecks: [],
+					blankPrivileges: false
 				};
 				await availableAPIs.setUserInfo({ desiredUser: username, info: userData });
 			}
@@ -252,9 +253,16 @@
 		let addPrivilege = document.createElement("button");
 		let removeAll = document.createElement("button");
 		let warning = document.createElement("b");
+		let blankPrivsCheck = document.createElement("input");
+		let blankPrivsCheckLabel = document.createElement("label");
 		backButton.innerText = "<-";
 		addPrivilege.innerText = await availableAPIs.lookupLocale("ADD_BTN");
 		removeAll.innerText = await availableAPIs.lookupLocale("REMOVE_BTN");
+		blankPrivsCheck.type = "checkbox";
+		blankPrivsCheck.id = "blankPrivCheck";
+		blankPrivsCheckLabel.innerText = await availableAPIs.lookupLocale("BLANK_PRIVILEGE_FLAG");
+		blankPrivsCheckLabel.htmlFor = "blankPrivCheck";
+		blankPrivsCheck.checked = userData.blankPrivileges;
 		warning.innerText = await availableAPIs.lookupLocale("WARNING_PRIVILEGES");
 
 		backButton.addEventListener("click", userEditPage);
@@ -264,9 +272,15 @@
 			await availableAPIs.setUserInfo({desiredUser: username, info: userData});
 			privilegeSet();
 		})
+		blankPrivsCheck.addEventListener("change", async function() {
+			userData.blankPrivileges = blankPrivsCheck.checked;
+			await availableAPIs.setUserInfo({desiredUser: username, info: userData});
+		})
 		actionSpecificField.appendChild(backButton);
 		actionSpecificField.appendChild(addPrivilege);
 		actionSpecificField.appendChild(removeAll);
+		actionSpecificField.appendChild(blankPrivsCheck);
+		actionSpecificField.appendChild(blankPrivsCheckLabel);
 		actionSpecificField.appendChild(document.createElement("br"));
 		actionSpecificField.appendChild(warning);
 

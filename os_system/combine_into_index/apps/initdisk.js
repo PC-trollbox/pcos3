@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("initdisk: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	if (!exec_args.length) {
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("INITDISK_USAGE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("INITDISK_DESCRIPTION") + "\r\n");
@@ -25,7 +27,11 @@
 		}
 	} catch {}
 	
-	await availableAPIs.lldaInitPartitions();
+	try {
+		await availableAPIs.lldaInitPartitions();
+	} catch (e) {
+		await availableAPIs.toMyCLI("initdisk: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+	}
 	await availableAPIs.terminate();
 })();
 addEventListener("signal", async function(e) {

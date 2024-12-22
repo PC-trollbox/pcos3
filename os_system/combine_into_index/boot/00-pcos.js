@@ -1,11 +1,13 @@
 // @pcos-app-mode native
-const pcos_version = "1091";
+const pcos_version = "1105";
+const build_time = 1734856619967;
  
 let modules = {
-	core: coreExports
+	core: coreExports,
+	pcos_version,
+	build_time
 };
 globalThis.modules = modules;
-modules.pcos_version = pcos_version;
 
 async function panic(code, component) {
 	modules.shuttingDown = true;
@@ -44,6 +46,13 @@ async function panic(code, component) {
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE4);
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE5);
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE6);
+	try {
+		let networkWS = await modules.fs.read("ram/run/network.ws");
+		modules.websocket._handles[networkWS].ws.onclose = null;
+		modules.websocket._handles[networkWS].ws.close();
+		delete modules.websocket._handles[networkWS];
+		await modules.fs.rm("ram/run/network.ws");
+	} catch {}
 	if (modules.tasks) for (let task in modules.tasks.tracker) {
 		modules.core.tty_bios_api.println(currentLocales.PANIC_TASK_KILLED.replace("%s", modules.tasks.tracker[task].file));
 		modules.tasks.tracker[task].ree.closeDown();

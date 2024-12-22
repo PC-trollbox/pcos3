@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("df: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	let human = exec_args.includes("-h") || exec_args.includes("--human-readable");
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("DF_HEADER") + "\r\n");
 	let estimateStorage = await availableAPIs.estimateStorage();

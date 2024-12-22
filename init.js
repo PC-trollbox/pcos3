@@ -316,7 +316,34 @@ async function sysHaltedHook() {
 }
 
 (async function() {
+	let automatic_configuration = {
+		guard_passwords: [],
+		disallow_bad_ree: false,
+		ignore_preference_key: false,
+		require_password_for_boot: true,
+		never_boot_from_network: false,
+		registerOffline: true,
+		system_id: "register-new"
+	}
 	let url = new URL(location);
+	if (!isSecureContext) {
+		tty_bios_api.println("This Runtime requires a secure context for full functionality. Please switch to HTTPS.");
+		tty_bios_api.println("\tPress F1 to continue");
+		tty_bios_api.println("\tPress F2 to switch to HTTPS");
+		tty_bios_api.println("\tPress Enter to stop Runtime");
+		while (true) {
+			let key = await tty_bios_api.inputKey();
+			if (key.key == "F1") {
+				tty_bios_api.clear();
+				break;
+			}
+			if (key.key == "F2") {
+				location.protocol = "https:";
+				return tty_bios_api.println("Switching to HTTPS...");
+			}
+			if (key.key == "Enter") return await sysHaltedHook();
+		}
+	}
 	let openPrefMgr = false;
 	function keyDownHandler(e) {
 		if (e.key == "Enter") {
@@ -343,60 +370,106 @@ async function sysHaltedHook() {
 	document.body.appendChild(empty);
 	let ree = await createREE(empty);
 	tty_bios_api.println("\tREE created");
-	tty_bios_api.print("\tStorage access...");
+	tty_bios_api.print("\tStorage access...\t");
 	localStorage.a = "b";
 	try {
 		await ree.eval("localStorage.a");
-		tty_bios_api.println("\tavailable (bad)");
+		tty_bios_api.println("available (bad)");
 	} catch {
-		tty_bios_api.println("\tfailed (good)");
+		tty_bios_api.println("failed (good)");
 		ree_points++;
 	}
 	delete localStorage.a;
-	tty_bios_api.print("\tParent access...");
+	tty_bios_api.print("\tParent access...\t");
 	window.a = "b";
 	try {
 		await ree.eval("parent.a");
-		tty_bios_api.println("\tavailable (bad)");
+		tty_bios_api.println("available (bad)");
 	} catch {
-		tty_bios_api.println("\tfailed (good)");
+		tty_bios_api.println("failed (good)");
 		ree_points++;
 	}
 	delete window.a;
-	tty_bios_api.print("\tExported API access...");
+	tty_bios_api.print("\tExported API access...\t");
 	try {
 		await new Promise(async function(resolve, reject) {
 			try {
-				ree.exportAPI("ree-test", () => resolve() || (tty_bios_api.println("\tavailable (good)") && ree_points++));
+				ree.exportAPI("ree-test", () => resolve() || (tty_bios_api.println("available (good)") && ree_points++));
 				await ree.eval("window.availableAPIs['ree-test'](); null");
 			} catch (e) { reject(e); }
 		});
 	} catch (e) {
 		console.error(e);
-		tty_bios_api.println("\tfailed (bad)");
+		tty_bios_api.println("failed (bad)");
 	}
-	tty_bios_api.print("\tAPI authentication...");
+	tty_bios_api.print("\tAPI authentication...\t");
 	try {
 		await new Promise(async function(resolve, reject) {
 			try {
-				ree.exportAPI("ree-test-security", (param) => resolve() || (param.caller == ree.iframeId ? (tty_bios_api.println("\tworks (good)") && ree_points++) : tty_bios_api.println("\tauth failed (bad)")));
+				ree.exportAPI("ree-test-security", (param) => resolve() || (param.caller == ree.iframeId ? (tty_bios_api.println("works (good)") && ree_points++) : tty_bios_api.println("auth failed (bad)")));
 				await ree.eval("window.availableAPIs['ree-test-security'](); null");
 			} catch (e) { reject(e); }
 		});
 	} catch (e) {
 		console.error(e);
-		tty_bios_api.println("\tdefine/call failed (bad)");
+		tty_bios_api.println("define/call failed (bad)");
 	}
-	tty_bios_api.print("\tStopping test REE...");
+	tty_bios_api.print("\tStopping test REE...\t");
 	try {
 		await ree.closeDown();
 		ree_points++;
-		tty_bios_api.println("\tok");
+		tty_bios_api.println("ok");
 	} catch {
-		tty_bios_api.println("\tfailed");
+		tty_bios_api.println("failed");
 	}
 	empty.remove();
 	tty_bios_api.println("\tTotal points " + ree_points + " out of 5");
+	if (Object.keys(coreExports.prefs.backend) == 0) {
+		tty_bios_api.println("Performing automatic configuration...");
+		tty_bios_api.print("\tWriting preferences...\t");
+		coreExports.prefs.write("guard_passwords", automatic_configuration.guard_passwords);
+		coreExports.prefs.write("disallow_bad_ree", automatic_configuration.disallow_bad_ree);
+		coreExports.prefs.write("ignore_preference_key", automatic_configuration.ignore_preference_key);
+		coreExports.prefs.write("require_password_for_boot", automatic_configuration.require_password_for_boot);
+		coreExports.prefs.write("never_boot_from_network", automatic_configuration.never_boot_from_network);
+		tty_bios_api.println("done");
+		tty_bios_api.print("\tRegistering offline access...\t");
+		if (automatic_configuration.registerOffline) {
+			try {
+				if ((await navigator.serviceWorker.getRegistrations()).length) {
+					tty_bios_api.println("worker already exists");
+				} else {
+					try {
+						await navigator.serviceWorker.register("offline.js");
+						tty_bios_api.println("done");
+					} catch (e) {
+						console.error(e);
+						tty_bios_api.println("failed");
+					}
+				}
+			} catch (e) {
+				console.error(e);
+				tty_bios_api.println("workers not supported");
+			}
+		}
+		tty_bios_api.print("\tWriting System ID...\t");
+		if (automatic_configuration.system_id == "register-new") {
+			let generatedKey = await crypto.subtle.generateKey({
+				name: "ECDSA",
+				namedCurve: "P-256"
+			}, true, ["sign", "verify"]);
+			let exportedPrivateKey = await crypto.subtle.exportKey("jwk", generatedKey.privateKey);
+			let exportedPublicKey = await crypto.subtle.exportKey("jwk", generatedKey.publicKey);
+			coreExports.prefs.write("system_id", {
+				public: exportedPublicKey,
+				private: exportedPrivateKey
+			});
+			tty_bios_api.println("created new");
+		} else {
+			coreExports.prefs.write("system_id", automatic_configuration.system_id);
+			tty_bios_api.println("done");
+		}
+	}
 	if (ree_points != 5) tty_bios_api.println("REE TEST FAILED. RUNNING SYSTEM MAY BE INSECURE.");
 	if (ree_points != 5 && (!url.searchParams?.get("insecure")?.includes("allow-ree-fail") || prefs.read("disallow_bad_ree") == true)) return await sysHaltedHook();
 	await new Promise(r => setTimeout(r, 250));
@@ -421,47 +494,47 @@ async function sysHaltedHook() {
 		if (attempts == 5) return tty_bios_api.println("Password incorrect. System halted.");
 	}
 	tty_bios_api.println("Testing disk access...");
-	tty_bios_api.print("\tStarting disk...");
+	tty_bios_api.print("\tStarting disk...\t");
 	try {
 		disk._cache = (await idb.read()) || "null";
-		tty_bios_api.println("\tok");
+		tty_bios_api.println("ok");
 	} catch (e) {
 		console.error("disk access:", e);
-		tty_bios_api.println("\tfailed");
+		tty_bios_api.println("failed");
 	}
-	tty_bios_api.print("\tBoot partition...");
+	tty_bios_api.print("\tBoot partition...\t");
 	let should_try = false;
 	try {
 		if (!disk.partitions().includes("boot")) throw false;
-		tty_bios_api.println("\tpresent");
+		tty_bios_api.println("present");
 		should_try = true;
 	} catch (e) {
 		console.error("boot partition:", e);
-		tty_bios_api.println("\tbad");
+		tty_bios_api.println("bad");
 	}
-	tty_bios_api.print("\tStarting the system...");
+	tty_bios_api.print("\tStarting the system...\t");
 	let success = false;
 	try {
-		if (!should_try) tty_bios_api.println("\tboot partition missing, skipped");
+		if (!should_try) tty_bios_api.println("boot partition missing, skipped");
 		if (should_try) {
 			await new AsyncFunction(disk.partition("boot").getData())();
-			tty_bios_api.println("\tfinished");
+			tty_bios_api.println("finished");
 			success = true;
 		}
 	} catch (e) {
 		console.error("hard drive booting:", e);
-		tty_bios_api.println("\tfailed");
+		tty_bios_api.println("failed");
 	}
 	if (!success) {
-		tty_bios_api.print("Network starting...");
-		if (prefs.read("never_boot_from_network")) tty_bios_api.println("\tdisallowed");
+		tty_bios_api.print("Network starting...\t");
+		if (prefs.read("never_boot_from_network")) tty_bios_api.println("disallowed");
 		else {
 			try {
 				await new AsyncFunction(await ((await fetch("os.js")).text()))();
-				tty_bios_api.println("\tfinished");
+				tty_bios_api.println("finished");
 			} catch (e) {
 				console.error("network booting:", e);
-				tty_bios_api.println("\tfailed");
+				tty_bios_api.println("failed");
 			}
 		}
 	}
@@ -648,31 +721,41 @@ async function prefmgr() {
 				}
 			}
 		} else if (choice == "14") {
-			if ((await navigator.serviceWorker.getRegistrations()).length) {
-				tty_bios_api.println("Please remove the previous offline installations first.");
-			} else {
-				tty_bios_api.print("Registering...\t");
-				try {
-					await navigator.serviceWorker.register("offline.js");
-					tty_bios_api.println("done");
-				} catch (e) {
-					console.error(e);
-					tty_bios_api.println("failed");
+			try {
+				if ((await navigator.serviceWorker.getRegistrations()).length) {
+					tty_bios_api.println("Please remove the previous offline installations first.");
+				} else {
+					tty_bios_api.print("Registering...\t");
+					try {
+						await navigator.serviceWorker.register("offline.js");
+						tty_bios_api.println("done");
+					} catch (e) {
+						console.error(e);
+						tty_bios_api.println("failed");
+					}
 				}
+			} catch (e) {
+				console.error(e);
+				tty_bios_api.println("Service workers not supported.");
 			}
 		} else if (choice == "15") {
-			let regs = await navigator.serviceWorker.getRegistrations();
-			if (!regs.length) {
-				tty_bios_api.println("No other installations active.");
-			} else {
-				tty_bios_api.print("Unregistering...\t");
-				try {
-					await Promise.all(regs.map(a => a.unregister()));
-					tty_bios_api.println("done");
-				} catch (e) {
-					console.error(e);
-					tty_bios_api.println("failed");
+			try {
+				let regs = await navigator.serviceWorker.getRegistrations();
+				if (!regs.length) {
+					tty_bios_api.println("No other installations active.");
+				} else {
+					tty_bios_api.print("Unregistering...\t");
+					try {
+						await Promise.all(regs.map(a => a.unregister()));
+						tty_bios_api.println("done");
+					} catch (e) {
+						console.error(e);
+						tty_bios_api.println("failed");
+					}
 				}
+			} catch (e) {
+				console.error(e);
+				tty_bios_api.println("Service workers not supported.");
 			}
 		} else if (choice == "16") {
 			tty_bios_api.print("Are you sure? (y/n) ");

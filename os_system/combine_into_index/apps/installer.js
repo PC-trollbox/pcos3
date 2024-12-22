@@ -5,6 +5,17 @@
 let onClose = () => availableAPIs.terminate();
 (async function() {
 	// @pcos-app-mode isolatable
+	let automatic_configuration = {}; /*{
+		startInstall: true,
+		acceptEULA: true,
+		partitioning: {
+			data: "data",
+			boot: "boot",
+			format: true,
+			autoInitNewInstalls: true
+		},
+		autoRestart: true
+	};*/
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
@@ -129,15 +140,22 @@ Used libraries:
 			content.appendChild(partitionDataFormat);
 			content.appendChild(document.createElement("br"));
 			content.appendChild(partitionBootInput);
+			let initSyncEnd;
+			let initSync = new Promise(_ => initSyncEnd = _);
 			partitionDataFormat.onclick = async function() {
 				if (!partitionDataInput.value) return await htmlAlert(await availableAPIs.lookupLocale("DATA_INPUT_ALERT"));
+				let newInstall = false;
 				try {
 					await availableAPIs.lldaList();
 				} catch {
-					if (!(await htmlConfirm(await availableAPIs.lookupLocale("PROMPT_PARTITION_TABLE")))) return;
+					newInstall = true;
+					if (!automatic_configuration?.partitioning?.autoInitNewInstalls) 
+						if (!(await htmlConfirm(await availableAPIs.lookupLocale("PROMPT_PARTITION_TABLE")))) return;
 					await availableAPIs.lldaInitPartitions();
 				}
-				let confirmErasePart = await htmlConfirm(await availableAPIs.lookupLocale("CONFIRM_PARTITION_ERASE"));
+				let confirmErasePart = true;
+				if (!automatic_configuration?.partitioning?.format && !(automatic_configuration?.partitioning?.autoInitNewInstalls && newInstall))
+					confirmErasePart = await htmlConfirm(await availableAPIs.lookupLocale("CONFIRM_PARTITION_ERASE"));
 				if (confirmErasePart) {
 					let partData = await availableAPIs.lldaRead({ partition: partitionDataInput.value });
 					let partId;
@@ -158,6 +176,7 @@ Used libraries:
 						}
 					});
 				}
+				initSyncEnd();
 				return;
 			}
 			button.onclick = async function() {
@@ -246,6 +265,7 @@ Used libraries:
 							isReboot: true
 						});
 					}
+					if (automatic_configuration.autoRestart) onClose();
 				} catch (e) {
 					console.error(e);
 					description.innerHTML = await availableAPIs.lookupLocale("INSTALLATION_FAILED");
@@ -259,7 +279,19 @@ Used libraries:
 					throw e;
 				}
 			}
+			if (automatic_configuration.partitioning) {
+				partitionDataInput.value = automatic_configuration.partitioning.data || "data";
+				partitionBootInput.value = automatic_configuration.partitioning.boot || "boot";
+				let newInstall = false;
+				try { await availableAPIs.lldaList(); } catch { newInstall = true; }
+				if (automatic_configuration.partitioning.format || (newInstall && automatic_configuration.partitioning.autoInitNewInstalls)) {
+					partitionDataFormat.click();
+					await initSync;
+				}
+				button.click();
+			}
 		}
+		if (automatic_configuration.acceptEULA) button.click();
 	}
 	liveButton.onclick = async function() {
 		header.remove();
@@ -298,6 +330,7 @@ Used libraries:
 			await availableAPIs.terminate();
 		}
 	}
+	if (automatic_configuration.startInstall) button.click()
 })();
 
 async function htmlAlert(msg) {

@@ -179,31 +179,41 @@ async function prefmgr() {
 				}
 			}
 		} else if (choice == "14") {
-			if ((await navigator.serviceWorker.getRegistrations()).length) {
-				tty_bios_api.println("Please remove the previous offline installations first.");
-			} else {
-				tty_bios_api.print("Registering...\t");
-				try {
-					await navigator.serviceWorker.register("offline.js");
-					tty_bios_api.println("done");
-				} catch (e) {
-					console.error(e);
-					tty_bios_api.println("failed");
+			try {
+				if ((await navigator.serviceWorker.getRegistrations()).length) {
+					tty_bios_api.println("Please remove the previous offline installations first.");
+				} else {
+					tty_bios_api.print("Registering...\t");
+					try {
+						await navigator.serviceWorker.register("offline.js");
+						tty_bios_api.println("done");
+					} catch (e) {
+						console.error(e);
+						tty_bios_api.println("failed");
+					}
 				}
+			} catch (e) {
+				console.error(e);
+				tty_bios_api.println("Service workers not supported.");
 			}
 		} else if (choice == "15") {
-			let regs = await navigator.serviceWorker.getRegistrations();
-			if (!regs.length) {
-				tty_bios_api.println("No other installations active.");
-			} else {
-				tty_bios_api.print("Unregistering...\t");
-				try {
-					await Promise.all(regs.map(a => a.unregister()));
-					tty_bios_api.println("done");
-				} catch (e) {
-					console.error(e);
-					tty_bios_api.println("failed");
+			try {
+				let regs = await navigator.serviceWorker.getRegistrations();
+				if (!regs.length) {
+					tty_bios_api.println("No other installations active.");
+				} else {
+					tty_bios_api.print("Unregistering...\t");
+					try {
+						await Promise.all(regs.map(a => a.unregister()));
+						tty_bios_api.println("done");
+					} catch (e) {
+						console.error(e);
+						tty_bios_api.println("failed");
+					}
 				}
+			} catch (e) {
+				console.error(e);
+				tty_bios_api.println("Service workers not supported.");
 			}
 		} else if (choice == "16") {
 			tty_bios_api.print("Are you sure? (y/n) ");

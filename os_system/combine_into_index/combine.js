@@ -62,6 +62,7 @@ version = parseInt(version);
 if (!args.values["no-increment"]) version++;
 version = version + args.values.branch;
 pcosHeader[1] = "const pcos_version = " + JSON.stringify(version) + ";";
+pcosHeader[2] = "const build_time = " + Date.now() + ";";
 pcosHeader = pcosHeader.join("\n");
 if (!args.values["no-increment"]) fs.writeFileSync(__dirname + "/boot/00-pcos.js", pcosHeader);
 let newBuild = "// This is a generated file. Please modify the corresponding files, not this file directly.\n";

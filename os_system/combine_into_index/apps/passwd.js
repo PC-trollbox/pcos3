@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("passwd: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PASSWD_NEW_PROMPT") + "\r\n");
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PASSWD_2FACTOR_LOSS_WARN") + "\r\n");
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PASSWD_PROMPT"));
@@ -23,53 +25,58 @@
 			} else if (stage == 1) {
 				stage = 2;
 				if (str == password) {
-					let salt = await availableAPIs.cspOperation({
-						cspProvider: "basic",
-						operation: "random",
-						cspArgument: new Uint8Array(64)
-					});
-					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-					let key = await availableAPIs.cspOperation({
-						cspProvider: "basic",
-						operation: "importKey",
-						cspArgument: {
-							format: "raw",
-							keyData: new TextEncoder().encode(password),
-							algorithm: {
-								name: "PBKDF2"
-							},
-							extractable: false,
-							keyUsages: ["deriveBits", "deriveKey"]
-						}
-					});
-					let derived = new Uint8Array(await availableAPIs.cspOperation({
-						cspProvider: "basic",
-						operation: "deriveBits",
-						cspArgument: {
-							algorithm: {
-								name: "PBKDF2",
-								salt: salt,
-								iterations: 100000,
-								hash: "SHA-256"
-							},
-							baseKey: key,
-							length: 256
-						}
-					}));
-					await availableAPIs.cspOperation({
-						cspProvider: "basic",
-						operation: "unloadKey",
-						cspArgument: key
-					});
-					await availableAPIs.setOwnSecurityChecks({
-						checks: [
-							{
-								type: "pbkdf2",
-								hash: u8aToHex(derived),
-								salt: u8aToHex(salt)
+					try {
+						let salt = await availableAPIs.cspOperation({
+							cspProvider: "basic",
+							operation: "random",
+							cspArgument: new Uint8Array(64)
+						});
+						let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+						let key = await availableAPIs.cspOperation({
+							cspProvider: "basic",
+							operation: "importKey",
+							cspArgument: {
+								format: "raw",
+								keyData: new TextEncoder().encode(password),
+								algorithm: {
+									name: "PBKDF2"
+								},
+								extractable: false,
+								keyUsages: ["deriveBits", "deriveKey"]
 							}
-						]
-					});
+						});
+						let derived = new Uint8Array(await availableAPIs.cspOperation({
+							cspProvider: "basic",
+							operation: "deriveBits",
+							cspArgument: {
+								algorithm: {
+									name: "PBKDF2",
+									salt: salt,
+									iterations: 100000,
+									hash: "SHA-256"
+								},
+								baseKey: key,
+								length: 256
+							}
+						}));
+						await availableAPIs.cspOperation({
+							cspProvider: "basic",
+							operation: "unloadKey",
+							cspArgument: key
+						});
+						await availableAPIs.setOwnSecurityChecks({
+							checks: [
+								{
+									type: "pbkdf2",
+									hash: u8aToHex(derived),
+									salt: u8aToHex(salt)
+								}
+							]
+						});
+					} catch (e) {
+						await availableAPIs.toMyCLI("passwd: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+						await availableAPIs.terminate();
+					}
 					await availableAPIs.toMyCLI("passwd: " + await availableAPIs.lookupLocale("PASSWD_FEEDBACK") + "\r\n");
 					await availableAPIs.terminate();
 				} else {

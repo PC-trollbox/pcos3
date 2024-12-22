@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("ping: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	if (!exec_args.length) {
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PING_USAGE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PING_DESCRIPTION") + "\r\n")
@@ -23,7 +25,7 @@
 		for (let i = 1; i <= 4; i++) {
 			await new Promise((resolve) => setTimeout(() => resolve("ping"), 1000));
 			try {
-				let time = performance.now();
+				let time = performance.now() + performance.timeOrigin;
 				if ((await Promise.race([await availableAPIs.fetchSend({
 					url: exec_args[0],
 					init: {
@@ -31,7 +33,7 @@
 						mode: "no-cors"
 					}
 				}), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))])) == "timeout") throw new Error("Response timed out");
-				time = performance.now() - time;
+				time = (performance.now() + performance.timeOrigin) - time;
 				await availableAPIs.toMyCLI("http_seq=" + i + " time=" + time.toFixed(2) + " ms\r\n");
 			} catch (e) {
 				await availableAPIs.toMyCLI("http_seq=" + i + " " + e.name + ": " + e.message + "\r\n");

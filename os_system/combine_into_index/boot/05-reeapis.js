@@ -942,20 +942,220 @@ function reeAPIs() {
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
-					return Promise.race([ new Promise(async function(resolve) {
+					let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+					let resolveConnectPromise;
+					let connectPromise = new Promise(_ => resolveConnectPromise = _);
+					function eventListener(e) {
+						try {
+							let packet = JSON.parse(e.data);
+							if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "connect") {
+								let connectionID = packet.data.connectionID;
+								if (!connectionID) return;
+								if (connections[connectionID]) return;
+								connections[connectionID] = {
+									acks: -1,
+									seq: 0,
+									packetBuffer: [],
+									address, gate,
+									serverConn: true,
+									resolveDataPromise,
+									dataPromise: new Promise(_ => connections[connectionID].resolveDataPromise = _)
+								};
+								websocket.send(JSON.stringify({
+									receiver: packet.sender,
+									data: {
+										type: "connectionful",
+										action: "conn-ack",
+										connectionID: connectionID
+									}
+								}));
+							}
+							if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "conn-ack") {
+								let connectionID = packet.data.connectionID;
+								if (!connectionID) return;
+								if (!connections.hasOwnProperty(connectionID)) return;
+								resolveConnectPromise(connectionID);
+								connectPromise = new Promise(_ => resolveConnectPromise = _);
+								networkListens[networkListenID].connectPromise = connectPromise;
+							}
+							if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "ack") {
+								let connectionID = packet.data.connectionID;
+								if (!connectionID) return;
+								if (!connections.hasOwnProperty(connectionID)) return;
+								connections[connectionID].packetBuffer = connections[connectionID].packetBuffer.filter(p => p.sequence > packet.ack);
+								connections[connectionID].acks = packet.data.acks;
+							}
+							if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "data") {
+								let connectionID = packet.data.connectionID;
+								if (!connectionID) return;
+								if (!connections.hasOwnProperty(connectionID)) return;
+								websocket.send(JSON.stringify({
+									receiver: packet.sender,
+									data: {
+										type: "connectionful",
+										action: "ack",
+										connectionID: connectionID,
+										ack: packet.data.seq
+									}
+								}))
+								connections[connectionID].resolveDataPromise(packet.data.data);
+								connections[connectionID].dataPromise = new Promise(_ => connections[connectionID].resolveDataPromise = _);
+							}
+							if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "disconnect") {
+								let connectionID = packet.data.connectionID;
+								if (!connectionID) return;
+								if (!connections.hasOwnProperty(connectionID)) return;
+								delete connections[connectionID];
+								websocket.send(JSON.stringify({
+									receiver: packet.sender,
+									data: {
+										type: "connectionful",
+										action: "disconnect",
+										connectionID: connectionID
+									}
+								}))
+							}
+						} catch {}
+					}
+					networkListens[networkListenID] = { ws: websocket, fn: eventListener, connectPromise };
+					websocket.addEventListener("message", eventListener);
+					return networkListenID;
+				},
+				getBuildTime: function() {
+					if (!privileges.includes("GET_BUILD")) throw new Error("UNAUTHORIZED_ACTION");
+					return modules.build_time;
+				},
+				connfulConnect: async function(connOpts) {
+					if (!privileges.includes("CONNFUL_CONNECT")) throw new Error("UNAUTHORIZED_ACTION");
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					let { gate, address } = connOpts;
+					let connectionID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+					return Promise.race([ new Promise(async function(resolve, reject) {
 						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+						connections[connectionID] = {
+							acks: -1,
+							seq: 0,
+							packetBuffer: [],
+							address, gate,
+							serverConn: false,
+							resolveDataPromise,
+							dataPromise: new Promise(_ => connections[connectionID].resolveDataPromise = _)
+						}
 						function eventListener(e) {
 							try {
 								let packet = JSON.parse(e.data);
-								if (packet.data.type == "connectionful" && packet.data.gate == gate) {
+								if (packet.from == address && packet.data.type == "connectionful" && packet.data.action == "conn-ack" && packet.data.connectionID == connectionID) {
+									websocket.send(JSON.stringify({
+										receiver: packet.sender,
+										data: {
+											type: "connectionful",
+											gate: gate,
+											action: "conn-ack",
+											connectionID: connectionID
+										}
+									}))
+									resolve(connectionID);
+								}
+								if (packet.from == address && packet.data.type == "connectionful" && packet.data.action == "ack" && packet.data.connectionID == connectionID) {
+									connections[connectionID].packetBuffer = connections[connectionID].packetBuffer.filter(p => p.sequence > packet.ack);
+									connections[connectionID].acks = packet.data.acks;
+								}
+								if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "data" && packet.data.connectionID == connectionID) {
+									websocket.send(JSON.stringify({
+										receiver: packet.sender,
+										data: {
+											type: "connectionful",
+											gate: gate,
+											action: "ack",
+											connectionID: connectionID,
+											ack: packet.data.seq
+										}
+									}))
+									connections[connectionID].resolveDataPromise(packet.data.data);
+									connections[connectionID].dataPromise = new Promise(_ => connections[connectionID].resolveDataPromise = _);
+								}
+								if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "disconnect") {
 									websocket.removeEventListener("message", eventListener);
+									delete networkListens[networkListenID];
+									websocket.send(JSON.stringify({
+										receiver: packet.sender,
+										data: {
+											type: "connectionful",
+											gate: gate,
+											action: "disconnect",
+											connectionID: connectionID
+										}
+									}))
 								}
 							} catch {}
 						}
 						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
-						websocket.addEventListener("message", eventListener);
-						resolve(networkListenID);
+						websocket.send(JSON.stringify({
+							receiver: address,
+							data: {
+								type: "connectionful",
+								action: "connect",
+								gate: gate,
+								connectionID
+							}
+						}));
 					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
+				},
+				connfulDisconnect: async function(connectionID) {
+					if (!privileges.includes("CONNFUL_DISCONNECT")) throw new Error("UNAUTHORIZED_ACTION");
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					websocket.send(JSON.stringify({
+						receiver: connections[connectionID].address,
+						data: {
+							type: "connectionful",
+							gate: connections[connectionID].serverConn ? undefined : connections[connectionID].gate,
+							action: "disconnect",
+							connectionID
+						}
+					}));
+				},
+				connfulWrite: async function(sendOpts) {
+					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
+					let { connectionID, data } = sendOpts;
+					let websocketHandle = modules.network.ws;
+					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					let packet = {
+						receiver: connections[connectionID].address,
+						data: {
+							type: "connectionful",
+							gate: connections[connectionID].serverConn ? undefined : connections[connectionID].gate,
+							action: "data",
+							connectionID,
+							data,
+							seq: ++connections[connectionID].seq,
+							acks: connections[connectionID].acks
+						}
+					};
+					connections[connectionID].packetBuffer.push(packet);
+					websocket.send(JSON.stringify(packet));
+				},
+				connfulRead: async function(connectionID) {
+					if (!privileges.includes("CONNFUL_READ")) throw new Error("UNAUTHORIZED_ACTION");
+					return connections[connectionID].dataPromise;
+				},
+				connfulAddressGet: async function(connectionID) {
+					if (!privileges.includes("CONNFUL_ADDRESS_GET")) throw new Error("UNAUTHORIZED_ACTION");
+					return connections[connectionID].address;
+				},
+				systemUptime: async function() {
+					if (!privileges.includes("SYSTEM_UPTIME")) throw new Error("UNAUTHORIZED_ACTION");
+					return Math.floor(performance.now());
 				}
 			}
 		}

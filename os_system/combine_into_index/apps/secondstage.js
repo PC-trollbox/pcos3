@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, CSP_OPERATIONS, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_LIST_PARTITIONS, SET_USER_INFO, RUN_KLVL_CODE, FS_CHANGE_PERMISSION, FS_REMOVE
+// allow: GET_LOCALE, GET_THEME, CSP_OPERATIONS, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_LIST_PARTITIONS, SET_USER_INFO, RUN_KLVL_CODE, FS_CHANGE_PERMISSION, FS_REMOVE, SYSTEM_SHUTDOWN, GET_SERVER_URL
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -8,12 +8,37 @@
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("SET_UP_PCOS"));
 	let privileges = await availableAPIs.getPrivileges();
-	let checklist = [ "CSP_OPERATIONS", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_LIST_PARTITIONS", "SET_USER_INFO", "RUN_KLVL_CODE", "FS_CHANGE_PERMISSION", "FS_REMOVE" ];
+	let checklist = [ "CSP_OPERATIONS", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_LIST_PARTITIONS", "SET_USER_INFO", "RUN_KLVL_CODE", "FS_CHANGE_PERMISSION", "FS_REMOVE", "SYSTEM_SHUTDOWN", "GET_SERVER_URL" ];
 	if (!checklist.every(p => privileges.includes(p))) {
 		document.body.innerText = await availableAPIs.lookupLocale("SETUP_FAILED");
 		return;
 	}
 	await availableAPIs.closeability(false);
+	let networkDefaultURL = new URL(await availableAPIs.runningServer());
+	networkDefaultURL.protocol = "ws" + (networkDefaultURL.protocol == "https:" ? "s" : "") + ":";
+	networkDefaultURL.pathname = "";
+	let automatic_configuration = {
+		/*startSetup: true,*/
+		createAccount: {
+			/*password: "password",
+			darkMode: true,
+			create: true,*/
+			username: "root",
+			lockUsername: true,
+			onlyOnNewInstall: true
+		},
+		updateOSLink: true,
+		appHarden: {
+			requireSignature: true,
+			requireAllowlist: true
+		},
+		network: {
+			url: networkDefaultURL.toString(),
+			ucBits: 1
+		},
+		autoClose: true,
+		restartOnClose: true
+	};
 	let defaultSystem = await availableAPIs.getSystemMount();
 	let header = document.createElement("b");
 	let postHeader = document.createElement("br");
@@ -39,11 +64,6 @@
 		let darkmode = document.createElement("input");
 		let darkmode_lb = document.createElement("label");
 		useraccountname.placeholder = await availableAPIs.lookupLocale("USERNAME");
-		if (!exec_args.includes("usersConfigured")) {
-			useraccountname.value = "root";
-			useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
-			useraccountname.disabled = true;
-		}
 		useraccountpassword.placeholder = await availableAPIs.lookupLocale("PASSWORD");
 		useraccountpassword.type = "password";
 		darkmode.type = "checkbox";
@@ -66,59 +86,72 @@
 			let darkModeChecked = darkmode.checked;
 			content.innerHTML = "";
 			button.hidden = true;
-			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
-			let salt = await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "random",
-				cspArgument: new Uint8Array(64)
+			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_SYSTEM_APPHARDEN"));
+			if (automatic_configuration.appHarden) await availableAPIs.fs_write({
+				path: defaultSystem + "/etc/appHarden",
+				data: JSON.stringify(automatic_configuration.appHarden)
 			});
-			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-			let key = await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "importKey",
-				cspArgument: {
-					format: "raw",
-					keyData: new TextEncoder().encode(password),
-					algorithm: {
-						name: "PBKDF2"
-					},
-					extractable: false,
-					keyUsages: ["deriveBits", "deriveKey"]
-				}
-			});
-			let derived = new Uint8Array(await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "deriveBits",
-				cspArgument: {
-					algorithm: {
-						name: "PBKDF2",
-						salt: salt,
-						iterations: 100000,
-						hash: "SHA-256"
-					},
-					baseKey: key,
-					length: 256
-				}
-			}));
-			await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "unloadKey",
-				cspArgument: key
-			});
-			await availableAPIs.setUserInfo({
-				desiredUser: username,
-				info: {
-					securityChecks: [
-						{
-							type: "pbkdf2",
-							hash: u8aToHex(derived),
-							salt: u8aToHex(salt)
-						}
-					],
-					groups: [ username, "users" ],
-					homeDirectory: homedir
-				}
-			});
+			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_NET_CONF"));
+			if (automatic_configuration.network) await availableAPIs.fs_write({
+				path: defaultSystem + "/etc/network.json",
+				data: JSON.stringify(automatic_configuration.network)
+			})
+			if (!(automatic_configuration?.createAccount?.onlyOnNewInstall && exec_args.includes("usersConfigured"))) {
+				description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
+				let salt = await availableAPIs.cspOperation({
+					cspProvider: "basic",
+					operation: "random",
+					cspArgument: new Uint8Array(64)
+				});
+				let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+				let key = await availableAPIs.cspOperation({
+					cspProvider: "basic",
+					operation: "importKey",
+					cspArgument: {
+						format: "raw",
+						keyData: new TextEncoder().encode(password),
+						algorithm: {
+							name: "PBKDF2"
+						},
+						extractable: false,
+						keyUsages: ["deriveBits", "deriveKey"]
+					}
+				});
+				let derived = new Uint8Array(await availableAPIs.cspOperation({
+					cspProvider: "basic",
+					operation: "deriveBits",
+					cspArgument: {
+						algorithm: {
+							name: "PBKDF2",
+							salt: salt,
+							iterations: 100000,
+							hash: "SHA-256"
+						},
+						baseKey: key,
+						length: 256
+					}
+				}));
+				await availableAPIs.cspOperation({
+					cspProvider: "basic",
+					operation: "unloadKey",
+					cspArgument: key
+				});
+				await availableAPIs.setUserInfo({
+					desiredUser: username,
+					info: {
+						securityChecks: [
+							{
+								type: "pbkdf2",
+								hash: u8aToHex(derived),
+								salt: u8aToHex(salt)
+							}
+						],
+						groups: [ username, "users" ],
+						homeDirectory: homedir,
+						blankPrivileges: false
+					}
+				});
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER_HOME"));
 			try {
 				await availableAPIs.fs_mkdir({ path: defaultSystem + "/home" });
@@ -135,7 +168,7 @@
 			await availableAPIs.fs_chown({ path: homedir + "/desktop", newUser: username });
 			await availableAPIs.fs_chgrp({ path: homedir + "/desktop", newGrp: username });
 			await availableAPIs.fs_chmod({ path: homedir + "/desktop", newPermissions: "rx" });
-			if (!exec_args.includes("usersConfigured")) {
+			if (automatic_configuration.updateOSLink) {
 				await availableAPIs.fs_write({
 					path: homedir + "/desktop/updateos.lnk",
 					data: JSON.stringify({
@@ -148,28 +181,32 @@
 				await availableAPIs.fs_chmod({ path: homedir + "/desktop/updateos.lnk", newPermissions: "rx" });
 			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2U"));
-			await availableAPIs.fs_write({
-				path: homedir + "/.wallpaper",
-				data: await availableAPIs.fs_read({
-					path: defaultSystem + "/etc/wallpapers/pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"
-				})
-			});
-			await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
-			await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
-			await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
+			if (!(automatic_configuration?.createAccount?.onlyOnNewInstall && exec_args.includes("usersConfigured"))) {
+				await availableAPIs.fs_write({
+					path: homedir + "/.wallpaper",
+					data: await availableAPIs.fs_read({
+						path: defaultSystem + "/etc/wallpapers/pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"
+					})
+				});
+				await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
+				await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
+				await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
 			await availableAPIs.fs_write({
 				path: defaultSystem + "/etc/wallpapers/lockscreen.pic",
 				data: await availableAPIs.fs_read({ path: defaultSystem + "/etc/wallpapers/pcos-lock-beta.pic" })
 			});
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE"));
-			await availableAPIs.fs_write({
-				path: homedir + "/.darkmode",
-				data: darkModeChecked.toString()
-			});
-			await availableAPIs.fs_chown({ path: homedir + "/.darkmode", newUser: username });
-			await availableAPIs.fs_chgrp({ path: homedir + "/.darkmode", newGrp: username });
-			await availableAPIs.fs_chmod({ path: homedir + "/.darkmode", newPermissions: "rx" });
+			if (!(automatic_configuration?.createAccount?.onlyOnNewInstall && exec_args.includes("usersConfigured"))) {
+				await availableAPIs.fs_write({
+					path: homedir + "/.darkmode",
+					data: darkModeChecked.toString()
+				});
+				await availableAPIs.fs_chown({ path: homedir + "/.darkmode", newUser: username });
+				await availableAPIs.fs_chgrp({ path: homedir + "/.darkmode", newGrp: username });
+				await availableAPIs.fs_chmod({ path: homedir + "/.darkmode", newPermissions: "rx" });
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE2L"));
 			await availableAPIs.fs_write({
 				path: defaultSystem + "/etc/darkLockScreen",
@@ -192,8 +229,25 @@
 			});
 			description.innerHTML = await availableAPIs.lookupLocale("SETUP_SUCCESSFUL");
 			await availableAPIs.closeability(true);
+			if (automatic_configuration.autoClose) {	
+				if (automatic_configuration.restartOnClose) await availableAPIs.shutdown({ isReboot: true });
+				await availableAPIs.terminate();
+			}
+		}
+		if (automatic_configuration.createAccount) {
+			useraccountname.value = automatic_configuration.createAccount.username || useraccountname.value;
+			useraccountpassword.value = automatic_configuration.createAccount.password || "";
+			darkmode.checked = automatic_configuration.createAccount.darkMode || darkmode.checked;
+			useraccountname.disabled = automatic_configuration.createAccount.lockUsername;
+			if (automatic_configuration.createAccount.lockUsername) useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
+			if (automatic_configuration.createAccount.create) button.click();
+			else if (automatic_configuration.createAccount.onlyOnNewInstall && exec_args.includes("usersConfigured")) {
+				useraccountpassword.value = useraccountpassword.value || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				button.click();
+			}
 		}
 	}
+	if (automatic_configuration.startSetup) button.click();
 })();
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) {

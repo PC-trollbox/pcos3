@@ -1,5 +1,4 @@
 // =====BEGIN MANIFEST=====
-// link: lrn:API_TEST_TERM
 // signer: automaticSigner
 // =====END MANIFEST=====
 (async function() {

@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE
+// allow: NONE
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable

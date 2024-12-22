@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("llda_tool: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	if (!exec_args.length) {
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_USAGE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_EXPORT") + "\r\n");
@@ -18,21 +20,25 @@
 		return availableAPIs.terminate();
 	}
 
-	if (exec_args[0] == "export") {
-		await availableAPIs.fs_write({
-			path: exec_args[2],
-			data: JSON.stringify(await availableAPIs.lldaRead({ partition: exec_args[1] }))
-		});
-	} else if (exec_args[0] == "import") {
-		await availableAPIs.lldaWrite({ partition: exec_args[2], data: JSON.parse(await availableAPIs.fs_read({ path: exec_args[1] })) });
-	} else if (exec_args[0] == "copy") {
-		await availableAPIs.lldaWrite({ partition: exec_args[2], data: await availableAPIs.lldaRead({ partition: exec_args[1] }) });
-	} else if (exec_args[0] == "remove") {
-		await availableAPIs.lldaRemove({ partition: exec_args[1] });
-	} else if (exec_args[0] == "list") {
-		await availableAPIs.toMyCLI(JSON.stringify(await availableAPIs.lldaList()) + "\r\n");
-	} else {
-		await availableAPIs.toMyCLI("llda_tool: " + await availableAPIs.lookupLocale("LLDA_UNKNOWN_ACTION") + "\r\n");
+	try {
+		if (exec_args[0] == "export") {
+			await availableAPIs.fs_write({
+				path: exec_args[2],
+				data: JSON.stringify(await availableAPIs.lldaRead({ partition: exec_args[1] }))
+			});
+		} else if (exec_args[0] == "import") {
+			await availableAPIs.lldaWrite({ partition: exec_args[2], data: JSON.parse(await availableAPIs.fs_read({ path: exec_args[1] })) });
+		} else if (exec_args[0] == "copy") {
+			await availableAPIs.lldaWrite({ partition: exec_args[2], data: await availableAPIs.lldaRead({ partition: exec_args[1] }) });
+		} else if (exec_args[0] == "remove") {
+			await availableAPIs.lldaRemove({ partition: exec_args[1] });
+		} else if (exec_args[0] == "list") {
+			await availableAPIs.toMyCLI(JSON.stringify(await availableAPIs.lldaList()) + "\r\n");
+		} else {
+			await availableAPIs.toMyCLI("llda_tool: " + await availableAPIs.lookupLocale("LLDA_UNKNOWN_ACTION") + "\r\n");
+		}
+	} catch (e) {
+		await availableAPIs.toMyCLI("llda_tool: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
 	}
 	
 	await availableAPIs.terminate();

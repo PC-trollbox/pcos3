@@ -37,6 +37,9 @@
 	let names = osArchive.match(/\/\/ [0-9]+-.+.js/g);
 	let appIndex = names.indexOf("// " + "1" + "5-ap" + "ps.js");
 	let apps = files[appIndex].match(/async function (.+)Installer\(target, token\)/g).map(a => a.split(" ")[2].split("(")[0]);
+	apps.splice(apps.indexOf("autoinstallerInstaller"), 1);
+	apps.splice(apps.indexOf("installerInstaller"), 1);
+	apps.splice(apps.indexOf("secondstageInstaller"), 1);
 	let ipcPipe = await availableAPIs.createPipe();
 	let pipeResult = availableAPIs.listenToPipe(ipcPipe);
 	let installerCode = "";

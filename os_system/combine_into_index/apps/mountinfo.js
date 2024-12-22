@@ -5,6 +5,8 @@
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("mountinfo: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 
 	let pargs = {};
 	let ppos = [];

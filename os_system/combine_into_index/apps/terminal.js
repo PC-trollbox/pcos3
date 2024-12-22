@@ -6,8 +6,16 @@
 let user_spawn_token = null;
 (async function() {
 	// @pcos-app-mode isolatable
-	await window.availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("REAL_TERMINAL_NAME"));
 	await availableAPIs.attachCLI();
+	let privileges = await availableAPIs.getPrivileges();
+	let checklist = [ "GET_LOCALE", "FS_LIST_PARTITIONS", "FS_READ", "MANAGE_TOKENS", "ELEVATE_PRIVILEGES", "START_TASK", "CLI_MODIFICATIONS", "GET_BUILD", "LIST_TASKS", "CSP_OPERATIONS" ];
+	privileges = await availableAPIs.getPrivileges();
+	if (!checklist.every(p => privileges.includes(p))) {
+		await availableAPIs.toMyCLI("terminal: Critical permissions were denied. Press any key to exit.\r\n");
+		await availableAPIs.fromMyCLI();
+		return await availableAPIs.terminate();
+	}
+	await window.availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("REAL_TERMINAL_NAME"));
 	
 	function parse_cmdline(cmdline) {
 		var re_next_arg = /^\s*((?:(?:"(?:\\.|[^"])*")|(?:'[^']*')|\\.|\S)+)\s*(.*)$/;
@@ -48,8 +56,14 @@ let user_spawn_token = null;
 	let suSession = null;
 	let hideInputMask = "";
 	let hideInput = false;
-	await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("TERMINAL_INVITATION")).replace("%s", (await window.availableAPIs.getVersion())) + "\r\n\r\n");
-	await availableAPIs.toMyCLI(default_user + (default_user == "root" ? "#" : "$") + " ");
+	
+	async function systemVersion() {
+		await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("TERMINAL_INVITATION")).replace("%s", (await window.availableAPIs.getVersion())) + "\r\n");
+		await availableAPIs.toMyCLI((await window.availableAPIs.lookupLocale("SYSTEM_BUILT_AT")).replace("%s", (new Date(await window.availableAPIs.getBuildTime())).toISOString()) + "\r\n");	
+	}
+
+	await systemVersion();
+	await availableAPIs.toMyCLI("\r\n" + default_user + (default_user == "root" ? "#" : "$") + " ");
 	
 	onTermData(async function self(e, why) {
 		if (otherProcessAttached) return await availableAPIs.typeIntoOtherCLI({
@@ -138,6 +152,12 @@ let user_spawn_token = null;
 							user_spawn_token = prompt.token;
 							let processToken = await availableAPIs.getProcessToken();
 							await availableAPIs.setProcessToken(await availableAPIs.forkToken(user_spawn_token));
+							privileges = await availableAPIs.getPrivileges();
+							if (!checklist.every(p => privileges.includes(p))) {
+								await availableAPIs.toMyCLI("terminal: Critical permissions were denied. Press any key to exit.\r\n");
+								await availableAPIs.fromMyCLI();
+								return await availableAPIs.terminate();
+							}
 							await availableAPIs.revokeToken(processToken);
 							await availableAPIs.automatedLogonDelete(suSession);
 						}
@@ -170,6 +190,12 @@ let user_spawn_token = null;
 					user_spawn_token = authui;
 					let processToken = await availableAPIs.getProcessToken();
 					await availableAPIs.setProcessToken(await availableAPIs.forkToken(user_spawn_token));
+					privileges = await availableAPIs.getPrivileges();
+					if (!checklist.every(p => privileges.includes(p))) {
+						await availableAPIs.toMyCLI("terminal: Critical permissions were denied. Press any key to exit.\r\n");
+						await availableAPIs.fromMyCLI();
+						return await availableAPIs.terminate();
+					}
 					await availableAPIs.revokeToken(processToken);
 				} else await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("AUTH_FAILED") + "\r\n");
 				otherProcessAttached = false;
@@ -198,12 +224,12 @@ let user_spawn_token = null;
 			} else if (cmdline[0] == "lspath") {
 				await availableAPIs.toMyCLI(pathsForBinaries.map(a => JSON.stringify(a)).join(", ") + "\r\n");
 				await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("REAL_TERMINAL_DEFAULT_PATH_FIELD")).replace("%s", JSON.stringify(defaultPath)) + "\r\n");
-			} else if (cmdline[0] == "clear") {
-				await availableAPIs.clearMyCLI();
-			} else if (cmdline[0] == "exit") {
-				await availableAPIs.terminate();
-			} else if (cmdline[0] == "help") {
+			} else if (cmdline[0] == "clear") await availableAPIs.clearMyCLI();
+			else if (cmdline[0] == "exit") await availableAPIs.terminate();
+			else if (cmdline[0] == "ver") await systemVersion();
+			else if (cmdline[0] == "help") {
 				await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_BUILTIN_LIST") + "\r\n");
+				await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_VER_USEDESC") + "\r\n");
 				await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_HELP_USEDESC") + "\r\n");
 				await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_CLEAR_USEDESC") + "\r\n");
 				await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REAL_TERMINAL_SUGRAPH_USEDESC") + "\r\n");
@@ -263,7 +289,7 @@ let user_spawn_token = null;
 			try {
 				default_user = await window.availableAPIs.getUser();
 			} catch {}
-			await availableAPIs.toMyCLI(default_user + (default_user == "root" ? "#" : "$") + " ");
+			await availableAPIs.toMyCLI(default_user + (privileges.includes("FS_BYPASS_PERMISSIONS") ? "#" : "$") + " ");
 			return;
 		} else if (e == '\u007F') {
 			if (str.length > 0) {
@@ -285,6 +311,6 @@ async function onTermData(listener) {
 	}
 }
 addEventListener("signal", async function(e) {
-	await availableAPIs.revokeToken(user_spawn_token);
+	try { await availableAPIs.revokeToken(user_spawn_token); } catch {}
 	if (e.detail == 15) await window.availableAPIs.terminate();
 }); null;

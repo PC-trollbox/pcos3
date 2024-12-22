@@ -5,6 +5,8 @@
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("mount: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 
 	let pargs = {};
 	let ppos = [];
@@ -24,7 +26,11 @@
 	if (ppos.length < 2) {
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("MOUNT_USAGE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("MOUNT_DESCRIPTION") + "\r\n");
-		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("MOUNT_KNOWN_FS")).replace("%s", (await availableAPIs.supportedFilesystems()).join(", ")) + "\r\n");
+		try {
+			await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("MOUNT_KNOWN_FS")).replace("%s", (await availableAPIs.supportedFilesystems()).join(", ")) + "\r\n");
+		} catch {
+			await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("MOUNT_KNOWN_FS")).replace("%s", await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER")) + "\r\n");
+		}
 		await availableAPIs.toMyCLI("\t" + await availableAPIs.lookupLocale("MOUNT_KNOWN_PPART") + "\r\n");
 		await availableAPIs.toMyCLI("\t" + await availableAPIs.lookupLocale("MOUNT_KNOWN_PINPA") + "\r\n");
 		await availableAPIs.toMyCLI("\t" + await availableAPIs.lookupLocale("MOUNT_KNOWN_PPASS") + "\r\n");

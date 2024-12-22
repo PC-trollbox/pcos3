@@ -108,7 +108,7 @@ async function setupbase() {
 					} 
 				},
 				boot: {
-					"00-pcos.js": "// @pcos-app-mode native\nconst pcos_version = " + JSON.stringify(modules.pcos_version) + ";\n\nlet modules = {\n     core: coreExports\n};\nglobalThis.modules = modules;\nmodules.pcos_version = pcos_version;\n" + panic.toString() + "\n" + startupMemo.toString() + "\nstartupMemo();\n",
+					"00-pcos.js": "// @pcos-app-mode native\nconst pcos_version = " + JSON.stringify(modules.pcos_version) + ";\nconst build_time = " + JSON.stringify(modules.build_time) + ";\n\nlet modules = {\n	core: coreExports,\n	pcos_version,\n	build_time\n};\nglobalThis.modules = modules;\n" + panic.toString() + "\n" + startupMemo.toString() + "\nstartupMemo();\n",
 					"01-fs.js": loadFs.toString() + "\n" + sampleFormatToEncryptedPCFS.toString() + "\nloadFs();\n",
 					"01-fsboot.js": "/* no-op */",
 					"01-fsck.js": fsck.toString() + "\nawait fsck();\n",

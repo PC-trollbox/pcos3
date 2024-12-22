@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("chmod: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	if (!exec_args.length) {
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("CHMOD_USAGE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("CHMOD_DESCRIPTION") + "\r\n");

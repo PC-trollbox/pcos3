@@ -460,7 +460,12 @@ function localization() {
 			"PCOS_NETWORK_STATUS_ONLINE": "You are connected to PCOS Network. (address: %s)",
 			"PCOS_NETWORK_STATUS_OFFLINE": "You are disconnected from PCOS Network.",
 			"PCOS_NETWORK_STATUS_STOPPED": "The PCOS Network service was stopped.",
-			"START_MENU_FAILED": "The start menu has failed to launch. You can log out instead."
+			"START_MENU_FAILED": "The start menu has failed to launch. You can log out instead.",
+			"SYSTEM_BUILT_AT": "System built at %s",
+			"REAL_TERMINAL_VER_USEDESC": "ver - Show the build version and time",
+			"BLANK_PRIVILEGE_FLAG": "Blank user privileges",
+			"INSTALLING_SYSTEM_APPHARDEN": "Installing program security rules",
+			"INSTALLING_NET_CONF": "Installing PCOS Network configuration"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -921,7 +926,12 @@ function localization() {
 			"PCOS_NETWORK_STATUS_ONLINE": "Вы подключены к PCOS Network. (адрес: %s)",
 			"PCOS_NETWORK_STATUS_OFFLINE": "Вы отключены от PCOS Network.",
 			"PCOS_NETWORK_STATUS_STOPPED": "Служба PCOS Network была остановлена.",
-			"START_MENU_FAILED": "Не удалось запустить меню \"Пуск\". Вместо этого можно выполнить выход из системы."
+			"START_MENU_FAILED": "Не удалось запустить меню \"Пуск\". Вместо этого можно выполнить выход из системы.",
+			"SYSTEM_BUILT_AT": "Система скомпилирована %s",
+			"REAL_TERMINAL_VER_USEDESC": "ver - Показать номер и время компиляции системы",
+			"BLANK_PRIVILEGE_FLAG": "Нулевые привилегии",
+			"INSTALLING_SYSTEM_APPHARDEN": "Установка правил безопасности программ",
+			"INSTALLING_NET_CONF": "Установка конфигурации PCOS Network"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
