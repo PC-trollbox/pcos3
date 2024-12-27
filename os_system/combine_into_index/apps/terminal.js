@@ -63,7 +63,7 @@ let user_spawn_token = null;
 	}
 
 	await systemVersion();
-	await availableAPIs.toMyCLI("\r\n" + default_user + (default_user == "root" ? "#" : "$") + " ");
+	await availableAPIs.toMyCLI("\r\n" + default_user + (privileges.includes("FS_BYPASS_PERMISSIONS") ? "#" : "$") + " ");
 	
 	onTermData(async function self(e, why) {
 		if (otherProcessAttached) return await availableAPIs.typeIntoOtherCLI({

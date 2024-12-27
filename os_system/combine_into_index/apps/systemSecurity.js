@@ -85,7 +85,7 @@
 		leaveButton.innerText = await availableAPIs.lookupLocale("EXIT");
 		homeDirectoryChanger.addEventListener("click", changeHomeDir);
 		securityChecksButton.addEventListener("click", async function() {
-			await availableAPIs.switchUserWithSetup(username);
+			await availableAPIs.switchUser(username);
 			await availableAPIs.startTask({
 				file: await availableAPIs.getSystemMount() + "/apps/personalSecurity.js",
 				argPassed: []
@@ -338,6 +338,7 @@
 		createButton.addEventListener("click", async function() {
 			if (!userData.additionalPrivilegeSet) userData.additionalPrivilegeSet = [];
 			userData.additionalPrivilegeSet.push(...(privilegeNameField.value.match(/[A-Z_]+/g) || []));
+			userData.additionalPrivilegeSet = Array.from(new Set(userData.additionalPrivilegeSet));
 			await availableAPIs.setUserInfo({desiredUser: username, info: userData});
 			privilegeSet();
 		});

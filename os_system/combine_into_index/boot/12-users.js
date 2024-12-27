@@ -86,7 +86,9 @@ async function setupUsers() {
 			authui: {
 				securityChecks: [],
 				groups: ["authui"],
-				homeDirectory: modules.defaultSystem
+				homeDirectory: modules.defaultSystem,
+				blankPrivileges: true,
+				additionalPrivilegeSet:  [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "FS_READ", "FS_LIST_PARTITIONS", "CSP_OPERATIONS" ]
 			}}), token);
 		},
 		mkrecursive: async function(dir, token) {

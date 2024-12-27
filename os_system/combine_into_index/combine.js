@@ -129,11 +129,6 @@ for (let buildFile of buildFiles) {
 			appName.splice(appName.lastIndexOf("js"), 1);
 			appName = appName.join(".");
 			let manifestStats = [];
-			let signature = crypto.sign("sha256", app, {
-				key: keypair.automaticSigner_private,
-				format: "jwk",
-				dsaEncoding: "ieee-p1363"
-			}).toString("hex");
 			if (app.includes("// =====BEGIN MANIFEST=====")) {
 				let parsingLines = app.split("\n");
 				let parsingBoundStart = parsingLines.indexOf("// =====BEGIN MANIFEST=====");
@@ -143,9 +138,18 @@ for (let buildFile of buildFiles) {
 					let lineType = line.split(": ")[0].replace("// ", "");
 					let lineData = line.replace("// " + lineType + ": ", "");
 					let dataParts = lineData.split(", ");
-					for (let data of dataParts) manifestStats.push({ lineType, data });
+					for (let data of dataParts) {
+						if (lineType == "signature") parsingLines.splice(parsingLines.indexOf(line), 1);
+						manifestStats.push({ lineType, data });
+					}
 				}
-				parsingLines.splice(parsingBoundStart + 1, 0, "// signature: " + signature);
+				app = parsingLines.join("\n");
+				let signature = crypto.sign("sha256", app, {
+					key: keypair[manifestStats.find(x => x.lineType == "signer")?.data + "_private"],
+					format: "jwk",
+					dsaEncoding: "ieee-p1363"
+				}).toString("hex");
+				parsingLines.splice(parsingBoundEnd, 0, "// signature: " + signature);
 				app = parsingLines.join("\n");
 			}
 			
@@ -155,46 +159,46 @@ for (let buildFile of buildFiles) {
 			let name = (link || "").includes("name:") ? link.replace("name:", "") : "";
 			appFns.push(fnName);
 			bfc = bfc + `// ../apps/${appFile}
-			async function ${fnName}(target, token) {
-				let neededApps = await modules.fs.ls(target + "/", token);
-				if (!neededApps.includes("apps")) await modules.fs.mkdir(target + "/apps", token);
-				await modules.fs.chmod(target + "/apps", "rx", token);
-				let neededAppsLinks = await modules.fs.ls(target + "/apps", token);
-				if (!neededAppsLinks.includes("links")) await modules.fs.mkdir(target + "/apps/links", token);
-				await modules.fs.chmod(target + "/apps/links", "rx", token);
-				let neededAppsAssocs = await modules.fs.ls(target + "/apps", token);
-				if (!neededAppsAssocs.includes("associations")) await modules.fs.mkdir(target + "/apps/associations", token);
-				await modules.fs.chmod(target + "/apps/associations", "rx", token);
-				let appPath = target + "/apps/" + ${JSON.stringify(appName)} + ".js";
-				let linkPath = target + "/apps/links/" + ${JSON.stringify(appName)} + ".lnk";
-				let assocs = ${(JSON.stringify((manifestStats.filter(x => x.lineType == "association") || []).map(x => x.data)))};
-				if (${link != undefined}) {
-					let lrn = ${JSON.stringify(lrn)} || undefined;
-					let name = ${JSON.stringify(name)} || undefined;
-					await modules.fs.write(linkPath, JSON.stringify({
-						path: appPath,
-						localeReferenceName: lrn,
-						name
-					}), token);
-					await modules.fs.chmod(linkPath, "rx", token);
-				}
-				for (let assoc of assocs) {
-					let lrn, name;
-					if (${link != undefined}) {
-						lrn = ${JSON.stringify(lrn)} || undefined;
-						name = ${JSON.stringify(name)} || undefined;
-					}
-					await modules.fs.write(target + "/apps/associations/" + assoc, JSON.stringify({
-						path: appPath,
-						localeReferenceName: lrn,
-						name
-					}), token);
-					await modules.fs.chmod(target + "/apps/associations/" + assoc, "rx", token);
-				}
-				await modules.fs.write(appPath, ${JSON.stringify(app)}, token);
-				await modules.fs.chmod(appPath, "rx", token);
-			}
-			`;
+async function ${fnName}(target, token) {
+	let neededApps = await modules.fs.ls(target + "/", token);
+	if (!neededApps.includes("apps")) await modules.fs.mkdir(target + "/apps", token);
+	await modules.fs.chmod(target + "/apps", "rx", token);
+	let neededAppsLinks = await modules.fs.ls(target + "/apps", token);
+	if (!neededAppsLinks.includes("links")) await modules.fs.mkdir(target + "/apps/links", token);
+	await modules.fs.chmod(target + "/apps/links", "rx", token);
+	let neededAppsAssocs = await modules.fs.ls(target + "/apps", token);
+	if (!neededAppsAssocs.includes("associations")) await modules.fs.mkdir(target + "/apps/associations", token);
+	await modules.fs.chmod(target + "/apps/associations", "rx", token);
+	let appPath = target + "/apps/" + ${JSON.stringify(appName)} + ".js";
+	let linkPath = target + "/apps/links/" + ${JSON.stringify(appName)} + ".lnk";
+	let assocs = ${(JSON.stringify((manifestStats.filter(x => x.lineType == "association") || []).map(x => x.data)))};
+	if (${link != undefined}) {
+		let lrn = ${JSON.stringify(lrn)} || undefined;
+		let name = ${JSON.stringify(name)} || undefined;
+		await modules.fs.write(linkPath, JSON.stringify({
+			path: appPath,
+			localeReferenceName: lrn,
+			name
+		}), token);
+		await modules.fs.chmod(linkPath, "rx", token);
+	}
+	for (let assoc of assocs) {
+		let lrn, name;
+		if (${link != undefined}) {
+			lrn = ${JSON.stringify(lrn)} || undefined;
+			name = ${JSON.stringify(name)} || undefined;
+		}
+		await modules.fs.write(target + "/apps/associations/" + assoc, JSON.stringify({
+			path: appPath,
+			localeReferenceName: lrn,
+			name
+		}), token);
+		await modules.fs.chmod(target + "/apps/associations/" + assoc, "rx", token);
+	}
+	await modules.fs.write(appPath, ${JSON.stringify(app)}, token);
+	await modules.fs.chmod(appPath, "rx", token);
+}
+`;
 		}
 	}
 	newBuild += bfc;

@@ -1,4 +1,4 @@
-# up-to-date for build 1105
+# up-to-date for build 1106
 ./how-to/create-system-id.md
 ./how-to/change-my-password-cliroute.md
 ./how-to/reset-root-password.md
@@ -586,6 +586,7 @@
 ./os_system/history/build566.js
 ./os_system/history/build1065.js
 ./os_system/history/build795.js
+./os_system/history/build1106.js
 ./os_system/history/build1049.js
 ./os_system/history/build898.js
 ./os_system/history/build705.js

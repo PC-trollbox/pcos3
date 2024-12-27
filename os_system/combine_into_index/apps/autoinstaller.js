@@ -106,8 +106,6 @@ let onClose = () => availableAPIs.terminate();
 			}
 		});
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("CHANGING_ROOT_PERMISSIONS") + "\r\n");
-		await availableAPIs.fs_chown({ path: "target", newUser: "root" });
-		await availableAPIs.fs_chgrp({ path: "target", newGrp: "root" });
 		await availableAPIs.fs_chmod({ path: "target", newPermissions: "rx" });
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("COPYING_FOLDERS") + "\r\n");
 		try {

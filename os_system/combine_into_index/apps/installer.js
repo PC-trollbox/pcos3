@@ -241,8 +241,6 @@ Used libraries:
 						}
 					});
 					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CHANGING_ROOT_PERMISSIONS"));
-					await availableAPIs.fs_chown({ path: "target", newUser: "root" });
-					await availableAPIs.fs_chgrp({ path: "target", newGrp: "root" });
 					await availableAPIs.fs_chmod({ path: "target", newPermissions: "rx" });
 					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("COPYING_FOLDERS"));
 					try {
