@@ -192,7 +192,7 @@ function loadTasks() {
 				let attachedCLIRegistrations = [];
 				let cliCache = "";
 				windowObject.closeButton.addEventListener("click", () => that.sendSignal(taskId, 15));
-				ree.exportAPI("attachCLI", function() {
+				ree.exportAPI("attachCLI", async function() {
 					if (that.tracker[taskId].cliio.attached) return true;
 					for (let registration of attachedCLIRegistrations) registration();
 					attachedCLIRegistrations = [];
@@ -215,44 +215,40 @@ function loadTasks() {
 					that.tracker[taskId].cliio.signup = signup;
 					that.tracker[taskId].cliio.xtermInstance.onData(e => cliCache += e);
 					termInstance.clear();
+					await new Promise((resolve) => setTimeout(resolve, 8));
 					return true;  
 				});
 				ree.exportAPI("toMyCLI", async function(apiArg) {
 					if (that.tracker[taskId].cliio.attached) {
-						await new Promise((resolve) => setTimeout(resolve, 8));
 						that.tracker[taskId].cliio.xtermInstance.write(apiArg.arg);
 						for (let registered in registrations) {
 							await registrations[registered]({ type: "write", data: apiArg.arg });
 							registrations.splice(registered, 1);
 						}
-						await new Promise((resolve) => setTimeout(resolve, 8));
 					}
 				});
 				ree.exportAPI("fromMyCLI", async function() {
 					if (!that.tracker[taskId].cliio.attached) return false;
-					await new Promise((resolve) => setTimeout(resolve, 8));
 					let ti = that.tracker[taskId].cliio.xtermInstance;
 					return new Promise(async function(resolve) {
 						if (cliCache) {
-							cliCache = "";
-							await new Promise((resolve) => setTimeout(resolve, 8));
-							return resolve(cliCache);
+							cliCache = cliCache.slice(1);
+							resolve(cliCache[0]);
+							return;
 						}
 						let d = ti.onData(async function(e) {
-							await new Promise((resolve) => setTimeout(resolve, 8));
+							cliCache = cliCache.slice(1);
 							resolve(e);
 							d.dispose();
 						});
 					});
 				});
 				ree.exportAPI("clearMyCLI", async function() {
-					await new Promise((resolve) => setTimeout(resolve, 8));
 					if (that.tracker[taskId].cliio.attached) that.tracker[taskId].cliio.xtermInstance.clear();
 					for (let registered in registrations) {
 						await registrations[registered]({ type: "consoleClear" });
 						registrations.splice(registered, 1);
 					}
-					await new Promise((resolve) => setTimeout(resolve, 8));
 				});
 				ree.exportAPI("cliSize", function() {
 					if (!that.tracker[taskId].cliio.attached) return [ 0, 0 ];
