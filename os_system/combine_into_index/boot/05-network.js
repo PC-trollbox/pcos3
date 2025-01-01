@@ -68,8 +68,6 @@ async function networkd() {
 				modules.network.connected = true;
 				modules.network.address = messageData.address;
 				modules.network.ws = handle;
-				await modules.fs.write("ram/run/network.ws", handle);
-				await modules.fs.write("ram/run/networkAddress", messageData.address);
 				stage++;
 			} else if (stage == 3) {
 				if (messageData.event == "DisconnectionComplete") {

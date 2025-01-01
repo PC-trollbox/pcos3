@@ -813,7 +813,6 @@ function reeAPIs() {
 				networkPing: async function(address) {
 					if (!privileges.includes("PCOS_NETWORK_PING")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -870,7 +869,6 @@ function reeAPIs() {
 					if (!privileges.includes("CONNLESS_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!gate.startsWith("user_") && !privileges.includes("CONNLESS_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -893,7 +891,6 @@ function reeAPIs() {
 				connlessSend: async function(sendOpts) {
 					if (!privileges.includes("CONNLESS_SEND")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -935,10 +932,9 @@ function reeAPIs() {
 					return modules.network.address;
 				},
 				connfulListen: async function(gate) {
-					if (!privileges.includes("CONNFULL_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
+					if (!privileges.includes("CONNFUL_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!gate.startsWith("user_") && !privileges.includes("CONNFUL_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -1021,6 +1017,10 @@ function reeAPIs() {
 					websocket.addEventListener("message", eventListener);
 					return networkListenID;
 				},
+				connfulListenConnections: function(networkListenID) {
+					if (!privileges.includes("CONNFUL_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
+					return networkListens[networkListenID].connectPromise;
+				},
 				getBuildTime: function() {
 					if (!privileges.includes("GET_BUILD")) throw new Error("UNAUTHORIZED_ACTION");
 					return modules.build_time;
@@ -1028,7 +1028,6 @@ function reeAPIs() {
 				connfulConnect: async function(connOpts) {
 					if (!privileges.includes("CONNFUL_CONNECT")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -1108,7 +1107,6 @@ function reeAPIs() {
 				connfulDisconnect: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_DISCONNECT")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -1126,7 +1124,6 @@ function reeAPIs() {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
 					let { connectionID, data } = sendOpts;
 					let websocketHandle = modules.network.ws;
-					if (!modules.network.ws) websocketHandle = await modules.fs.read("ram/run/network.ws", processToken);
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
@@ -1156,6 +1153,25 @@ function reeAPIs() {
 				systemUptime: async function() {
 					if (!privileges.includes("SYSTEM_UPTIME")) throw new Error("UNAUTHORIZED_ACTION");
 					return Math.floor(performance.now());
+				},
+				networkRawWrite: function(data) {
+					if (!privileges.includes("NETWORK_RAW_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
+					let websocketHandle = modules.network.ws;
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					websocket.send(data);
+				},
+				networkRawRead: function() {
+					if (!privileges.includes("NETWORK_RAW_READ")) throw new Error("UNAUTHORIZED_ACTION");
+					let websocketHandle = modules.network.ws;
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					return Promise.race([ new Promise(async function(resolve) {
+						networkListens[networkListenID] = { ws: websocket, fn: _ => resolve(_.data) };
+						websocket.addEventListener("message", eventListener);
+					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
 				}
 			}
 		}
