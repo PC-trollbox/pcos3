@@ -465,7 +465,8 @@ function localization() {
 			"REAL_TERMINAL_VER_USEDESC": "ver - Show the build version and time",
 			"BLANK_PRIVILEGE_FLAG": "Blank user privileges",
 			"INSTALLING_SYSTEM_APPHARDEN": "Installing program security rules",
-			"INSTALLING_NET_CONF": "Installing PCOS Network configuration"
+			"INSTALLING_NET_CONF": "Installing PCOS Network configuration",
+			"NETWORK_ADDRESS_FIELD": "Network address: %s"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -931,7 +932,8 @@ function localization() {
 			"REAL_TERMINAL_VER_USEDESC": "ver - Показать номер и время компиляции системы",
 			"BLANK_PRIVILEGE_FLAG": "Нулевые привилегии",
 			"INSTALLING_SYSTEM_APPHARDEN": "Установка правил безопасности программ",
-			"INSTALLING_NET_CONF": "Установка конфигурации PCOS Network"
+			"INSTALLING_NET_CONF": "Установка конфигурации PCOS Network",
+			"NETWORK_ADDRESS_FIELD": "Сетевой адрес: %s"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
