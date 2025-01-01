@@ -190,7 +190,7 @@ function loadTasks() {
 				};
 				let registrations = [];
 				let attachedCLIRegistrations = [];
-				let cliCache = "";
+				let cliCache = [];
 				windowObject.closeButton.addEventListener("click", () => that.sendSignal(taskId, 15));
 				ree.exportAPI("attachCLI", async function() {
 					if (that.tracker[taskId].cliio.attached) return true;
@@ -213,7 +213,7 @@ function loadTasks() {
 					that.tracker[taskId].cliio.robsInstance = robs;
 					robs.observe(windowObject.windowDiv);
 					that.tracker[taskId].cliio.signup = signup;
-					that.tracker[taskId].cliio.xtermInstance.onData(e => cliCache += e);
+					that.tracker[taskId].cliio.xtermInstance.onData(e => cliCache.push(e));
 					termInstance.clear();
 					await new Promise((resolve) => setTimeout(resolve, 8));
 					return true;  
@@ -232,8 +232,9 @@ function loadTasks() {
 					let ti = that.tracker[taskId].cliio.xtermInstance;
 					return new Promise(async function(resolve) {
 						if (cliCache) {
+							let element = cliCache[0];
 							cliCache = cliCache.slice(1);
-							resolve(cliCache[0]);
+							resolve(element);
 							return;
 						}
 						let d = ti.onData(async function(e) {
