@@ -186,7 +186,7 @@ server.on("connection", function(socket, req) {
 					}
 				}
 				if (packetData.data?.type == "ping") {
-					if (typeof packetData.data.resend === "string" && packetData.data.resend?.length < 64) socket.send(JSON.stringify({
+					if (typeof packetData.data.resend === "string" && packetData.data.resend?.length <= 64) socket.send(JSON.stringify({
 						from: serverAddress,
 						data: {
 							type: "pong",
