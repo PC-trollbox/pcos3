@@ -26,7 +26,7 @@
 			await new Promise((resolve) => setTimeout(() => resolve("ping"), 500));
 			let time = performance.now();
 			try {
-				if ((await Promise.race([await availableAPIs.fetchSend({
+				if ((await Promise.race([availableAPIs.fetchSend({
 					url: exec_args[0],
 					init: {
 						noArrayBuffer: true,
@@ -62,7 +62,7 @@
 		await new Promise((resolve) => setTimeout(() => resolve("ping"), 500));
 		let time = performance.now();
 		try {
-			let race = await Promise.race([await availableAPIs.networkPing(pingedAddress), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
+			let race = await Promise.race([availableAPIs.networkPing(pingedAddress), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
 			if (race == "timeout") throw new Error("Response timed out");
 			time = performance.now() - time;
 			await availableAPIs.toMyCLI("count=" + i + " time=" + time.toFixed(2) + " ms\r\n");
