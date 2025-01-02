@@ -48,7 +48,7 @@ function reeAPIs() {
 		}
 		ree.beforeCloseDown(async function() {
 			for (let processPipe of processPipes) delete modules.ipc._ipc[processPipe];
-			for (let networkListen in networkListens) networkListens[networkListen].ws.removeEventListener(networkListens[networkListen].fn);
+			for (let networkListen in networkListens) networkListens[networkListen].ws.removeEventListener("message", networkListens[networkListen].fn);
 			for (let websocket of websockets) modules.websocket.close(websocket);
 			await modules.tokens.revoke(token);
 			for (let i in modules.csps) if (modules.csps[i].hasOwnProperty("removeSameGroupKeys")) modules.csps[i].removeSameGroupKeys(null, taskId);
