@@ -15,7 +15,10 @@ function generateString(num, chars) {
 	return result;
 }
 
-module.exports = function decode(b64) {
-	let decodeResult = generateString(findInputNumberString(b64, base64Charset), hexCharset);
-	return Buffer.from(Uint8Array.from(decodeResult.match(/.{1,2}/g).map(a => parseInt(a, 16)))).toString("hex");
-}
+module.exports = {
+	b64dec: function decode(b64) {
+		let decodeResult = generateString(findInputNumberString(b64, base64Charset), hexCharset);
+		return Buffer.from(Uint8Array.from(decodeResult.match(/.{1,2}/g).map(a => parseInt(a, 16)))).toString("hex");
+	},
+	generateString: generateString
+};

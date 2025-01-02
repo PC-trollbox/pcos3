@@ -1,7 +1,7 @@
 const express = require("express");
 const ws = require("ws");
 const crypto = require("crypto");
-const b64dec = require("./b64dec");
+const { b64dec, generateString } = require("./b64dec");
 const app = express();
 const http = require("http").createServer(app);
 const path = require("path/posix");
@@ -10,6 +10,11 @@ let socketList = {};
 let sfspMountModule = require("./sfsp_mount");
 let globalMount = sfspMountModule({});
 let sessionTokens = {};
+const serverAddress = "7f00000150434f53334e6574776f726b";
+const symbols = "abcdefghijklmnopqrstuvwxyz0123456789_-";
+let dnsTable = {
+	"pcosserver.pc": serverAddress
+};
 
 app.use(function(req, res, next) {
 	res.set("Cross-Origin-Embedder-Policy", "require-corp");
@@ -91,6 +96,7 @@ server.on("connection", function(socket, req) {
 	let publicKey, ipk;
 	let signBytes;
 	let alive = true;
+	let hostname;
 	socket.send(JSON.stringify({ event: "Connected" }));
 	socket.on("message", function(message) {
 		message = message.toString();
@@ -125,14 +131,22 @@ server.on("connection", function(socket, req) {
 			let xHash = crypto.createHash("sha256").update(Buffer.from(b64dec(publicKey.x), "hex")).digest().toString("hex").padStart(8, "0").slice(0, 8);
 			let yHash = crypto.createHash("sha256").update(Buffer.from(b64dec(publicKey.y), "hex")).digest().toString("hex").padStart(8, "0").slice(0, 8);
 			let forceSetting = publicKey.forceConnect;
+			hostname = (publicKey.hostname?.slice(0, 16)?.match(/[a-z0-9\-_]+/g)?.join("") || generateString(BigInt("0x" + crypto.randomBytes(8).toString("hex")), symbols)) + ".basic";
+			if (dnsTable[hostname]) hostname = generateString(BigInt("0x" + crypto.randomBytes(8).toString("hex")), symbols) + ".basic";
 			publicKey = xHash + yHash + (Math.floor(Math.abs(parseInt(publicKey.userCustomizable) || 0))).toString(16).padStart(8, "0").slice(0, 8);
 			if (socketList.hasOwnProperty(ip + publicKey) && !forceSetting) {
 				socket.send(JSON.stringify({ event: "AddressConflict", address: ip + publicKey }));
 				return socket.terminate();
 			}
+			if ((ip + publicKey) == serverAddress) {
+				socket.send(JSON.stringify({ event: "ServerAddressConflict", address: ip + publicKey }));
+				return socket.terminate();
+			}
+			dnsTable[hostname] = ip + publicKey;
 			socket.send(JSON.stringify({
 				event: "ConnectionEstablished",
-				address: ip + publicKey
+				address: ip + publicKey,
+				hostname
 			}));
 			socketList[ip + publicKey] = socket;
 		} else {
@@ -146,21 +160,38 @@ server.on("connection", function(socket, req) {
 			}
 			if (packetData.finalProxyPacket) {
 				delete socketList[ip + publicKey];
+				delete dnsTable[hostname];
 				socket.send(JSON.stringify({
 					event: "DisconnectionComplete",
 					packetID: (typeof packetData.id === "string") ? packetData.id.slice(0, 64) : "none"
 				}));
 				return socket.terminate();
 			}
-			if (!socketList.hasOwnProperty(packetData.receiver)) return socket.send(JSON.stringify({
+			if (!socketList.hasOwnProperty(packetData.receiver) && packetData.receiver != serverAddress) return socket.send(JSON.stringify({
 				event: "AddressUnreachable",
 				packetID: (typeof packetData.id === "string") ? packetData.id.slice(0, 64) : "none"
 			}));
-			socketList[packetData.receiver].send(JSON.stringify({
-				from: ip + publicKey,
-				data: packetData.data,
-				packetID: (typeof packetData.id === "string") ? packetData.id.slice(0, 64) : "none"
-			}));
+			if (packetData.receiver == serverAddress) {
+				if (packetData.data.type == "connectionless" && packetData.data.gate == "resolve") {
+					if (typeof packetData.data.content.query === "string" && typeof packetData.data.content.reply === "string") {
+						socket.send(JSON.stringify({
+							from: serverAddress,
+							data: {
+								type: "connectionless",
+								gate: packetData.data.content.reply,
+								content: dnsTable[packetData.data.content.query] || null
+							},
+							packetID: crypto.randomBytes(32).toString("hex")
+						}));
+					}
+				}
+			} else {
+				socketList[packetData.receiver].send(JSON.stringify({
+					from: ip + publicKey,
+					data: packetData.data,
+					packetID: (typeof packetData.id === "string") ? packetData.id.slice(0, 64) : "none"
+				}));
+			}
 			socket.send(JSON.stringify({
 				event: "PacketPong",
 				packetID: (typeof packetData.id === "string") ? packetData.id.slice(0, 64) : "none"
@@ -176,6 +207,7 @@ server.on("connection", function(socket, req) {
 	socket.on("pong", () => alive = true);
 	socket.on("close", function() {
 		delete socketList[ip + publicKey];
+		delete dnsTable[hostname];
 		clearInterval(pingCycle);
 	});
 });

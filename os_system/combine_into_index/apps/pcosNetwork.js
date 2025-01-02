@@ -24,8 +24,11 @@
 		}));
 	} catch {}
 	let descriptionNetworkURL = document.createElement("span");
+	let descriptionUCBits = document.createElement("span");
+	let descriptionHostname = document.createElement("span");
 	let paramNetworkURL = document.createElement("input");
 	let ucBits = document.createElement("input");
+	let paramHostname = document.createElement("input");
 	let saveBtn = document.createElement("button");
 	let updatePredictBtn = document.createElement("button");
 	let addressPrediction = document.createElement("span");
@@ -33,18 +36,24 @@
 	let originUrl = new URL(await availableAPIs.runningServer());
 	originUrl.protocol = "ws" + (originUrl.protocol == "https:" ? "s" : "") + ":";
 	descriptionNetworkURL.innerText = await availableAPIs.lookupLocale("NETCONFIG_URLF");
+	descriptionUCBits.innerText = await availableAPIs.lookupLocale("NETCONFIG_UC");
+	descriptionHostname.innerText = await availableAPIs.lookupLocale("NETCONFIG_HOSTNAME");
 	paramNetworkURL.value = existingConfig.url || originUrl.origin;
-	ucBits.placeholder = await availableAPIs.lookupLocale("NETCONFIG_UC");
 	ucBits.type = "number";
 	ucBits.min = 0;
 	ucBits.max = 4294967295;
 	ucBits.value = existingConfig.ucBits;
+	paramHostname.value = existingConfig.hostname || "";
 	saveBtn.innerText = await availableAPIs.lookupLocale("NETCONFIG_SAVE");
 	updatePredictBtn.innerText = await availableAPIs.lookupLocale("NETCONFIG_PREDICT");
 	form.appendChild(descriptionNetworkURL);
 	form.appendChild(paramNetworkURL);
 	form.appendChild(document.createElement("br"));
+	form.appendChild(descriptionUCBits);
 	form.appendChild(ucBits);
+	form.appendChild(document.createElement("br"));
+	form.appendChild(descriptionHostname);
+	form.appendChild(paramHostname);
 	form.appendChild(document.createElement("br"));
 	form.appendChild(saveBtn);
 	form.appendChild(updatePredictBtn);
@@ -59,7 +68,8 @@
 				path: (await availableAPIs.getSystemMount()) + "/etc/network.json",
 				data: JSON.stringify({
 					url: paramNetworkURL.value,
-					ucBits: Math.round(Math.abs(Number(ucBits.value)))
+					ucBits: Math.round(Math.abs(Number(ucBits.value))),
+					hostname: paramHostname.value
 				}, null, "\t")
 			});
 			try {

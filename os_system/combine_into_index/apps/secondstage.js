@@ -17,6 +17,7 @@
 	let networkDefaultURL = new URL(await availableAPIs.runningServer());
 	networkDefaultURL.protocol = "ws" + (networkDefaultURL.protocol == "https:" ? "s" : "") + ":";
 	networkDefaultURL.pathname = "";
+	const networkSymbols = "abcdefghijklmnopqrstuvwxyz0123456789_-";
 	let automatic_configuration = {
 		/*startSetup: true,*/
 		createAccount: {
@@ -34,7 +35,8 @@
 		},
 		network: {
 			url: networkDefaultURL.toString(),
-			ucBits: 1
+			ucBits: 1,
+			hostname: new Array(16).fill(0).map(a => networkSymbols[Math.floor(Math.random() * networkSymbols.length)]).join("")
 		},
 		autoClose: true,
 		restartOnClose: true

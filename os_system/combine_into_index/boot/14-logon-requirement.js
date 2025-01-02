@@ -408,7 +408,7 @@ async function requireLogon() {
 				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
 				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"))
 				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
-				pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_" + (modules.network.connected ? "ONLINE" : "OFFLINE")).replace("%s", userInfo.privileges.includes("GET_NETWORK_ADDRESS") ? (modules.network.address || "0").match(/.{1,4}/g).join(":") : modules.locales.get("UNKNOWN_PLACEHOLDER"));
+				pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_" + (modules.network.connected ? "ONLINE" : "OFFLINE")).replace("%s", userInfo.privileges.includes("GET_HOSTNAME") ? (modules.network.hostname || modules.locales.get("UNKNOWN_PLACEHOLDER")) : modules.locales.get("UNKNOWN_PLACEHOLDER")).replace("%s", userInfo.privileges.includes("GET_NETWORK_ADDRESS") ? (modules.network.address || "0").match(/.{1,4}/g).join(":") : modules.locales.get("UNKNOWN_PLACEHOLDER"));
 				if (modules.network.serviceStopped) pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_STOPPED");
 			}, 500);
 			

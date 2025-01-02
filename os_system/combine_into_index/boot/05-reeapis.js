@@ -1172,6 +1172,53 @@ function reeAPIs() {
 						networkListens[networkListenID] = { ws: websocket, fn: _ => resolve(_.data) };
 						websocket.addEventListener("message", eventListener);
 					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
+				},
+				getHostname: async function() {
+					if (!privileges.includes("GET_HOSTNAME")) throw new Error("UNAUTHORIZED_ACTION");
+					return modules.network.hostname;
+				},
+				resolve: async function(name) {
+					if (!privileges.includes("RESOLVE_NAME")) throw new Error("UNAUTHORIZED_ACTION");
+					let websocketHandle = modules.network.ws;
+					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+					let websocket = modules.websocket._handles[websocketHandle].ws;
+					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+					let tlds = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/tlds.json"));
+					function resolveRecursive(name, address) {
+						if (tlds.hasOwnProperty(name)) return tlds[name];
+						if (address == null) return null;
+						return new Promise(function(resolve) {
+							let gate = "user_" + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(a => a.toString(16).padStart(2, "0")).join("");
+							let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+							function eventListener(e) {
+								try {
+									let packet = JSON.parse(e.data);
+									if (packet.data.type == "connectionless" && packet.data.gate == gate && packet.from == address) {
+										websocket.removeEventListener("message", eventListener);
+										delete networkListens[networkListenID];
+										resolve(packet.data.content);
+									}
+								} catch {}
+							}
+							networkListens[networkListenID] = { ws: websocket, fn: eventListener };
+							websocket.addEventListener("message", eventListener);
+							websocket.send(JSON.stringify({
+								receiver: address,
+								data: {
+									type: "connectionless",
+									gate: "resolve",
+									content: {
+										reply: gate,
+										query: name
+									}
+								}
+							}));
+						});
+					}
+					let nameParts = name.split(".").reverse();
+					let currentResolve;
+					for (let part in nameParts) currentResolve = await resolveRecursive(nameParts.slice(0, part + 1).reverse().join("."), currentResolve);
+					return currentResolve;
 				}
 			}
 		}

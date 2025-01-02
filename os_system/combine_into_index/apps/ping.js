@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, FETCH_SEND, PCOS_NETWORK_PING
+// allow: GET_LOCALE, FETCH_SEND, PCOS_NETWORK_PING, RESOLVE_NAME
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -23,9 +23,9 @@
 		}
 		await availableAPIs.toMyCLI("Pinging " + exec_args[0] + " via HTTP...\r\n");
 		for (let i = 1; i <= 4; i++) {
-			await new Promise((resolve) => setTimeout(() => resolve("ping"), 1000));
+			await new Promise((resolve) => setTimeout(() => resolve("ping"), 500));
+			let time = performance.now();
 			try {
-				let time = performance.now() + performance.timeOrigin;
 				if ((await Promise.race([await availableAPIs.fetchSend({
 					url: exec_args[0],
 					init: {
@@ -33,21 +33,36 @@
 						mode: "no-cors"
 					}
 				}), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))])) == "timeout") throw new Error("Response timed out");
-				time = (performance.now() + performance.timeOrigin) - time;
+				time = performance.now() - time;
 				await availableAPIs.toMyCLI("http_seq=" + i + " time=" + time.toFixed(2) + " ms\r\n");
 			} catch (e) {
-				await availableAPIs.toMyCLI("http_seq=" + i + " " + e.name + ": " + e.message + "\r\n");
+				time = performance.now() - time;
+				await availableAPIs.toMyCLI("http_seq=" + i + " time=" + time.toFixed(2) + " ms err=" + e.name + ": " + e.message + "\r\n");
 			}
 		}
 		return availableAPIs.terminate();
 	}
-	let undecoredAddress = exec_args[0].replaceAll(":", "");
-	await availableAPIs.toMyCLI("Pinging " + undecoredAddress + " via PCOS Network...\r\n");
+	let pingedAddress;
+	if (exec_args[0].includes(":")) pingedAddress = exec_args[0].replaceAll(":", "");
+	else {
+		try {
+			pingedAddress = await Promise.race([
+				await availableAPIs.resolve(exec_args[0]),
+				new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))
+			])
+			if (pingedAddress == "timeout") throw new Error("Response timed out");
+			if (!pingedAddress) throw new Error("Could not resolve hostname");
+		} catch (e) {
+			await availableAPIs.toMyCLI("ping: " + exec_args[0] + ": " + e.name + ": " + e.message + "\r\n");
+			return await availableAPIs.terminate();
+		}
+	}
+	await availableAPIs.toMyCLI("Pinging " + exec_args[0] + " (" + pingedAddress.match(/.{1,4}/g).join(":") + ") via PCOS Network...\r\n");
 	for (let i = 1; i <= 4; i++) {
-		await new Promise((resolve) => setTimeout(() => resolve("ping"), 1000));
+		await new Promise((resolve) => setTimeout(() => resolve("ping"), 500));
 		let time = performance.now();
 		try {
-			let race = await Promise.race([await availableAPIs.networkPing(undecoredAddress), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
+			let race = await Promise.race([await availableAPIs.networkPing(pingedAddress), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
 			if (race == "timeout") throw new Error("Response timed out");
 			time = performance.now() - time;
 			await availableAPIs.toMyCLI("count=" + i + " time=" + time.toFixed(2) + " ms\r\n");

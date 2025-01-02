@@ -169,7 +169,7 @@ function localization() {
 			"NETCONFIG_DENY": "There are not enough permissions to configure PCOS Network.",
 			"NETCONFIG_URLF": "Proxy URL: ",
 			"NETCONFIG_AUTO": "Start on OS startup",
-			"NETCONFIG_UC": "User-customizable part",
+			"NETCONFIG_UC": "Customizable: ",
 			"NETCONFIG_SAVE": "Save config",
 			"NETCONFIG_PREDICT": "Predict address",
 			"EMPTY_STATUSBAR": "Status",
@@ -457,7 +457,7 @@ function localization() {
 			"SHUTTING_DOWN_FAILED": "Failed to shut the system down.",
 			"NETWORK_STATUS_ONLINE": "You are connected to a local area network.",
 			"NETWORK_STATUS_OFFLINE": "You aren't connected to any sort of network.",
-			"PCOS_NETWORK_STATUS_ONLINE": "You are connected to PCOS Network. (address: %s)",
+			"PCOS_NETWORK_STATUS_ONLINE": "You are connected to PCOS Network. (hostname: %s, address: %s)",
 			"PCOS_NETWORK_STATUS_OFFLINE": "You are disconnected from PCOS Network.",
 			"PCOS_NETWORK_STATUS_STOPPED": "The PCOS Network service was stopped.",
 			"START_MENU_FAILED": "The start menu has failed to launch. You can log out instead.",
@@ -466,7 +466,9 @@ function localization() {
 			"BLANK_PRIVILEGE_FLAG": "Blank user privileges",
 			"INSTALLING_SYSTEM_APPHARDEN": "Installing program security rules",
 			"INSTALLING_NET_CONF": "Installing PCOS Network configuration",
-			"NETWORK_ADDRESS_FIELD": "Network address: %s"
+			"NETWORK_ADDRESS_FIELD": "Network address: %s",
+			"NETWORK_AUTOHOST_FIELD": "Automatic hostname: %s",
+			"NETCONFIG_HOSTNAME": "Hostname: "
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -636,7 +638,7 @@ function localization() {
 			"NETCONFIG_DENY": "Недостаточно разрешений для конфигурации PCOS Network.",
 			"NETCONFIG_URLF": "URL прокси: ",
 			"NETCONFIG_AUTO": "Запускать при загрузке ОС",
-			"NETCONFIG_UC": "Изменяемое пользователем",
+			"NETCONFIG_UC": "Изменяемое: ",
 			"NETCONFIG_SAVE": "Сохранить конфиг.",
 			"NETCONFIG_PREDICT": "Предсказать адрес",
 			"EMPTY_STATUSBAR": "Статус",
@@ -924,7 +926,7 @@ function localization() {
 			"SHUTTING_DOWN_FAILED": "Не удалось завершить работу системы.",
 			"NETWORK_STATUS_ONLINE": "Вы подключены к локальной вычислительной сети.",
 			"NETWORK_STATUS_OFFLINE": "Вы не подключены ни к какой сети.",
-			"PCOS_NETWORK_STATUS_ONLINE": "Вы подключены к PCOS Network. (адрес: %s)",
+			"PCOS_NETWORK_STATUS_ONLINE": "Вы подключены к PCOS Network. (имя: %s, адрес: %s)",
 			"PCOS_NETWORK_STATUS_OFFLINE": "Вы отключены от PCOS Network.",
 			"PCOS_NETWORK_STATUS_STOPPED": "Служба PCOS Network была остановлена.",
 			"START_MENU_FAILED": "Не удалось запустить меню \"Пуск\". Вместо этого можно выполнить выход из системы.",
@@ -933,7 +935,9 @@ function localization() {
 			"BLANK_PRIVILEGE_FLAG": "Нулевые привилегии",
 			"INSTALLING_SYSTEM_APPHARDEN": "Установка правил безопасности программ",
 			"INSTALLING_NET_CONF": "Установка конфигурации PCOS Network",
-			"NETWORK_ADDRESS_FIELD": "Сетевой адрес: %s"
+			"NETWORK_ADDRESS_FIELD": "Сетевой адрес: %s",
+			"NETWORK_AUTOHOST_FIELD": "Автоматическое имя: %s",
+			"NETCONFIG_HOSTNAME": "Имя в сети: "
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
