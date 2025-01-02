@@ -172,7 +172,7 @@ server.on("connection", function(socket, req) {
 				packetID: (typeof packetData.id === "string") ? packetData.id.slice(0, 64) : "none"
 			}));
 			if (packetData.receiver == serverAddress) {
-				if (packetData.data.type == "connectionless" && packetData.data.gate == "resolve") {
+				if (packetData.data?.type == "connectionless" && packetData.data?.gate == "resolve") {
 					if (typeof packetData.data.content.query === "string" && typeof packetData.data.content.reply === "string") {
 						socket.send(JSON.stringify({
 							from: serverAddress,
@@ -184,6 +184,15 @@ server.on("connection", function(socket, req) {
 							packetID: crypto.randomBytes(32).toString("hex")
 						}));
 					}
+				}
+				if (packetData.data?.type == "ping") {
+					if (typeof packetData.data.resend === "string" && packetData.data.resend?.length < 64) socket.send(JSON.stringify({
+						from: serverAddress,
+						data: {
+							type: "pong",
+							resend: packetData.data.resend
+						}
+					}));
 				}
 			} else {
 				socketList[packetData.receiver].send(JSON.stringify({
