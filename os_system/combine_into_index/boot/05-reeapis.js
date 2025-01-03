@@ -1217,7 +1217,7 @@ function reeAPIs() {
 					}
 					let nameParts = name.split(".").reverse();
 					let currentResolve;
-					for (let part in nameParts) currentResolve = await resolveRecursive(nameParts.slice(0, part + 1).reverse().join("."), currentResolve);
+					for (let part = 0; part < nameParts.length; part++) currentResolve = await resolveRecursive(nameParts.slice(0, part + 1).reverse().join("."), currentResolve);
 					return currentResolve;
 				},
 				patchDiff: function(libraryOptions) {
