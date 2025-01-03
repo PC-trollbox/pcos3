@@ -89,11 +89,6 @@
 	await availableAPIs.terminate();
 })();
 
-async function onTermData(listener) {
-	while (true) {
-		listener(await availableAPIs.fromMyCLI());
-	}
-}
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) await window.availableAPIs.terminate();
 }); null;

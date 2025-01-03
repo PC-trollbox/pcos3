@@ -468,7 +468,15 @@ function localization() {
 			"INSTALLING_NET_CONF": "Installing PCOS Network configuration",
 			"NETWORK_ADDRESS_FIELD": "Network address: %s",
 			"NETWORK_AUTOHOST_FIELD": "Automatic hostname: %s",
-			"NETCONFIG_HOSTNAME": "Hostname: "
+			"NETCONFIG_HOSTNAME": "Hostname: ",
+			"DIFF_USAGE": "Usage: diff [original] [new] [difference]",
+			"DIFF_DESCRIPTION": "Calculates the difference between two files.",
+			"PATCH_USAGE": "Usage: patch [original] [difference] [new]",
+			"PATCH_DESCRIPTION": "Calculates the 'sum' of the original and the difference.",
+			"CURRENT_OSFILE_VERSION": "Current OS file version: build %s",
+			"DOWNLOADING_OS_PATCH": "Downloading OS file patch from %s (address %s)",
+			"HANDOFF_UPDATE": "Handing off the update process to updateos.js",
+			"SYSTEM_UP_TO_DATE": "The system is up to date"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -937,7 +945,15 @@ function localization() {
 			"INSTALLING_NET_CONF": "Установка конфигурации PCOS Network",
 			"NETWORK_ADDRESS_FIELD": "Сетевой адрес: %s",
 			"NETWORK_AUTOHOST_FIELD": "Автоматическое имя: %s",
-			"NETCONFIG_HOSTNAME": "Имя в сети: "
+			"NETCONFIG_HOSTNAME": "Имя в сети: ",
+			"DIFF_USAGE": "Использование: diff [оригинал] [новый] [разность]",
+			"DIFF_DESCRIPTION": "Вычисляет разность между двумя файлами.",
+			"PATCH_USAGE": "Использование: patch [оригинал] [разность] [новый]",
+			"PATCH_DESCRIPTION": "Вычисляет 'сумму' оригинального файла и разности.",
+			"CURRENT_OSFILE_VERSION": "Текущая версия файла: сборка %s",
+			"DOWNLOADING_OS_PATCH": "Скачивание разности сборок с сервера %s (адрес %s)",
+			"HANDOFF_UPDATE": "Перенаправление процесса обновления updateos.js",
+			"SYSTEM_UP_TO_DATE": "Обновления отсутствуют"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

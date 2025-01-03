@@ -12,6 +12,7 @@
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
+    "fast-myers-diff": "^3.2.0",
     "tweetnacl": "^1.0.3"
   }
 }

@@ -114,6 +114,7 @@ async function setupbase() {
 					"01-fsck.js": fsck.toString() + "\nawait fsck();\n",
 					"01-setup-state.js": "modules.settingUp = true;\n",
 					"02-ui.js": loadUi.toString() + "\nloadUi();\n",
+					"03-diff.js": loadDiff.toString() + "\nloadDiff();\n",
 					"03-xterm.js": xterm_export.toString() + "\nxterm_export();\n",
 					"04-ipc.js": loadIpc.toString() + "\nloadIpc();\n",
 					"04-websockets.js": loadWebsocketSupport.toString() + "\nloadWebsocketSupport();\n",

@@ -1219,6 +1219,11 @@ function reeAPIs() {
 					let currentResolve;
 					for (let part in nameParts) currentResolve = await resolveRecursive(nameParts.slice(0, part + 1).reverse().join("."), currentResolve);
 					return currentResolve;
+				},
+				patchDiff: function(libraryOptions) {
+					if (!privileges.includes("PATCH_DIFF")) throw new Error("UNAUTHORIZED_ACTION");
+					let operations = { diff_core, diff, lcs, calcPatch, applyPatch, calcSlices };
+					return [ ...operations[libraryOptions.operation](...libraryOptions.args) ];
 				}
 			}
 		}

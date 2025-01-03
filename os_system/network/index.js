@@ -6,6 +6,8 @@ const app = express();
 const http = require("http").createServer(app);
 const path = require("path/posix");
 const server = new ws.Server({ server: http });
+const fs = require("fs");
+const diff = require("fast-myers-diff");
 let socketList = {};
 let sfspMountModule = require("./sfsp_mount");
 let globalMount = sfspMountModule({});
@@ -183,6 +185,22 @@ server.on("connection", function(socket, req) {
 							},
 							packetID: crypto.randomBytes(32).toString("hex")
 						}));
+					}
+				}
+				if (packetData.data?.type == "connectionless" && packetData.data?.gate == "deltaUpdate") {
+					if (typeof packetData.data.content.from === "string" && typeof packetData.data.content.reply === "string") {
+						try {
+							let fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(packetData.data.content.from.match(/\w+/g)) + ".js").toString();
+							socket.send(JSON.stringify({
+								from: serverAddress,
+								data: {
+									type: "connectionless",
+									gate: packetData.data.content.reply,
+									content: [ ...diff.calcPatch(fromBuild, fs.readFileSync(__dirname + "/../index.js").toString()) ]
+								},
+								packetID: crypto.randomBytes(32).toString("hex")
+							}));
+						} catch {}
 					}
 				}
 				if (packetData.data?.type == "ping") {
