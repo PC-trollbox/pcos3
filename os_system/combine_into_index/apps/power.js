@@ -32,9 +32,9 @@
 	}
 	try {
 		await availableAPIs.shutdown({
-			isReboot: ppos[0] == "reboot" || ppos[0] == "r" || ppos[0] == "restart" || ppos[0] == "kexec" || ppos[0] == "k" || pargs.kexec || pargs.k,
-			isKexec: pargs.kexec || pargs.k || ppos[0] == "kexec" || ppos[0] == "k",
-			force: pargs.force || pargs.f
+			isReboot: ppos[0] == "reboot" || ppos[0] == "r" || ppos[0] == "restart" || ppos[0] == "kexec" || ppos[0] == "k" || pargs.kexec,
+			isKexec: pargs.kexec || ppos[0] == "kexec" || ppos[0] == "k",
+			force: pargs.force
 		});
 	} catch (e) {
 		await availableAPIs.toMyCLI("power: " + await availableAPIs.lookupLocale(e.message) + "\r\n");

@@ -479,8 +479,8 @@ function localization() {
 			"SYSTEM_UP_TO_DATE": "The system is up to date",
 			"POWER_USAGE": "Usage: power <options> <r|reboot|restart|k|kexec>",
 			"POWER_DESCRIPTION": "Powers down or restarts the system. Supplying nothing to power makes a shutdown.",
-			"POWER_FORCE": "--force, -f: don't wait for processes, reboot or power down immediately",
-			"POWER_KEXEC": "--kexec, -k: reboot without reloading the page or firmware (automatically toggles reboot)",
+			"POWER_FORCE": "--force: don't wait for processes, reboot or power down immediately",
+			"POWER_KEXEC": "--kexec: reboot without reloading the page or firmware (automatically toggles reboot)",
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -960,8 +960,8 @@ function localization() {
 			"SYSTEM_UP_TO_DATE": "Обновления отсутствуют",
 			"POWER_USAGE": "Использование: power <параметры> <r|reboot|restart|k|kexec>",
 			"POWER_DESCRIPTION": "Выключает или перезагружает систему. Указывание ничего приводит к завершению работы.",
-			"POWER_FORCE": "--force, -f: не ждать процессов, перезагрузиться или выключиться немедленно",
-			"POWER_KEXEC": "--kexec, -k: перезагрузить систему, не перезагружая страницу или прошивку (автоматически выбирает reboot)",
+			"POWER_FORCE": "--force: не ждать процессов, перезагрузиться или выключиться немедленно",
+			"POWER_KEXEC": "--kexec: перезагрузить систему, не перезагружая страницу или прошивку (автоматически выбирает reboot)",
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
