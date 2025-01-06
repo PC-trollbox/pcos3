@@ -95,9 +95,15 @@ function reeAPIs() {
 					return true;
 				},
 				shutdown: async function(arg) {
-					let {isReboot, token} = arg;
+					let {isKexec, isReboot, force, token} = arg;
 					if (!privileges.includes("SYSTEM_SHUTDOWN")) throw new Error("UNAUTHORIZED_ACTION");
-					await modules.restart(!isReboot, token || processToken);
+					if (force) {
+						try { modules.websocket._handles[modules.network.ws].ws.close(); } catch {}
+						modules.session.destroy();
+						if (isReboot) return location.reload();
+						return modules.killSystem();
+					}
+					await modules.restart(!isReboot, token || processToken, isKexec);
 					return true;
 				},
 				fs_read: async function(arg) {

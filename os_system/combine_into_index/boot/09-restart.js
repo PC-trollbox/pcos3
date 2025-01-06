@@ -14,7 +14,7 @@ function restartLoad() {
 		});
 	}
 	
-	async function restart(noAutomaticReload = false, token) {
+	async function restart(noAutomaticReload = false, token, kexec) {
 		try {
 			let shutdownSoundPerm = await modules.fs.permissions(modules.defaultSystem + "/etc/sounds/shutdown.aud");
 			if (!shutdownSoundPerm.world.includes("r")) throw new Error("Not allowed to read shutdown.aud");
@@ -45,7 +45,7 @@ function restartLoad() {
 			allProcessesClosed()
 		]);
 		try {
-			modules.websocket._handles[(await modules.fs.read("ram/run/network.ws"))].ws.send(JSON.stringify({
+			modules.websocket._handles[modules.network.ws].send(JSON.stringify({
 				finalProxyPacket: true
 			}));
 		} catch {}
@@ -53,17 +53,31 @@ function restartLoad() {
 		for (let taskId in tasks.tracker) tasks.sendSignal(taskId, 9, true);
 		await allProcessesClosed();
 		try {
-			let networkWS = await modules.fs.read("ram/run/network.ws");
-			modules.websocket._handles[networkWS].ws.onclose = null;
-			modules.websocket._handles[networkWS].ws.close();
-			delete modules.websocket._handles[networkWS];
-			await modules.fs.rm("ram/run/network.ws");
+			modules.websocket._handles[modules.network.ws].ws.onclose = null;
+			modules.websocket._handles[modules.network.ws].ws.close();
+			delete modules.websocket._handles[modules.network.ws];
 		} catch {}
 		description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("UNMOUNTING_MOUNTS"));
 		for (let mount in fs.mounts) await fs.unmount(mount, token);
 		description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("RESTARTING"));
+		if (!noAutomaticReload) {
+			if (kexec) {
+				try {
+					modules.session.destroy();
+					await new ((async _=>0).constructor)(
+						modules.core.disk.partition("boot").getData()
+					)();
+					return modules.killSystem();
+				} catch (e) {
+					await panic("KEXEC_FAILED", {
+						name: "kexec",
+						underlyingJS: e
+					});
+				}
+			}
+			return location.reload();
+		}
 		modules.killSystem();
-		if (!noAutomaticReload) return location.reload()
 		description.innerText = modules.locales.get("SAFE_TO_CLOSE");
 		let button = document.createElement("button");
 		button.innerText = modules.locales.get("RESTART_BUTTON");

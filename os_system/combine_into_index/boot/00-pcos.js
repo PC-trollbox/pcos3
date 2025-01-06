@@ -1,6 +1,6 @@
 // @pcos-app-mode native
-const pcos_version = "1123";
-const build_time = 1735916781347;
+const pcos_version = "1126";
+const build_time = 1736168219396;
  
 let modules = {
 	core: coreExports,
@@ -47,11 +47,9 @@ async function panic(code, component) {
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE5);
 	modules.core.tty_bios_api.println(currentLocales.PANIC_LINE6);
 	try {
-		let networkWS = await modules.fs.read("ram/run/network.ws");
-		modules.websocket._handles[networkWS].ws.onclose = null;
-		modules.websocket._handles[networkWS].ws.close();
-		delete modules.websocket._handles[networkWS];
-		await modules.fs.rm("ram/run/network.ws");
+		modules.websocket._handles[modules.network.ws].ws.onclose = null;
+		modules.websocket._handles[modules.network.ws].ws.close();
+		delete modules.websocket._handles[modules.network.ws];
 	} catch {}
 	if (modules.tasks) for (let task in modules.tasks.tracker) {
 		modules.core.tty_bios_api.println(currentLocales.PANIC_TASK_KILLED.replace("%s", modules.tasks.tracker[task].file));
@@ -65,6 +63,7 @@ async function panic(code, component) {
 			modules.core.tty_bios_api.println(currentLocales.PANIC_MOUNT_FAILED.replace("%s", mount).replace("%s", e.name).replace("%s", e.message));
 		}
 	}
+	if (modules.session) modules.session.destroy();
 	throw (component ? component.underlyingJS : null) || code || "UNSPECIFIED_ERROR";
 }
 

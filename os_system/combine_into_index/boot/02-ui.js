@@ -296,6 +296,13 @@ function loadUi() {
 			if (key !== undefined) return this.tracker[session].attrib[key];
 			return this.tracker[session].attrib;
 		},
+		destroy: function() {
+			for (let session in this.tracker) this.rmsession(session);
+			this.tracker = {};
+			delete this.systemSession;
+			delete modules.liu;
+			delete modules.serviceSession;
+		},
 		tracker: {},
 		active: null
 	}

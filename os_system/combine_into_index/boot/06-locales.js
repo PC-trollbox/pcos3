@@ -476,7 +476,11 @@ function localization() {
 			"CURRENT_OSFILE_VERSION": "Current OS file version: build %s",
 			"DOWNLOADING_OS_PATCH": "Downloading OS file patch from %s (address %s)",
 			"HANDOFF_UPDATE": "Handing off the update process to updateos.js",
-			"SYSTEM_UP_TO_DATE": "The system is up to date"
+			"SYSTEM_UP_TO_DATE": "The system is up to date",
+			"POWER_USAGE": "Usage: power <options> <r|reboot|restart|k|kexec>",
+			"POWER_DESCRIPTION": "Powers down or restarts the system. Supplying nothing to power makes a shutdown.",
+			"POWER_FORCE": "--force, -f: don't wait for processes, reboot or power down immediately",
+			"POWER_KEXEC": "--kexec, -k: reboot without reloading the page or firmware (automatically toggles reboot)",
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -953,7 +957,11 @@ function localization() {
 			"CURRENT_OSFILE_VERSION": "Текущая версия файла: сборка %s",
 			"DOWNLOADING_OS_PATCH": "Скачивание разности сборок с сервера %s (адрес %s)",
 			"HANDOFF_UPDATE": "Перенаправление процесса обновления updateos.js",
-			"SYSTEM_UP_TO_DATE": "Обновления отсутствуют"
+			"SYSTEM_UP_TO_DATE": "Обновления отсутствуют",
+			"POWER_USAGE": "Использование: power <параметры> <r|reboot|restart|k|kexec>",
+			"POWER_DESCRIPTION": "Выключает или перезагружает систему. Указывание ничего приводит к завершению работы.",
+			"POWER_FORCE": "--force, -f: не ждать процессов, перезагрузиться или выключиться немедленно",
+			"POWER_KEXEC": "--kexec, -k: перезагрузить систему, не перезагружая страницу или прошивку (автоматически выбирает reboot)",
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

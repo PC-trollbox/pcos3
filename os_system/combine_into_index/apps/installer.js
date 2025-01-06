@@ -311,7 +311,6 @@ Used libraries:
 			content.innerHTML = "";
 			content.style.height = "";
 			await availableAPIs.runKlvlCode(`(async function() {
-				await modules.fs.rm(modules.defaultSystem + "/etc/appHarden");
 				let appScripts = await modules.fs.read(modules.defaultSystem + "/boot/15-apps.js");
 				let apps = appScripts.match(/async function (.+)Installer\\(target, token\\)/g).map(a => a.split(" ")[2].split("(")[0]);
 				let fireAfterInstall = null;
