@@ -123,7 +123,7 @@ async function sysHaltedHook() {
 		coreExports.prefs.write("require_password_for_boot", automatic_configuration.require_password_for_boot);
 		coreExports.prefs.write("never_boot_from_network", automatic_configuration.never_boot_from_network);
 		tty_bios_api.println("done");
-		tty_bios_api.print("\tRegistering offline access...\t");
+		tty_bios_api.print("\tOffline access...\t");
 		if (automatic_configuration.registerOffline) {
 			try {
 				if ((await navigator.serviceWorker.getRegistrations()).length) {

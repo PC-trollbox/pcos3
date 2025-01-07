@@ -50,7 +50,15 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 		reboot.onclick = async function() {
 			shouldShutdown = true;
 			await visibility(false);
-			await availableAPIs.shutdown({ isReboot: true });
+			await availableAPIs.shutdown({ isReboot: true, isKexec: true });
+		}
+		reboot.oncontextmenu = async function(e) {
+			e.stopImmediatePropagation();
+			e.stopPropagation();
+			e.preventDefault();
+			shouldShutdown = true;
+			await visibility(false);
+			await availableAPIs.shutdown({ isReboot: true, isKexec: false });
 		}
 	}
 	if (privileges.includes("LULL_SYSTEM")) {

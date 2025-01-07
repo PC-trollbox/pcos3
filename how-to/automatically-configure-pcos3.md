@@ -24,7 +24,7 @@
      - `boot`: Set the boot partition.
      - `format`: Format the disk unconditionally.
      - `autoInitNewInstalls`: Automatically initiate the disk for new installations.
-   - `autoRestart`: Automatically restart the system after installation.
+   - `autoRestart`: Automatically restart the system after installation. Set to `"kexec"` to use faster reboots.
 8. Go to `os_system/combine_into_index/apps/secondstage.js` for setup configuration.
 9. Uncomment the partial example of `automatic_configuration`.
 10. Set `automatic_configuration`:
@@ -41,7 +41,7 @@
      - `url`: Set the WebSocket proxy URL.
      - `ucBits`: Set the user-customizable part of the network address.
    - `autoClose`: Automatically close the installer to log in.
-   - `restartOnClose`: Restart after closing the installer (with `autoClose`)
+   - `restartOnClose`: Restart after closing the installer (with `autoClose`). Set to `"kexec"` to use faster reboots.
 10. Run `os_system/keypair.js` to generate the OS PKI.
 11. Run `os_system/combine_into_index/combine.js -b<YOUR_BRANCH_NAME_HERE>`.
 12. Perform self-hosting steps to see the changes. (see readme.md)

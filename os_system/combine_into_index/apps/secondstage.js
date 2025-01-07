@@ -39,7 +39,7 @@
 			hostname: new Array(16).fill(0).map(a => networkSymbols[Math.floor(Math.random() * networkSymbols.length)]).join("")
 		},
 		autoClose: true,
-		restartOnClose: true
+		restartOnClose: "kexec"
 	};
 	let defaultSystem = await availableAPIs.getSystemMount();
 	let header = document.createElement("b");
@@ -232,7 +232,7 @@
 			description.innerHTML = await availableAPIs.lookupLocale("SETUP_SUCCESSFUL");
 			await availableAPIs.closeability(true);
 			if (automatic_configuration.autoClose) {	
-				if (automatic_configuration.restartOnClose) await availableAPIs.shutdown({ isReboot: true });
+				if (automatic_configuration.restartOnClose) await availableAPIs.shutdown({ isReboot: true, isKexec: automatic_configuration.restartOnClose == "kexec" });
 				await availableAPIs.terminate();
 			}
 		}

@@ -14,7 +14,7 @@ let onClose = () => availableAPIs.terminate();
 			format: true,
 			autoInitNewInstalls: true
 		},
-		autoRestart: true
+		autoRestart: "kexec"
 	};*/
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
@@ -262,7 +262,8 @@ Used libraries:
 					onClose = function() {
 						onClose = () => availableAPIs.terminate();
 						availableAPIs.shutdown({
-							isReboot: true
+							isReboot: true,
+							isKexec: automatic_configuration.autoRestart == "kexec"
 						});
 					}
 					if (automatic_configuration.autoRestart) onClose();
