@@ -84,7 +84,8 @@
 	}
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("RESTARTING") + "\r\n");
 	await availableAPIs.shutdown({
-		isReboot: true
+		isReboot: true,
+		isKexec: true
 	});
 	await availableAPIs.terminate();
 })();
