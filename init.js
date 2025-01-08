@@ -433,7 +433,7 @@ async function sysHaltedHook() {
 		coreExports.prefs.write("require_password_for_boot", automatic_configuration.require_password_for_boot);
 		coreExports.prefs.write("never_boot_from_network", automatic_configuration.never_boot_from_network);
 		tty_bios_api.println("done");
-		tty_bios_api.print("\tRegistering offline access...\t");
+		tty_bios_api.print("\tOffline access...\t");
 		if (automatic_configuration.registerOffline) {
 			try {
 				if ((await navigator.serviceWorker.getRegistrations()).length) {
@@ -530,7 +530,7 @@ async function sysHaltedHook() {
 		if (prefs.read("never_boot_from_network")) tty_bios_api.println("disallowed");
 		else {
 			try {
-				await new AsyncFunction(await ((await fetch("os.js")).text()))();
+				await new AsyncFunction(await ((await fetch(url.searchParams?.get("bootSource") || "os.js")).text()))();
 				tty_bios_api.println("finished");
 			} catch (e) {
 				console.error("network booting:", e);
@@ -963,6 +963,7 @@ async function sysID() {
 	pbkdf2,
 	idb,
 	bootMode: "normal",
-	bootSection: undefined
+	bootSection: undefined,
+	setFW: new_flash => localStorage.setItem("runtime_flash", new_flash)
 };
 globalThis.coreExports = coreExports;

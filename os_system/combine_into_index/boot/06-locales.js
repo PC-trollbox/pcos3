@@ -481,6 +481,11 @@ function localization() {
 			"POWER_DESCRIPTION": "Powers down or restarts the system. Supplying nothing to power makes a shutdown.",
 			"POWER_FORCE": "--force: don't wait for processes, reboot or power down immediately",
 			"POWER_KEXEC": "--kexec: reboot without reloading the page or firmware (automatically toggles reboot)",
+			"UPDATEFW_BUTTON": "Update firmware",
+			"UPDATEFW_DOWNLOADING": "Downloading local init.js...",
+			"UPDATEFW_DOWNLOAD_FAILED": "Failed to download local init.js.",
+			"UPDATEFW_DECODING": "Parsing init.js as text",
+			"UPDATEFW_SETTING": "Setting init.js as firmware"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -962,6 +967,11 @@ function localization() {
 			"POWER_DESCRIPTION": "Выключает или перезагружает систему. Указывание ничего приводит к завершению работы.",
 			"POWER_FORCE": "--force: не ждать процессов, перезагрузиться или выключиться немедленно",
 			"POWER_KEXEC": "--kexec: перезагрузить систему, не перезагружая страницу или прошивку (автоматически выбирает reboot)",
+			"UPDATEFW_BUTTON": "Обновить прошивку",
+			"UPDATEFW_DOWNLOADING": "Скачивание местного init.js...",
+			"UPDATEFW_DOWNLOAD_FAILED": "Не удалось скачать местный init.js.",
+			"UPDATEFW_DECODING": "Обработка init.js как текст",
+			"UPDATEFW_SETTING": "Задание init.js как прошивки"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

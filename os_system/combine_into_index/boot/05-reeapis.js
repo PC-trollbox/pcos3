@@ -661,11 +661,7 @@ function reeAPIs() {
 				},
 				lldaIDBList: async function() {
 					if (!privileges.includes("LLDISK_IDB_LIST")) throw new Error("UNAUTHORIZED_ACTION"); 
-					if (modules.core.idb.listParts) return modules.core.idb.listParts(); 
-					let idb_keys = modules.core.idb._db.transaction("disk").objectStore("disk").getAllKeys();
-					return new Promise(function(resolve) {
-						idb_keys.onsuccess = () => resolve(idb_keys.result);
-					});
+					return modules.core.idb.listParts(); 
 				},
 				lldaIDBSync: async function() {
 					if (!privileges.includes("LLDISK_IDB_SYNC")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1230,6 +1226,14 @@ function reeAPIs() {
 					if (!privileges.includes("PATCH_DIFF")) throw new Error("UNAUTHORIZED_ACTION");
 					let operations = { diff_core, diff, lcs, calcPatch, applyPatch, calcSlices };
 					return [ ...operations[libraryOptions.operation](...libraryOptions.args) ];
+				},
+				setFirmware: async function(new_flash) {
+					if (!privileges.includes("SET_FIRMWARE")) throw new Error("UNAUTHORIZED_ACTION");
+					if (modules.core.setFW) {
+						await modules.core.setFW(new_flash);
+						return;
+					}
+					localStorage.setItem("runtime_flash", new_flash);
 				}
 			}
 		}

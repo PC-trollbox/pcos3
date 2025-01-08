@@ -2,7 +2,7 @@
 // link: lrn:SYSADMIN_TOOLS_TITLE
 // signer: automaticSigner
 // fnName: sysadminInstaller
-// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK
+// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -17,6 +17,7 @@
 	let fsckDiscardButton = document.createElement("button");
 	let wipeSystemButton = document.createElement("button");
 	let updateSystemButton = document.createElement("button");
+	let updateFirmwareButton = document.createElement("button");
 	let imagingButton = document.createElement("button");
 	let optionalComponentMgmt = document.createElement("button");
 	osReinstallButton.innerText = await availableAPIs.lookupLocale("REINSTALL_BUTTON");
@@ -24,6 +25,7 @@
 	fsckDiscardButton.innerText = await availableAPIs.lookupLocale("DISCARD_BUTTON");
 	wipeSystemButton.innerText = await availableAPIs.lookupLocale("SWIPE_BUTTON");
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
+	updateFirmwareButton.innerText = await availableAPIs.lookupLocale("UPDATEFW_BUTTON");
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
 	optionalComponentMgmt.innerText = await availableAPIs.lookupLocale("OPTIONAL_COMPONENTS_TITLE");
 	osReinstallButton.addEventListener("click", async function() {
@@ -110,7 +112,7 @@
 		});
 	});
 	wipeSystemButton.addEventListener("click", async function() {
-		let checklist = [ "RUN_KLVL_CODE" ];
+		let checklist = [ "FS_REMOVE", "FS_MOUNT", "FS_READ", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "SYSTEM_SHUTDOWN" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -119,26 +121,29 @@
 		await availableAPIs.closeability(false);
 		extraActivities.innerText = await availableAPIs.lookupLocale("WIPING_SYSTEM");
 		try {
-			await availableAPIs.runKlvlCode(`(async function() {
-let idb_keys = modules.core.idb._db.transaction("disk").objectStore("disk").getAllKeys();
-idb_keys = await new Promise(function(resolve) {
-	idb_keys.onsuccess = () => resolve(idb_keys.result);
-});
-for (let key of idb_keys) {
-	let partLen = (await modules.core.idb.readPart(key)).length;
-	let randomness = "";
-	while (randomness.length < partLen) {
-		let remainingBytes = Math.round((partLen - randomness.length) / 2);
-		if (remainingBytes > 65536) remainingBytes = 65536;
-		randomness += crypto.getRandomValues(new Uint8Array(remainingBytes)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-	}
-	await modules.core.idb.writePart(key, randomness);
-	await modules.core.idb.sync();
-	await modules.core.idb.removePart(key);
-	await modules.core.idb.sync();
-}
-modules.restart();
-})();`);
+			await availableAPIs.fs_mount({
+				mountpoint: "pref",
+				filesystem: "preferenceMount",
+				filesystemOptions: {}
+			});
+			let prefOpts = await availableAPIs.fs_ls({ path: "pref" });
+			for (let prefOpt of prefOpts) await availableAPIs.fs_rm({ path: "pref/" + prefOpt });
+			let idb_keys = await availableAPIs.lldaIDBList();
+			for (let key of idb_keys) {
+				let partLen = (await availableAPIs.lldaIDBRead({ key })).length;
+				let randomness = "";
+				while (randomness.length < partLen) {
+					let remainingBytes = Math.round((partLen - randomness.length) / 2);
+					if (remainingBytes > 65536) remainingBytes = 65536;
+					randomness += crypto.getRandomValues(new Uint8Array(remainingBytes)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				}
+				await availableAPIs.lldaIDBWrite({ key, value: randomness });
+				await availableAPIs.lldaIDBSync();
+				await availableAPIs.lldaIDBRemove({ key });
+				await availableAPIs.lldaIDBSync();
+			}
+			
+			await availableAPIs.shutdown({});
 		} catch (e) {
 			await availableAPIs.closeability(true);
 			console.error(e);
@@ -148,7 +153,7 @@ modules.restart();
 		}
 	});
 	updateSystemButton.addEventListener("click", async function() {
-		let checklist = [ "FETCH_SEND", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE"];
+		let checklist = [ "FETCH_SEND", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -220,6 +225,39 @@ modules.restart();
 				return;
 			}
 		}
+		extraActivities.innerText = await availableAPIs.lookupLocale("RESTARTING");
+		await availableAPIs.shutdown({
+			isReboot: true,
+			isKexec: true
+		});
+	});
+	updateFirmwareButton.addEventListener("click", async function() {
+		let checklist = [ "FETCH_SEND", "SYSTEM_SHUTDOWN", "SET_FIRMWARE" ];
+		if (!checklist.every(p => privileges.includes(p))) {
+			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
+			return;
+		}
+		await availableAPIs.closeability(false);
+		container.hidden = true;
+		extraActivities.innerText = await availableAPIs.lookupLocale("UPDATEFW_DOWNLOADING");
+		let fwArchive;
+		try {
+			fwArchive = await availableAPIs.fetchSend({
+				url: "/init.js",
+				init: {}
+			});
+		} catch (e) {
+			await availableAPIs.closeability(true);
+			console.error(e);
+			extraActivities.innerText = await availableAPIs.lookupLocale("UPDATEFW_DOWNLOAD_FAILED");
+			container.hidden = false;
+			return;
+		}
+		extraActivities.innerText = await availableAPIs.lookupLocale("UPDATEFW_DECODING");
+		fwArchive = fwArchive.arrayBuffer;
+		fwArchive = new TextDecoder().decode(fwArchive);
+		extraActivities.innerText = await availableAPIs.lookupLocale("UPDATEFW_SETTING");
+		await availableAPIs.setFirmware(fwArchive);
 		extraActivities.innerText = await availableAPIs.lookupLocale("RESTARTING");
 		await availableAPIs.shutdown({
 			isReboot: true
@@ -383,6 +421,7 @@ modules.restart();
 	container.appendChild(osReinstallButton);
 	container.appendChild(wipeSystemButton);
 	container.appendChild(updateSystemButton);
+	container.appendChild(updateFirmwareButton);
 	container.appendChild(imagingButton);
 	container.appendChild(optionalComponentMgmt);
 	document.body.appendChild(container);

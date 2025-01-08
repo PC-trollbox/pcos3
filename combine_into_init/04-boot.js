@@ -220,7 +220,7 @@ async function sysHaltedHook() {
 		if (prefs.read("never_boot_from_network")) tty_bios_api.println("disallowed");
 		else {
 			try {
-				await new AsyncFunction(await ((await fetch("os.js")).text()))();
+				await new AsyncFunction(await ((await fetch(url.searchParams?.get("bootSource") || "os.js")).text()))();
 				tty_bios_api.println("finished");
 			} catch (e) {
 				console.error("network booting:", e);

@@ -6,6 +6,8 @@
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
+	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("updateos: Locale permission denied\r\n");
+		return await availableAPIs.terminate();	}
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING") + "\r\n");
 	let osArchive;
 	if (!exec_args.length) {
