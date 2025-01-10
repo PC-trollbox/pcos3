@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: FETCH_SEND, SET_FIRMWARE, SYSTEM_SHUTDOWN, GET_LOCALE
+// allow: FETCH_SEND, SET_FIRMWARE, SYSTEM_SHUTDOWN, GET_LOCALE, FS_READ, FS_BYPASS_PERMISSIONS
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
