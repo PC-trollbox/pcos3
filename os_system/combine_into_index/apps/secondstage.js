@@ -175,7 +175,7 @@
 					path: homedir + "/desktop/updateos.lnk",
 					data: JSON.stringify({
 						localeReferenceName: "UPDATE_BUTTON",
-						path: defaultSystem + "/apps/updateos.js"
+						path: defaultSystem + "/apps/diffupdate.js"
 					})
 				});
 				await availableAPIs.fs_chown({ path: homedir + "/desktop/updateos.lnk", newUser: username });
