@@ -319,7 +319,6 @@ function setupbase() {
 					"14-logon-requirement.js": requireLogon.toString() + "\n" + waitForLogon.toString() + "\n" + hookButtonClick.toString() + "\n" + serviceLogon.toString() + "\n",
 					"14-logon-requirement-enforce.js": "/* no-op */",
 					"15-apps.js": appFnCode + "\n",
-					"15-optional.js": opt.toString() + "\nopt();\n",
 					"17-installer-secondstage.js": secondstage.toString() + "\nsecondstage();\n",
 					"99-finished.js": systemKillWaiter.toString() + "\nreturn await systemKillWaiter();"
 				},

@@ -2,7 +2,7 @@
 // link: lrn:SYSADMIN_TOOLS_TITLE
 // signer: automaticSigner
 // fnName: sysadminInstaller
-// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE
+// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, PATCH_DIFF, RESOLVE_NAME, CONNLESS_LISTEN, CONNLESS_SEND, CSP_OPERATIONS
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -19,7 +19,6 @@
 	let updateSystemButton = document.createElement("button");
 	let updateFirmwareButton = document.createElement("button");
 	let imagingButton = document.createElement("button");
-	let optionalComponentMgmt = document.createElement("button");
 	osReinstallButton.innerText = await availableAPIs.lookupLocale("REINSTALL_BUTTON");
 	fsckOrderButton.innerText = await availableAPIs.lookupLocale("FSCK_BUTTON");
 	fsckDiscardButton.innerText = await availableAPIs.lookupLocale("DISCARD_BUTTON");
@@ -27,9 +26,8 @@
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	updateFirmwareButton.innerText = await availableAPIs.lookupLocale("UPDATEFW_BUTTON");
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
-	optionalComponentMgmt.innerText = await availableAPIs.lookupLocale("OPTIONAL_COMPONENTS_TITLE");
 	osReinstallButton.addEventListener("click", async function() {
-		let checklist = [ "SYSTEM_SHUTDOWN", "FETCH_SEND", "LLDISK_WRITE" ];
+		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNLESS_LISTEN", "CONNLESS_SEND", "LLDISK_WRITE", "SYSTEM_SHUTDOWN", "FS_READ" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -39,9 +37,38 @@
 		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING");
 		let osArchive;
 		try {
-			osArchive = await availableAPIs.fetchSend({
-				url: "/os.js",
-				init: {}
+			let etcls = await availableAPIs.fs_ls({
+				path: (await availableAPIs.getSystemMount()) + "/etc"
+			});
+			let from = "scratch";
+			let originalVersion = "";
+			if (etcls.includes("diffupdate_cache.js")) {
+				originalVersion = await availableAPIs.fs_read({
+					path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js"
+				});
+				from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
+			}
+			let serverAddress = await availableAPIs.resolve("pcosserver.pc");
+			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", "pcosserver.pc").replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
+			let randomUserPort = "user_" + Array.from(await availableAPIs.cspOperation({
+				cspProvider: "basic",
+				operation: "random",
+				cspArgument: new Uint8Array(16)
+			})).map(a => a.toString(16).padStart(2, "0")).join("");
+			let listen = availableAPIs.connlessListen(randomUserPort);
+			await availableAPIs.connlessSend({
+				gate: "deltaUpdate",
+				address: serverAddress,
+				content: { from, reply: randomUserPort }
+			});
+			listen = await listen;
+			osArchive = (await availableAPIs.patchDiff({
+				operation: "applyPatch",
+				args: [ originalVersion, listen.data.content ]
+			})).join("");
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",
+				data: osArchive
 			});
 		} catch (e) {
 			await availableAPIs.closeability(true);
@@ -50,9 +77,6 @@
 			container.hidden = false;
 			return;
 		}
-		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DECODING");
-		osArchive = osArchive.arrayBuffer;
-		osArchive = new TextDecoder().decode(osArchive);
 		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_SETTING");
 		await availableAPIs.lldaWrite({
 			partition: "boot",
@@ -153,7 +177,7 @@
 		}
 	});
 	updateSystemButton.addEventListener("click", async function() {
-		let checklist = [ "FETCH_SEND", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
+		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNLESS_LISTEN", "CONNLESS_SEND", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -163,9 +187,44 @@
 		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING");
 		let osArchive;
 		try {
-			osArchive = await availableAPIs.fetchSend({
-				url: "/os.js",
-				init: {}
+			let etcls = await availableAPIs.fs_ls({
+				path: (await availableAPIs.getSystemMount()) + "/etc"
+			});
+			let from = "scratch";
+			let originalVersion = "";
+			if (etcls.includes("diffupdate_cache.js")) {
+				originalVersion = await availableAPIs.fs_read({
+					path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js"
+				});
+				from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
+			}
+			let serverAddress = await availableAPIs.resolve("pcosserver.pc");
+			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", "pcosserver.pc").replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
+			let randomUserPort = "user_" + Array.from(await availableAPIs.cspOperation({
+				cspProvider: "basic",
+				operation: "random",
+				cspArgument: new Uint8Array(16)
+			})).map(a => a.toString(16).padStart(2, "0")).join("");
+			let listen = availableAPIs.connlessListen(randomUserPort);
+			await availableAPIs.connlessSend({
+				gate: "deltaUpdate",
+				address: serverAddress,
+				content: { from, reply: randomUserPort }
+			});
+			listen = await listen;
+			if (listen.data.content.length == 0) {
+				await availableAPIs.closeability(true);
+				extraActivities.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
+				container.hidden = false;
+				return;
+			}
+			osArchive = (await availableAPIs.patchDiff({
+				operation: "applyPatch",
+				args: [ originalVersion, listen.data.content ]
+			})).join("");
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",
+				data: osArchive
 			});
 		} catch (e) {
 			await availableAPIs.closeability(true);
@@ -174,9 +233,6 @@
 			container.hidden = false;
 			return;
 		}
-		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DECODING");
-		osArchive = osArchive.arrayBuffer;
-		osArchive = new TextDecoder().decode(osArchive);
 		let files = osArchive.split(/\/\/ [0-9]+-.+.js\n/g).slice(1);
 		let names = osArchive.match(/\/\/ [0-9]+-.+.js/g);
 		let appIndex = names.indexOf("// " + "1" + "5-ap" + "ps.js");
@@ -271,150 +327,6 @@
 		}
 		await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("SYSTEM_IMAGING"));
 		imaging();
-	})
-	optionalComponentMgmt.addEventListener("click", async function() {
-		let checklist = [ "FS_READ", "FS_WRITE", "FS_LIST_PARTITIONS", "FETCH_SEND", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE" ];
-		if (!checklist.every(p => privileges.includes(p))) {
-			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
-			return;
-		}
-		await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("OPTIONAL_COMPONENTS_TITLE"));
-		extraActivities.innerText = "";
-		let cmponents = {};
-		let rawComponentFile;
-		try {
-			rawComponentFile = await availableAPIs.fs_read({
-				path: (await availableAPIs.getSystemMount()) + "/boot/15-optional.js"
-			});
-		} catch {
-			try {
-				container.innerText = await availableAPIs.lookupLocale("NO_COMPONENTS_FILE");
-				rawComponentFile = await availableAPIs.fetchSend({
-					url: "/os.js",
-					init: {}
-				});
-				rawComponentFile = rawComponentFile.arrayBuffer;
-				rawComponentFile = new TextDecoder().decode(rawComponentFile);
-				rawComponentFile = rawComponentFile.split("\n");
-				let startIndex = rawComponentFile.indexOf("// =====BEGIN ALL OPTIONAL COMPONENTS=====");
-				let endIndex = rawComponentFile.indexOf("// =====END ALL OPTIONAL COMPONENTS=====");
-				rawComponentFile = rawComponentFile.slice(startIndex + 1, endIndex);
-				rawComponentFile = rawComponentFile.join("\n");
-				await availableAPIs.fs_write({
-					path: (await availableAPIs.getSystemMount()) + "/boot/15-optional.js",
-					data: rawComponentFile
-				});
-			} catch {
-				container.innerText = await availableAPIs.lookupLocale("FAILED_COMPONENTS_DOWNLOAD");
-			}
-		}
-		async function reparse() {
-			await availableAPIs.closeability(false);
-			cmponents = {};
-			container.innerText = await availableAPIs.lookupLocale("PARSING_COMPONENTS");
-			rawComponentFile = rawComponentFile.split("\n");
-			let componentComputerNames = rawComponentFile.filter(a => a.startsWith("// =====BEGIN ") && a.endsWith(" COMPONENT METADATA=====")).map(a => a.replace("// =====BEGIN ", "").replace(" COMPONENT METADATA=====", ""));
-			for (let compName of componentComputerNames) {
-				let metadataLineIndex = rawComponentFile.indexOf("// =====BEGIN " + compName + " COMPONENT METADATA=====");
-				let metadataLineEndIndex = rawComponentFile.indexOf("// =====END " + compName + " COMPONENT METADATA=====");
-				let installerLineIndex = rawComponentFile.indexOf("// =====BEGIN " + compName + " COMPONENT INSTALLER=====");
-				let installerLineEndIndex = rawComponentFile.indexOf("// =====END " + compName + " COMPONENT INSTALLER=====");
-				let removerLineIndex = rawComponentFile.indexOf("// =====BEGIN " + compName + " COMPONENT REMOVER=====");
-				let removerLineEndIndex = rawComponentFile.indexOf("// =====END " + compName + " COMPONENT REMOVER=====");
-				let checkersLineIndex = rawComponentFile.indexOf("// =====BEGIN " + compName + " COMPONENT CHECKER=====");
-				let checkersLineEndIndex = rawComponentFile.indexOf("// =====END " + compName + " COMPONENT CHECKER=====");
-				let metadata = rawComponentFile.slice(metadataLineIndex + 1, metadataLineEndIndex);
-				let metadataParsed = {};
-				for (let line of metadata) {
-					let lineSplit = line.replace("// ", "").split(": ");
-					metadataParsed[lineSplit[0]] = lineSplit[1];
-				}
-				let ipcPipe = await availableAPIs.createPipe();
-				let isInstalled = availableAPIs.listenToPipe(ipcPipe);
-				await availableAPIs.runKlvlCode(`(async function() {
-					${rawComponentFile.slice(checkersLineIndex, checkersLineEndIndex).join("\n")}
-					modules.ipc.send(${JSON.stringify(ipcPipe)}, await checker(${JSON.stringify(await availableAPIs.getSystemMount())}, ${JSON.stringify(await availableAPIs.getProcessToken())}));
-				})();`);
-				isInstalled = await isInstalled;
-				await availableAPIs.closePipe(ipcPipe);
-				cmponents[compName] = {
-					metadata: metadataParsed,
-					installer: rawComponentFile.slice(installerLineIndex + 1, installerLineEndIndex).join("\n"),
-					remover: rawComponentFile.slice(removerLineIndex + 1, removerLineEndIndex).join("\n"),
-					isInstalled: isInstalled
-				};
-			}
-			rawComponentFile = rawComponentFile.join("\n");
-			await availableAPIs.closeability(true);
-		}
-		async function showFullList() {
-			container.innerText = "";
-			for (let component in cmponents) {
-				let componentBtn = document.createElement("button");
-				componentBtn.innerText = await availableAPIs.lookupLocale(cmponents[component].metadata.localeReferenceName) || cmponents[component].metadata["localeName_" + (await availableAPIs.locale())] || cmponents[component].metadata.humanName;
-				componentBtn.addEventListener("click", async function() {
-					container.innerText = "";
-					let backButton = document.createElement("button");
-					let header = document.createElement("b");
-					let computerName = document.createElement("span");
-					let computerNameTitle = document.createElement("b");
-					let description = document.createElement("span");
-					let license = document.createElement("span");
-					let actionButton = document.createElement("button");
-					backButton.innerText = await availableAPIs.lookupLocale("EXIT");
-					header.innerText = await availableAPIs.lookupLocale(cmponents[component].metadata.localeReferenceName) || cmponents[component].metadata["localeName_" + (await availableAPIs.locale())] || cmponents[component].metadata.humanName;
-					computerNameTitle.innerText = "ID: ";
-					computerName.innerText = component;
-					description.innerText = (await availableAPIs.lookupLocale("DESCRIPTION_FIELD")).replace("%s", await availableAPIs.lookupLocale(cmponents[component].metadata.localeReferenceDescription) || cmponents[component].metadata["localeDescription_" + (await availableAPIs.locale())] || cmponents[component].metadata.description);
-					license.innerText = (await availableAPIs.lookupLocale("LICENSE_FIELD")).replace("%s", cmponents[component].metadata.license);
-					container.appendChild(backButton);
-					container.appendChild(header);
-					container.appendChild(document.createElement("hr"));
-					container.appendChild(computerNameTitle);
-					container.appendChild(computerName);
-					container.appendChild(document.createElement("br"));
-					container.appendChild(description);
-					container.appendChild(document.createElement("br"));
-					container.appendChild(license);
-					container.appendChild(document.createElement("hr"));
-					container.appendChild(actionButton);
-					backButton.addEventListener("click", async function() {
-						await showFullList();
-					});
-					actionButton.innerText = cmponents[component].isInstalled ? (await availableAPIs.lookupLocale("REMOVE_BTN")) : (await availableAPIs.lookupLocale("INSTALL_BUTTON"));
-					actionButton.addEventListener("click", async function() {
-						await availableAPIs.closeability(false);
-						let executedFnName = cmponents[component].isInstalled ? "remover" : "installer";
-						let ipcPipe = await availableAPIs.createPipe();
-						container.hidden = true;
-						extraActivities.innerText = await availableAPIs.lookupLocale("MODIFYING_STATUS");
-						let result = availableAPIs.listenToPipe(ipcPipe);
-						await availableAPIs.runKlvlCode(`(async function() {
-							${cmponents[component][executedFnName]}
-							try {
-								await ${executedFnName}(${JSON.stringify(await availableAPIs.getSystemMount())}, ${JSON.stringify(await availableAPIs.getProcessToken())});
-								modules.ipc.send(${JSON.stringify(ipcPipe)}, true);
-							} catch (e) {
-								console.error(e);
-								modules.ipc.send(${JSON.stringify(ipcPipe)}, false);
-							}
-						})();`);
-						result = await result;
-						extraActivities.innerText = result ? (await availableAPIs.lookupLocale("MODIFYING_SUCCESS")) : (await availableAPIs.lookupLocale("MODIFYING_FAILED"));
-						await availableAPIs.closePipe(ipcPipe);
-						container.hidden = false;
-						await availableAPIs.closeability(true);
-						if (result) {
-							await reparse();
-							await showFullList();
-						}
-					});
-				});
-				container.appendChild(componentBtn);
-			}
-		}
-		await reparse();
-		await showFullList();
 	});
 	container.appendChild(fsckOrderButton);
 	container.appendChild(fsckDiscardButton);
@@ -423,7 +335,6 @@
 	container.appendChild(updateSystemButton);
 	container.appendChild(updateFirmwareButton);
 	container.appendChild(imagingButton);
-	container.appendChild(optionalComponentMgmt);
 	document.body.appendChild(container);
 	document.body.appendChild(extraActivities);
 })();

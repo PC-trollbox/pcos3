@@ -190,7 +190,9 @@ server.on("connection", function(socket, req) {
 				if (packetData.data?.type == "connectionless" && packetData.data?.gate == "deltaUpdate") {
 					if (typeof packetData.data.content.from === "string" && typeof packetData.data.content.reply === "string") {
 						try {
-							let fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(packetData.data.content.from.match(/\w+/g)) + ".js").toString();
+							let fromBuild = "";
+							if (packetData.data.content.from != "scratch")
+								fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(packetData.data.content.from.match(/\w+/g)) + ".js").toString();
 							socket.send(JSON.stringify({
 								from: serverAddress,
 								data: {
