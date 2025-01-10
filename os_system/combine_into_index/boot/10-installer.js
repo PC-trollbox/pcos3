@@ -26,6 +26,8 @@ async function setupbase() {
 	let _generated = null;
 	let appFns = [ _generated?._automatically?._by?._combine?.js ];
 	let appFnCode = appFns.map(a => a.toString()).join("\n");
+	let url = new URL(location.origin);
+	url.protocol = "ws" + (url.protocol == "https:" ? "s" : "") + ":";
 	let fsmount = {
 		read: async function (key) {
 			let pathParts = key.split("/");
@@ -80,6 +82,10 @@ async function setupbase() {
 					appHarden: JSON.stringify({
 						requireSignature: true,
 						requireAllowlist: true
+					}),
+					"network.json": JSON.stringify({
+						url: url.toString(),
+						ucBits: 0
 					}),
 					security: {
 						users: JSON.stringify({
@@ -203,6 +209,10 @@ async function setupbase() {
 	delete modules.fs.mounts["roinstaller"];
 	modules.defaultSystem = "installer";
 	installer();
+	if (modules.network.serviceStopped) {
+		delete modules.network.serviceStopped;
+		networkd();
+	}
 }
 
 setupbase();
