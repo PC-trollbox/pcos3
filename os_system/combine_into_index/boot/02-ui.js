@@ -302,6 +302,8 @@ function loadUi() {
 			delete this.systemSession;
 			delete modules.liu;
 			delete modules.serviceSession;
+			uiStyle.remove();
+			delete modules.uiStyle;
 		},
 		tracker: {},
 		active: null
@@ -309,6 +311,7 @@ function loadUi() {
 
 	modules.window = createWindow;
 	modules.session = session;
+	modules.uiStyle = uiStyle;
 
 	modules.session.systemSession = session.mksession();
 	session.muteAllSessions();
