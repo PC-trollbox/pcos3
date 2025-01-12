@@ -5,6 +5,33 @@ async function networkd() {
 	try {
 		let config = await modules.fs.read(modules.defaultSystem + "/etc/network.json");
 		config = JSON.parse(config);
+		function isPacketFiltered(packet) {
+			if (!config.filters) return false;
+			for (let filter of config.filters) {
+				if (filter.type == 0) return filter.result;
+				if (filter.type == 1 && isPacketFrom(packet, filter)) return filter.result;
+				if (filter.type == 2 && filter.protocol == packet.data.type) return filter.result;
+				if (filter.type == 3 && isPacketFrom(packet, filter) && filter.protocol == packet.data.type) return filter.result;
+				if (filter.type == 4 && isPacketFrom(packet, filter) &&
+					(packet.data.type == "connectionful" || packet.data.type == "connectionless")) {
+						if (packet.data.gate == filter.gate) return filter.result;
+					}
+			}
+			return true;
+		}
+		function isPacketFrom(packet, filter) {
+			if (filter.from == packet.from) return true;
+			if (filter.ipHash == packet.from.slice(0, 8)) return true;
+			if (filter.systemID == packet.from.slice(8, 24)) return true;
+			return false;
+		}
+		modules.network.reloadConfig = async function() {
+			config = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/network.json"));
+			ws.send(JSON.stringify({
+				finalProxyPacket: true
+			}));
+			ws.close();
+		}
 		let stage = 0;
 		let pukey = (modules.core.prefs.read("system_id") || {}).public;
 		let importedKey = await crypto.subtle.importKey("jwk", (modules.core.prefs.read("system_id") || {}).private, {
@@ -80,6 +107,11 @@ async function networkd() {
 					return ws.close();
 				}
 				if (messageData.from) {
+					if (isPacketFiltered(messageData)) {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+						return false;
+					}
 					if (messageData.data.type == "ping") {
 						if (typeof messageData.data.resend !== "string") return;
 						if (messageData.data.resend.length > 64) return;

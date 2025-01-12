@@ -47,10 +47,10 @@
 	else {
 		try {
 			pingedAddress = await Promise.race([
-				await availableAPIs.resolve(exec_args[0]),
+				availableAPIs.resolve(exec_args[0]),
 				new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))
 			])
-			if (pingedAddress == "timeout") throw new Error("Response timed out");
+			if (pingedAddress == "timeout") throw new Error("Resolution timed out");
 			if (!pingedAddress) throw new Error("Could not resolve hostname");
 		} catch (e) {
 			await availableAPIs.toMyCLI("ping: " + exec_args[0] + ": " + e.name + ": " + e.message + "\r\n");

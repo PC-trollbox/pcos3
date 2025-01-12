@@ -1065,7 +1065,7 @@ function reeAPIs() {
 									connections[connectionID].packetBuffer = connections[connectionID].packetBuffer.filter(p => p.sequence > packet.ack);
 									connections[connectionID].acks = packet.data.acks;
 								}
-								if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "data" && packet.data.connectionID == connectionID) {
+								if (packet.data.type == "connectionful" && packet.data.action == "data" && packet.data.connectionID == connectionID) {
 									websocket.send(JSON.stringify({
 										receiver: packet.sender,
 										data: {
@@ -1079,7 +1079,7 @@ function reeAPIs() {
 									connections[connectionID].resolveDataPromise(packet.data.data);
 									connections[connectionID].dataPromise = new Promise(_ => connections[connectionID].resolveDataPromise = _);
 								}
-								if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "disconnect") {
+								if (packet.data.type == "connectionful" && packet.data.action == "disconnect" && packet.data.connectionID == connectionID) {
 									websocket.removeEventListener("message", eventListener);
 									delete networkListens[networkListenID];
 									websocket.send(JSON.stringify({
@@ -1234,6 +1234,10 @@ function reeAPIs() {
 						return;
 					}
 					localStorage.setItem("runtime_flash", new_flash);
+				},
+				reloadNetworkConfig: async function() {
+					if (!privileges.includes("RELOAD_NETWORK_CONFIG")) throw new Error("UNAUTHORIZED_ACTION");
+					await modules.network.reloadConfig();
 				}
 			}
 		}
