@@ -1,6 +1,6 @@
 // @pcos-app-mode native
-const pcos_version = "1157";
-const build_time = 1737210925479;
+const pcos_version = "1158";
+const build_time = 1737211053175;
  
 let modules = {
 	core: coreExports,

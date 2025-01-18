@@ -15,7 +15,7 @@
 			.replace("%s", (batteryStatus.level * 100).toFixed(2))
 			.replace("%s", await availableAPIs.ufTimeInc([
 				(batteryStatus.charging ? batteryStatus.chargingTime : batteryStatus.dischargingTime) * 1000
-			])));
+			])) + "\r\n");
 	} catch (e) {
 		await availableAPIs.toMyCLI("batteryinfo: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
 	}
