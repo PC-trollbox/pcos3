@@ -426,7 +426,7 @@ async function requireLogon() {
 							(batteryStatus.charging ? batteryStatus.chargingTime : batteryStatus.dischargingTime) * 1000
 						));
 					if (batteryStatus.level < 0.2) batteryStatusIcon = iconCache.dying_;
-					if (batteryStatus.charging) batteryStatusIcon = iconCache.level == 1 ? iconCache.batteryChargeFinished_ : iconCache.charging_;
+					if (batteryStatus.charging) batteryStatusIcon = batteryStatus.level == 1 ? iconCache.batteryChargeFinished_ : iconCache.charging_;
 				}
 				battery.style.backgroundImage = "url(" + JSON.stringify(batteryStatusIcon) + ")";
 				battery.title = batteryStatusDescription;
