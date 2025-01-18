@@ -6,8 +6,7 @@ const app = express();
 const http = require("http").createServer(app);
 const path = require("path/posix");
 const server = new ws.Server({ server: http });
-const fs = require("fs");
-const diff = require("fast-myers-diff");
+const worker_threads = require("worker_threads");
 let socketList = {};
 let sfspMountModule = require("./sfsp_mount");
 let globalMount = sfspMountModule({});
@@ -190,18 +189,12 @@ server.on("connection", function(socket, req) {
 				if (packetData.data?.type == "connectionless" && packetData.data?.gate == "deltaUpdate") {
 					if (typeof packetData.data.content.from === "string" && typeof packetData.data.content.reply === "string") {
 						try {
-							let fromBuild = "";
-							if (packetData.data.content.from != "scratch")
-								fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(packetData.data.content.from.match(/\w+/g)) + ".js").toString();
-							socket.send(JSON.stringify({
-								from: serverAddress,
-								data: {
-									type: "connectionless",
-									gate: packetData.data.content.reply,
-									content: [ ...diff.calcPatch(fromBuild, fs.readFileSync(__dirname + "/../index.js").toString()) ]
-								},
-								packetID: crypto.randomBytes(32).toString("hex")
-							}));
+							let worker = new worker_threads.Worker(__dirname + "/worker.js", {
+								workerData: { packetData, serverAddress }
+							});
+							worker.addListener("message", function(message) {
+								socket.send(message);
+							})
 						} catch {}
 					}
 				}
