@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, SET_SECURITY_CHECKS, CSP_OPERATIONS
+// allow: GET_LOCALE, SET_SECURITY_CHECKS, CSP_OPERATIONS, SWITCH_USERS_AUTOMATICALLY
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -8,6 +8,14 @@
 	await availableAPIs.attachCLI();
 	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("passwd: Locale permission denied\r\n");
 		return await availableAPIs.terminate();	}
+	if (exec_args[0]) {
+		try {
+			await availableAPIs.switchUser(exec_args[0]);
+		} catch (e) {
+			await availableAPIs.toMyCLI("passwd: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+			return await availableAPIs.terminate();
+		}
+	}
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PASSWD_NEW_PROMPT") + "\r\n");
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PASSWD_2FACTOR_LOSS_WARN") + "\r\n");
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PASSWD_PROMPT"));

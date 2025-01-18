@@ -351,13 +351,7 @@
 		let slices = dir.split("/");
 		for (let i = 2; i <= slices.length; i++) {
 			let browse = await availableAPIs.fs_ls({ path: slices.slice(0, i - 1).join("/") });
-			if (!browse.includes(slices[i - 1])) {
-				let createdPath = slices.slice(0, i).join("/")
-				await availableAPIs.fs_mkdir({ path: createdPath });
-				await availableAPIs.fs_chown({ path: createdPath, newUser: "root" });
-				await availableAPIs.fs_chgrp({ path: createdPath, newGrp: "root" });
-				await availableAPIs.fs_chmod({ path: createdPath, newPermissions: "rx" });
-			}
+			if (!browse.includes(slices[i - 1])) await availableAPIs.fs_mkdir({ path: slices.slice(0, i).join("/") });
 		}
 	}
 
