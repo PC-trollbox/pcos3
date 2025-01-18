@@ -40,7 +40,7 @@ function loadUserFriendly() {
 			return string;
 		},
 		considerateTime: function(ms, majorUnitsOnly, displayMs) {
-			let dateObject = new Date(ms + (new Date(0).getTimezoneOffset() * 60000));
+			let dateObject = new Date(ms + (new Date(ms).getTimezoneOffset() * 60000));
 			let string = "";
 			let years = dateObject.getFullYear() - 1970;
 			let months = dateObject.getMonth();

@@ -392,30 +392,52 @@ async function requireLogon() {
 			clock.className = "clock";
 			let filler = document.createElement("div");
 			filler.className = "filler";
+			let battery = document.createElement("div");
 			let networkIcon = document.createElement("div");
 			let pcosNetworkIcon = document.createElement("div");
 			let iconCache = {};
-			for (let iconFile of ["network_", "network_offline_", "pcos_network_", "pcos_network_offline_"]) {
-				let permissions = await modules.fs.permissions(modules.defaultSystem + "/etc/icons/" + iconFile + "icon.pic", resolvedLogon.token);
-				if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("r") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
-					throw new Error("Permission denied reading taskbar icon picture");
+			for (let iconFile of ["network_", "network_offline_", "pcos_network_", "pcos_network_offline_", "readyToPlay_", "batteryChargeFinished_", "dying_", "charging_"]) {
+				try {
+					let permissions = await modules.fs.permissions(modules.defaultSystem + "/etc/icons/" + iconFile + "icon.pic", resolvedLogon.token);
+					if (permissions.owner != userInfo.user && !userInfo.groups.includes(permissions.group) && !permissions.world.includes("r") && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+						throw new Error("Permission denied reading taskbar icon picture");
+					}
+					iconCache[iconFile] = await modules.fs.read(modules.defaultSystem + "/etc/icons/" + iconFile + "icon.pic", resolvedLogon.token);
+				} catch (e) {
+					console.error("Failed to read taskbar icon picture:", e);
 				}
-				iconCache[iconFile] = await modules.fs.read(modules.defaultSystem + "/etc/icons/" + iconFile + "icon.pic", resolvedLogon.token);
 			}
 
-			liu[liuUser].clockInterval = setInterval(function() {
+			liu[liuUser].clockInterval = setInterval(async function() {
 				clock.innerText = new Date().toTimeString().split(" ")[0];
 				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
 				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"))
 				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
 				pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_" + (modules.network.connected ? "ONLINE" : "OFFLINE")).replace("%s", userInfo.privileges.includes("GET_HOSTNAME") ? (modules.network.hostname || modules.locales.get("UNKNOWN_PLACEHOLDER")) : modules.locales.get("UNKNOWN_PLACEHOLDER")).replace("%s", userInfo.privileges.includes("GET_NETWORK_ADDRESS") ? (modules.network.address || "0").match(/.{1,4}/g).join(":") : modules.locales.get("UNKNOWN_PLACEHOLDER"));
 				if (modules.network.serviceStopped) pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_STOPPED");
+				let batteryStatus = {charging: true, chargingTime: 0, dischargingTime: 0, level: 1};
+				let batteryStatusIcon = iconCache.readyToPlay_;
+				let batteryStatusDescription = modules.locales.get("BATTERY_STATUS_UNAVAILABLE");
+				if (navigator.getBattery && userInfo.privileges.includes("GET_BATTERY_STATUS")) {
+					batteryStatus = await navigator.getBattery();
+					batteryStatusDescription = modules.locales.get("BATTERY_STATUS_" + (batteryStatus.charging ? "CHARGING" : "DISCHARGING"))
+						.replace("%s", batteryStatus.level.toFixed(2))
+						.replace("%s", modules.userfriendliness.inconsiderateTime(
+							batteryStatus.charging ? batteryStatus.chargingTime : batteryStatus.dischargingTime
+						));
+					if (batteryStatus.level < 0.2) batteryStatus = iconCache.dying_;
+					if (batteryStatus.charging) batteryStatusIcon = iconCache.level == 1 ? iconCache.batteryChargeFinished_ : iconCache.charging_;
+				}
+				battery.style.backgroundImage = "url(" + JSON.stringify(batteryStatusIcon) + ")";
+				battery.title = batteryStatusDescription;
 			}, 500);
 			
+			battery.className = "icon";
 			networkIcon.className = "icon";
 			pcosNetworkIcon.className = "icon";
 			taskbar.appendChild(startButton);
 			taskbar.appendChild(filler);
+			taskbar.appendChild(battery);
 			taskbar.appendChild(networkIcon);
 			taskbar.appendChild(pcosNetworkIcon);
 			taskbar.appendChild(clock);

@@ -1238,6 +1238,16 @@ function reeAPIs() {
 				reloadNetworkConfig: async function() {
 					if (!privileges.includes("RELOAD_NETWORK_CONFIG")) throw new Error("UNAUTHORIZED_ACTION");
 					await modules.network.reloadConfig();
+				},
+				batteryStatus: async function() {
+					if (!privileges.includes("GET_BATTERY_STATUS")) throw new Error("UNAUTHORIZED_ACTION");
+					let battery = await navigator.getBattery();
+					return {
+						charging: battery.charging,
+						level: battery.level,
+						chargingTime: battery.chargingTime,
+						dischargingTime: battery.dischargingTime
+					};
 				}
 			}
 		}

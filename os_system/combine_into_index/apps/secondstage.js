@@ -184,21 +184,25 @@
 			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2U"));
 			if (!(automatic_configuration?.createAccount?.onlyOnNewInstall && exec_args.includes("usersConfigured"))) {
-				await availableAPIs.fs_write({
-					path: homedir + "/.wallpaper",
-					data: await availableAPIs.fs_read({
-						path: defaultSystem + "/etc/wallpapers/pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"
-					})
-				});
-				await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
-				await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
-				await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
+				try {
+					await availableAPIs.fs_write({
+						path: homedir + "/.wallpaper",
+						data: await availableAPIs.fs_read({
+							path: defaultSystem + "/etc/wallpapers/pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"
+						})
+					});
+					await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
+					await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
+					await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
+				} catch {}
 			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
-			await availableAPIs.fs_write({
-				path: defaultSystem + "/etc/wallpapers/lockscreen.pic",
-				data: await availableAPIs.fs_read({ path: defaultSystem + "/etc/wallpapers/pcos-lock-beta.pic" })
-			});
+			try {
+				await availableAPIs.fs_write({
+					path: defaultSystem + "/etc/wallpapers/lockscreen.pic",
+					data: await availableAPIs.fs_read({ path: defaultSystem + "/etc/wallpapers/pcos-lock-beta.pic" })
+				});
+			} catch {}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE"));
 			if (!(automatic_configuration?.createAccount?.onlyOnNewInstall && exec_args.includes("usersConfigured"))) {
 				await availableAPIs.fs_write({
@@ -215,15 +219,27 @@
 				data: "false"
 			});
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REMOVING_2STAGE"));
-			await availableAPIs.fs_rm({ path: defaultSystem + "/boot/17-installer-secondstage.js" });
-			await availableAPIs.fs_rm({ path: defaultSystem + "/apps/secondstage.js" });
+			try {
+				await availableAPIs.fs_rm({ path: defaultSystem + "/boot/17-installer-secondstage.js" });
+				await availableAPIs.fs_rm({ path: defaultSystem + "/apps/secondstage.js" });
+			} catch (e) {
+				console.error("Failed to remove secondstage", e);
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REMOVING_SETUP_STATE"));
-			await availableAPIs.fs_rm({ path: defaultSystem + "/boot/01-setup-state.js" });
+			try {
+				await availableAPIs.fs_rm({ path: defaultSystem + "/boot/01-setup-state.js" });
+			} catch (e) {
+				console.error("Failed to remove setup state", e);
+			}
 			await availableAPIs.runKlvlCode("delete modules.settingUp;");
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REMOVING_INSTALLERS"));
-			await availableAPIs.fs_rm({ path: defaultSystem + "/boot/15-apps.js" });
-			await availableAPIs.fs_rm({ path: defaultSystem + "/apps/autoinstaller.js" });
-			await availableAPIs.fs_rm({ path: defaultSystem + "/apps/installer.js" });
+			try {
+				await availableAPIs.fs_rm({ path: defaultSystem + "/boot/15-apps.js" });
+				await availableAPIs.fs_rm({ path: defaultSystem + "/apps/autoinstaller.js" });
+				await availableAPIs.fs_rm({ path: defaultSystem + "/apps/installer.js" });
+			} catch (e) {
+				console.error("Failed to remove installers", e);
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_LOGON"));
 			await availableAPIs.fs_write({
 				path: defaultSystem + "/boot/14-logon-requirement-enforce.js",
