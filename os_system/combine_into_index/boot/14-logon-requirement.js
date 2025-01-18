@@ -421,9 +421,9 @@ async function requireLogon() {
 				if (navigator.getBattery && userInfo.privileges.includes("GET_BATTERY_STATUS")) {
 					batteryStatus = await navigator.getBattery();
 					batteryStatusDescription = modules.locales.get("BATTERY_STATUS_" + (batteryStatus.charging ? "CHARGING" : "DISCHARGING"))
-						.replace("%s", batteryStatus.level.toFixed(2))
+						.replace("%s", (batteryStatus.level * 100).toFixed(2))
 						.replace("%s", modules.userfriendliness.inconsiderateTime(
-							batteryStatus.charging ? batteryStatus.chargingTime : batteryStatus.dischargingTime
+							(batteryStatus.charging ? batteryStatus.chargingTime : batteryStatus.dischargingTime) * 1000
 						));
 					if (batteryStatus.level < 0.2) batteryStatus = iconCache.dying_;
 					if (batteryStatus.charging) batteryStatusIcon = iconCache.level == 1 ? iconCache.batteryChargeFinished_ : iconCache.charging_;
