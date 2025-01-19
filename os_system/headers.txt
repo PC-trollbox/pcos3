@@ -300,13 +300,22 @@ connlessSend({
 }) // CONNLESS_SEND
 getUsers(String token) -> String[]
 getNetworkAddress() -> String || null // GET_NETWORK_ADDRESS
-connfulListen(String gate) -> String // CONNFUL_LISTEN (may also require CONNFUL_LISTEN_GLOBAL)
+connfulListen({
+    gate: String,
+    key: Object,
+    private: Object,
+    verifyClientKeyChain: Boolean
+}) -> String // CONNFUL_LISTEN (may also require CONNFUL_LISTEN_GLOBAL)
 connfulListenConnections(String networkListenID) -> String // CONNFUL_LISTEN
 getBuildTime() -> Number // GET_BUILD
 connfulConnect({
+    address: String,
     gate: String,
-    address: String
+    key: Object | undefined,
+    private: Object | undefined,
+    doNotVerifyServer: Boolean
 }) -> String // CONNFUL_CONNECT
+connfulConnectionSettled(String connectionID) // CONNFUL_CONNECT
 connfulDisconnect(String connectionID) // CONNFUL_DISCONNECT
 connfulWrite({
     connectionID: String,
