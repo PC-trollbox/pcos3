@@ -35,12 +35,16 @@
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("UPDATEFW_DECODING") + "\r\n");
 	fwArchive = fwArchive.arrayBuffer;
 	fwArchive = new TextDecoder().decode(fwArchive);
-	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("UPDATEFW_SETTING") + "\r\n");
-	await availableAPIs.setFirmware(fwArchive);
-	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("RESTARTING") + "\r\n");
-	await availableAPIs.shutdown({
-		isReboot: true
-	});
+	try {
+		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("UPDATEFW_SETTING") + "\r\n");
+		await availableAPIs.setFirmware(fwArchive);
+		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("RESTARTING") + "\r\n");
+		await availableAPIs.shutdown({
+			isReboot: true
+		});
+	} catch (e) {
+		await availableAPIs.toMyCLI("updatefw: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+	}
 	await availableAPIs.terminate();
 })();
 

@@ -317,6 +317,7 @@ connfulConnect({
 }) -> String // CONNFUL_CONNECT
 connfulConnectionSettled(String connectionID) // CONNFUL_CONNECT
 connfulDisconnect(String connectionID) // CONNFUL_DISCONNECT
+connfulForceDisconnect(String connectionID) // CONNFUL_DISCONNECT
 connfulWrite({
     connectionID: String,
     data: any

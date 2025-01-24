@@ -1134,7 +1134,7 @@ function reeAPIs() {
 				},
 				connfulConnect: async function(connOpts) {
 					if (!privileges.includes("CONNFUL_CONNECT")) throw new Error("UNAUTHORIZED_ACTION");
-					let {address, gate, key, private, doNotVerifyServer} = connOpts;
+					let {address, gate, key, private, doNotVerifyServer, verifyByDomain} = connOpts;
 					let websocketHandle = modules.network.ws;
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
@@ -1241,7 +1241,8 @@ function reeAPIs() {
 									}
 									verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, ksrlSignatures);
 								}
-								if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address)) {
+								if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address) &&
+										!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain))) {
 									websocket.removeEventListener("message", eventListener);
 									delete connections[connID + ":client"];
 									delete networkListens[networkListenID];
@@ -1322,6 +1323,10 @@ function reeAPIs() {
 							connectionID: connectionID.slice(0, -7)
 						}
 					}));
+				},
+				connfulForceDisconnect: async function(connectionID) {
+					if (!privileges.includes("CONNFUL_DISCONNECT")) throw new Error("UNAUTHORIZED_ACTION");
+					delete connections[connectionID];
 				},
 				connfulWrite: async function(sendOpts) {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");

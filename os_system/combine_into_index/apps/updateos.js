@@ -8,12 +8,26 @@
 	await availableAPIs.attachCLI();
 	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("updateos: Locale permission denied\r\n");
 		return await availableAPIs.terminate();	}
+	let pargs = {};
+	let ppos = [];
+	for (let arg of exec_args) {
+		if (arg.startsWith("--")) {
+			let key = arg.split("=")[0].slice(2);
+			let value = arg.split("=").slice(1).join("=");
+			if (arg.split("=")[1] == null) value = true;
+			if (pargs.hasOwnProperty(key)) {
+				let ogValues = pargs[key];
+				if (ogValues instanceof Array) pargs[key] = [ ...ogValues, value ];
+				else pargs[key] = [ ogValues, value ];
+			} else pargs[key] = value;
+		} else ppos.push(arg);
+	}
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING") + "\r\n");
 	let osArchive;
-	if (!exec_args.length) {
+	if (!ppos[0]) {
 		try {
 			osArchive = await availableAPIs.fetchSend({
-				url: "/os.js",
+				url: ppos.url || "/os.js",
 				init: {}
 			});
 		} catch (e) {
@@ -42,22 +56,25 @@
 	apps.splice(apps.indexOf("autoinstallerInstaller"), 1);
 	apps.splice(apps.indexOf("installerInstaller"), 1);
 	apps.splice(apps.indexOf("secondstageInstaller"), 1);
-	let ipcPipe = await availableAPIs.createPipe();
-	let pipeResult = availableAPIs.listenToPipe(ipcPipe);
-	let installerCode = "";
-	for (let app of apps) installerCode += `await ${app}(modules.defaultSystem, ${JSON.stringify(await availableAPIs.getProcessToken())});\n`;
-	await availableAPIs.runKlvlCode(`(async function() {
-		try {
-			${files[appIndex]}
-			${installerCode}
-			modules.ipc.send(${JSON.stringify(ipcPipe)}, true);
-		} catch (e) {
-			console.error(e);
-			modules.ipc.send(${JSON.stringify(ipcPipe)}, false);
-		}
-	})();`);
-	pipeResult = await pipeResult;
-	await availableAPIs.closePipe(ipcPipe);
+	let pipeResult = false;
+	try {
+		let ipcPipe = await availableAPIs.createPipe();
+		pipeResult = availableAPIs.listenToPipe(ipcPipe);
+		let installerCode = "";
+		for (let app of apps) installerCode += `await ${app}(modules.defaultSystem, ${JSON.stringify(await availableAPIs.getProcessToken())});\n`;
+		await availableAPIs.runKlvlCode(`(async function() {
+			try {
+				${files[appIndex]}
+				${installerCode}
+				modules.ipc.send(${JSON.stringify(ipcPipe)}, true);
+			} catch (e) {
+				console.error(e);
+				modules.ipc.send(${JSON.stringify(ipcPipe)}, false);
+			}
+		})();`);
+		pipeResult = await pipeResult;
+		await availableAPIs.closePipe(ipcPipe);
+	} catch {}
 	if (!pipeResult) {
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("UPDATE_EXTRA_FAIL") + "\r\n");
 		return await availableAPIs.terminate();
@@ -84,11 +101,17 @@
 			return await availableAPIs.terminate();
 		}
 	}
-	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("RESTARTING") + "\r\n");
-	await availableAPIs.shutdown({
-		isReboot: true,
-		isKexec: true
-	});
+	if (!pargs["no-reboot"]) {
+		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("RESTARTING") + "\r\n");
+		try {
+			await availableAPIs.shutdown({
+				isReboot: true,
+				isKexec: true
+			});
+		} catch (e) {
+			await availableAPIs.toMyCLI("updateos: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+		}
+	}
 	await availableAPIs.terminate();
 })();
 

@@ -408,8 +408,10 @@ async function requireLogon() {
 				}
 			}
 
+			let toggle = false;
+			clock.addEventListener("click", _ => toggle = !toggle);
 			liu[liuUser].clockInterval = setInterval(async function() {
-				clock.innerText = new Date().toTimeString().split(" ")[0];
+				clock.innerText = new Date()["toLocale" + (toggle ? "Date" : "Time") + "String"]();
 				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
 				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"))
 				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
