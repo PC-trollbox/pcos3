@@ -406,6 +406,7 @@ function reeAPIs() {
 					let lock = new Promise((resolve) => releaseLock = resolve);
 					modules.session.attrib(ses, "secureLock", lock);
 					let secureSession = await modules.session.mksession();
+					modules.session.attrib(ses, "secureID", secureSession);
 
 					let dom = modules.session.tracker[secureSession].html;
 					let ogDom = modules.session.tracker[ses].html;
@@ -419,18 +420,30 @@ function reeAPIs() {
 					modules.session.muteAllSessions();
 					modules.session.activateSession(secureSession);
 
-					let logonUI = await modules.authui(secureSession, desiredUser);
-					return new Promise(function(resolve) {
-						logonUI.hook(async function(result) {
-							releaseLock();
-							modules.session.attrib(ses, "secureLock", null);
-							modules.session.muteAllSessions();
-							modules.session.rmsession(secureSession);
-							modules.session.activateSession(ses);
-							if (result.success == false) return resolve(false);
-							return resolve(result.token);
+					try {
+						let logonUI = await modules.authui(secureSession, desiredUser);
+						return new Promise(function(resolve) {
+							logonUI.hook(async function(result) {
+								releaseLock();
+								modules.session.attrib(ses, "secureLock", null);
+								modules.session.attrib(ses, "secureID", null);
+								modules.session.muteAllSessions();
+								modules.session.rmsession(secureSession);
+								modules.session.activateSession(ses);
+								if (result.success == false) return resolve(false);
+								return resolve(result.token);
+							});
 						});
-					});
+					} catch (e) {
+						console.error("authui:", e);
+						releaseLock();
+						modules.session.attrib(ses, "secureLock", null);
+						modules.session.attrib(ses, "secureID", null);
+						modules.session.muteAllSessions();
+						modules.session.rmsession(secureSession);
+						modules.session.activateSession(ses);
+						return false;
+					}
 				},
 				getProcessToken: () => processToken,
 				setProcessToken: async function(desiredToken) {
@@ -802,6 +815,7 @@ function reeAPIs() {
 					let lock = new Promise((resolve) => releaseLock = resolve);
 					modules.session.attrib(ses, "secureLock", lock);
 					let secureSession = await modules.session.mksession();
+					modules.session.attrib(ses, "secureID", secureSession);
 
 					let dom = modules.session.tracker[secureSession].html;
 					let ogDom = modules.session.tracker[ses].html;
@@ -816,24 +830,36 @@ function reeAPIs() {
 					modules.session.activateSession(secureSession);
 					let task = await modules.tasks.taskInfo(taskId);
 
-					let logonUI = await modules.consentui(secureSession, {
-						user: desiredUser,
-						path: task.file,
-						args: task.arg,
-						intent,
-						name: params.name
-					});
-					return new Promise(function(resolve) {
-						logonUI.hook(async function(result) {
-							releaseLock();
-							modules.session.attrib(ses, "secureLock", null);
-							modules.session.muteAllSessions();
-							modules.session.rmsession(secureSession);
-							modules.session.activateSession(ses);
-							if (result.success == false) return resolve(false);
-							return resolve(result.token);
+					try {
+						let logonUI = await modules.consentui(secureSession, {
+							user: desiredUser,
+							path: task.file,
+							args: task.arg,
+							intent,
+							name: params.name
 						});
-					});
+						return new Promise(function(resolve) {
+							logonUI.hook(async function(result) {
+								releaseLock();
+								modules.session.attrib(ses, "secureLock", null);
+								modules.session.attrib(ses, "secureID", null);
+								modules.session.muteAllSessions();
+								modules.session.rmsession(secureSession);
+								modules.session.activateSession(ses);
+								if (result.success == false) return resolve(false);
+								return resolve(result.token);
+							});
+						});
+					} catch (e) {
+						console.error("consentui:", e);
+						releaseLock();
+						modules.session.attrib(ses, "secureLock", null);
+						modules.session.attrib(ses, "secureID", null);
+						modules.session.muteAllSessions();
+						modules.session.rmsession(secureSession);
+						modules.session.activateSession(ses);
+						return false;
+					}
 				},
 				networkPing: async function(address) {
 					if (!privileges.includes("PCOS_NETWORK_PING")) throw new Error("UNAUTHORIZED_ACTION");

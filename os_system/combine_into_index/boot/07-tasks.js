@@ -154,7 +154,7 @@ function loadTasks() {
 						}
 					}, importSigningKey, hexToU8A(execSignature.signature), new TextEncoder().encode(executable))) throw new Error("APP_SIGNATURE_VERIFICATION_FAILED");
 				} catch (e) {
-					console.error(e);
+					console.error("Failed to verify app signature:", e);
 					windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
 					windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED").replace("%s", execSignature.signer || modules.locales.get("UNKNOWN_PLACEHOLDER"));
 					windowObject.content.style.padding = "8px";

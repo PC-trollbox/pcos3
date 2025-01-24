@@ -33,6 +33,7 @@ async function requireLogon() {
 				logon: resolvedLogon,
 			}
 		}
+		if (modules.session.attrib(session, "secureID")) return modules.session.activateSession(modules.session.attrib(session, "secureID"));
 		modules.session.activateSession(session);
 		let dom = modules.session.tracker[session].html;
 		let bgPic = "";
@@ -533,16 +534,9 @@ async function serviceLogon() {
 		}
 	}
 	let taskbar = document.createElement("div");
-	let clock = document.createElement("span");
 	taskbar.className = "taskbar";
-	clock.className = "clock";
-
-	setInterval(function() {
-		clock.innerText = new Date().toTimeString().split(" ")[0];
-	}, 500);
 
 	taskbar.appendChild(startButton);
-	taskbar.appendChild(clock);
 	dom.appendChild(taskbar);
 	modules.serviceSession = session;
 	if (modules.core.bootMode != "safe") {

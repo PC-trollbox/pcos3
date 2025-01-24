@@ -23,7 +23,7 @@ function restartLoad() {
 			shutdownAudio.src = shutdownSound;
 			shutdownAudio.play();
 		} catch (e) {
-			console.error(e);
+			console.error("Failed to play shutdown.aud:", e);
 		}
 		modules.shuttingDown = true;
 		let window = modules.window;
