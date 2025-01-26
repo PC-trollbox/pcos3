@@ -220,8 +220,32 @@ async function sysHaltedHook() {
 		if (prefs.read("never_boot_from_network")) tty_bios_api.println("disallowed");
 		else {
 			try {
-				await new AsyncFunction(await ((await fetch(url.searchParams?.get("bootSource") || "os.js")).text()))();
-				tty_bios_api.println("finished");
+				let bootRequest = await fetch(url.searchParams?.get("bootSource") || "os.js");
+				let randomID = Math.random().toString(36).slice(2);
+				let bootCode = "";
+				let bootStreamed = bootRequest.body;
+				let bootReader = bootStreamed.getReader();
+				let total = bootRequest.headers.get("content-length");
+				let speedsGathered = 0, speeds = 0, bytes = 0;
+				tty_bios_api.println("<span id=\"" + randomID + "\"></span>", true);
+				let element = document.getElementById(randomID);
+				element.innerText = "downloaded 0 of " + total + " bytes (0.00%), will boot in " + (total / 12500000).toFixed(2) + " seconds, 12500000.00 bytes/second";
+				let lastTime = performance.now(), trueTime = performance.now();
+				while (true) {
+					let reading = await bootReader.read();
+					if (reading.value == undefined) break;
+					bytes += reading.value.byteLength;
+					let decoded = new TextDecoder().decode(reading.value);
+					bootCode += decoded;
+					speeds += reading.value.byteLength / ((performance.now() - lastTime) / 1000);
+					speedsGathered++;
+					element.innerText = "downloaded " + bytes + " of " + total + " bytes (" + ((bytes / total) * 100).toFixed(2) + "%), will boot in " + ((total - bytes) / (speeds / speedsGathered)).toFixed(2) + " seconds, " + (speeds / speedsGathered).toFixed(2) + " bytes/second";
+					lastTime = performance.now();
+					if (reading.done) break;
+				}
+				element.innerText = "downloaded " + bytes + " bytes (100.00%) in " + ((performance.now() - trueTime) / 1000).toFixed(2) + " seconds, " + (bytes / ((performance.now() - trueTime) / 1000)).toFixed(2) + " bytes/second";
+				await new AsyncFunction(bootCode)();
+				element.innerText = "finished";
 			} catch (e) {
 				console.error("network booting:", e);
 				tty_bios_api.println("failed");
