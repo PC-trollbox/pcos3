@@ -404,7 +404,7 @@ function loadFs() {
 				newPart.set(newCT, newIV.length);
 				newPart = newPart.reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				await modules.core.idb.writePart(partitionId + "-" + id, newPart);
-				if (!files.hasOwnProperty(basename)) await this.setBackend(this._recursive_op(await this.getBackend(), key, { type: "write", value: id }));
+				if (!files.hasOwnProperty(basename)) await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + key, { type: "write", value: id }));
 			},
 			rm: async function(key) {
 				key = String(key);
@@ -418,7 +418,7 @@ function loadFs() {
 				}
 				if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
 				if (typeof files === "string") await modules.core.idb.removePart(partitionId + "-" + files);
-				await this.setBackend(this._recursive_op(await this.getBackend(), key, { type: "delete" }));
+				await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + key, { type: "delete" }));
 			},
 			ls: async function(directory) {
 				directory = String(directory);
@@ -444,7 +444,7 @@ function loadFs() {
 					if (!files) throw new Error("NO_SUCH_DIR");
 				}
 				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
-				await this.setBackend(this._recursive_op(await this.getBackend(), directory, { type: "write", value: {} }));
+				await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + directory, { type: "write", value: {} }));
 			},
 			permissions: async function(file) {
 				file = String(file);
@@ -1088,25 +1088,6 @@ function loadFs() {
 	};
 	modules.fs = fs;
 	modules.defaultSystem = "ram";
-}
-
-function sampleFormatToEncryptedPCFS(partition, monokey = true) {
-	let salt = crypto.getRandomValues(new Uint8Array(32));
-	let diskPart = modules.core.disk.partition(partition);
-	let partId;
-	try {
-		partId = (diskPart.getData()).id;
-	} catch {}
-	if (!partId) partId = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-	diskPart.setData({
-		files: {},
-		permissions: {},
-		cryptodata: {
-			salt: Array.from(salt).map(a => a.toString(16).padStart(2, "0")).join(""),
-			passwordLockingInitial: monokey
-		},
-		id: partId
-	});
 }
 
 loadFs();
