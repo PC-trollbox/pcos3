@@ -49,9 +49,10 @@ function reeAPIs() {
 		async function recursiveKeyVerify(key, ksrl) {
 			if (!key) throw new Error("NO_KEY");
 			if (ksrl.includes(key.signature)) throw new Error("KEY_REVOKED");
+			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 			let signedByKey = modules.ksk_imported;
 			if (key.keyInfo && key.keyInfo?.signedBy) {
-				signedByKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
+				signedByKey = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
 				if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
 				if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
 				await recursiveKeyVerify(signedByKey, ksrl);
@@ -1060,10 +1061,10 @@ function reeAPIs() {
 									hash: "SHA-256"
 								}, usableMainKey, hexToU8A(connections[packet.data.connectionID + ":server"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packet.data.connectionID + ":server"].theirKeyRaw.keyInfo)));
 								if (verifyClientKeyChain && verifyKeySignature) {
-									let ksrlFiles = await this.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
+									let ksrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
 									let ksrlSignatures = [];
 									for (let ksrlFile of ksrlFiles) {
-										let ksrl = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
+										let ksrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
 										let ksrlSignature = ksrl.signature;
 										delete ksrl.signature;
 										if (await crypto.subtle.verify({
@@ -1129,6 +1130,10 @@ function reeAPIs() {
 								if (!connections.hasOwnProperty(packet.data.connectionID + ":server")) return;
 								if (!connections[packet.data.connectionID + ":server"].aesUsableKey) return;
 								if (!connections[packet.data.connectionID + ":server"].theirMainKeyReceived) return;
+								if (connections[packet.data.connectionID + ":server"].writingLock) await connections[packet.data.connectionID + ":server"].writingLock;
+								let writingLockRelease;
+								let writingLock = new Promise(r => writingLockRelease = r);
+								connections[packet.data.connectionID + ":server"].writingLock = writingLock;
 								connections[packet.data.connectionID + ":server"].dataBuffer.push(new TextDecoder().decode(await crypto.subtle.decrypt({
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv)
@@ -1139,6 +1144,7 @@ function reeAPIs() {
 								connections[packet.data.connectionID + ":server"].dataBufferPromise = dataBufferPromise;
 								connections[packet.data.connectionID + ":server"]._dataBufferPromise = _dataBufferPromise;
 								_curdbp();
+								writingLockRelease();
 							}
 						} catch {}
 					}
@@ -1199,7 +1205,8 @@ function reeAPIs() {
 						networkListenID,
 						dataBuffer: [],
 						dataBufferPromise,
-						settlePromise
+						settlePromise,
+						gateIfNeeded: gate
 					}
 					async function eventListener(e) {
 						try {
@@ -1250,10 +1257,10 @@ function reeAPIs() {
 									hash: "SHA-256"
 								}, usableMainKey, hexToU8A(connections[connID + ":client"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[connID + ":client"].theirKeyRaw.keyInfo)));
 								if (!doNotVerifyServer && verifyKeySignature) {
-									let ksrlFiles = await this.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
+									let ksrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
 									let ksrlSignatures = [];
 									for (let ksrlFile of ksrlFiles) {
-										let ksrl = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
+										let ksrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
 										let ksrlSignature = ksrl.signature;
 										delete ksrl.signature;
 										if (await crypto.subtle.verify({
@@ -1309,6 +1316,10 @@ function reeAPIs() {
 							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "data") {
 								if (!connections[connID + ":client"].aesUsableKey) return;
 								if (!connections[connID + ":client"].theirMainKeyReceived) return;
+								if (connections[connID + ":client"].writingLock) await connections[connID + ":client"].writingLock;
+								let writingLockRelease;
+								let writingLock = new Promise(r => writingLockRelease = r);
+								connections[connID + ":client"].writingLock = writingLock;
 								connections[connID + ":client"].dataBuffer.push(new TextDecoder().decode(await crypto.subtle.decrypt({
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv)
@@ -1316,6 +1327,7 @@ function reeAPIs() {
 								_dataBufferPromise();
 								dataBufferPromise = new Promise(r => _dataBufferPromise = r);
 								connections[packet.data.connectionID + ":client"].dataBufferPromise = dataBufferPromise;
+								writingLockRelease();
 							}
 						} catch {}
 					};
@@ -1346,7 +1358,8 @@ function reeAPIs() {
 						data: {
 							type: "connectionful",
 							action: "drop",
-							connectionID: connectionID.slice(0, -7)
+							connectionID: connectionID.slice(0, -7),
+							gate: connections[connectionID].gateIfNeeded
 						}
 					}));
 				},
@@ -1371,7 +1384,8 @@ function reeAPIs() {
 									iv
 								}, connections[sendOpts.connectionID].aesUsableKey, new TextEncoder().encode(sendOpts.data))))
 							},
-							connectionID: sendOpts.connectionID.slice(0, -7)
+							connectionID: sendOpts.connectionID.slice(0, -7),
+							gate: connections[sendOpts.connectionID].gateIfNeeded
 						}
 					}));
 				},
@@ -1379,8 +1393,7 @@ function reeAPIs() {
 					if (!privileges.includes("CONNFUL_READ")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
 					if (!connections[connectionID].dataBuffer.length) await connections[connectionID].dataBufferPromise;
-					let data = connections[connectionID].dataBuffer[0];
-					connections[connectionID].dataBuffer = connections[connectionID].dataBuffer.slice(1);
+					let data = connections[connectionID].dataBuffer.shift();
 					return data;
 				},
 				connfulAddressGet: async function(connectionID) {

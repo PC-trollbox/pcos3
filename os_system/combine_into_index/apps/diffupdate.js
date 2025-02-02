@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, PATCH_DIFF, RESOLVE_NAME, CONNLESS_LISTEN, CONNLESS_SEND, FS_LIST_PARTITIONS, CSP_OPERATIONS, START_TASK, LIST_TASKS
+// allow: GET_LOCALE, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, FS_LIST_PARTITIONS, CSP_OPERATIONS, START_TASK, LIST_TASKS
 // allow: FS_WRITE, RUN_KLVL_CODE, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, GET_LOCALE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_READ, FS_BYPASS_PERMISSIONS
 // =====END MANIFEST=====
 (async function() {
@@ -25,19 +25,26 @@
 		if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
 		serverAddress = serverAddress.replaceAll(":", "");
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", serverDomainOrAddress).replace("%s", serverAddress.match(/.{1,4}/g).join(":")) + "\r\n");
-		let randomUserPort = "user_" + Array.from(await availableAPIs.cspOperation({
-			cspProvider: "basic",
-			operation: "random",
-			cspArgument: new Uint8Array(16)
-		})).map(a => a.toString(16).padStart(2, "0")).join("");
-		let listen = availableAPIs.connlessListen(randomUserPort);
-		await availableAPIs.connlessSend({
+		let connection = await availableAPIs.connfulConnect({
 			gate: "deltaUpdate",
 			address: serverAddress,
-			content: { from, reply: randomUserPort }
+			verifyByDomain: serverDomainOrAddress.includes(":") ? serverAddress : serverDomainOrAddress
 		});
-		listen = await listen;
-		if (listen.data.content.length == 0) {
+		await availableAPIs.connfulConnectionSettled(connection);
+		await availableAPIs.connfulWrite({
+			connectionID: connection,
+			data: JSON.stringify({ from })
+		})
+		let patch = [];
+		while (true) {
+			let a = JSON.parse(await availableAPIs.connfulRead(connection));
+			if (a.final) break;
+			patch.push(a);
+			await availableAPIs.toMyCLI("\r" + (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length));
+		}
+		await availableAPIs.connfulDisconnect(connection);
+		await availableAPIs.toMyCLI("\r" + (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length) + "\r\n");
+		if (patch.length == 0) {
 			await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE") + "\r\n");
 			return await availableAPIs.terminate();
 		}
@@ -45,7 +52,7 @@
 			path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",
 			data: (await availableAPIs.patchDiff({
 				operation: "applyPatch",
-				args: [ originalVersion, listen.data.content ]
+				args: [ originalVersion, patch ]
 			})).join("")
 		});
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("HANDOFF_UPDATE") + "\r\n");

@@ -11,6 +11,11 @@ let socketList = {};
 let sfspMountModule = require("./sfsp_mount");
 let globalMount = sfspMountModule({});
 let sessionTokens = {};
+let deltaUpdateConns = {};
+let serverPublicKey = require("../keypair.json").serverKey;
+let usableKey = crypto.subtle.importKey("jwk", require("../keypair.json").serverKey_private, {name: "ECDSA", namedCurve: "P-256"}, false, ["sign"]);
+let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 const serverAddress = "7f00000150434f53334e6574776f726b";
 const symbols = "abcdefghijklmnopqrstuvwxyz0123456789_-";
 let dnsTable = {
@@ -99,7 +104,7 @@ server.on("connection", function(socket, req) {
 	let alive = true;
 	let hostname;
 	socket.send(JSON.stringify({ event: "Connected" }));
-	socket.on("message", function(message) {
+	socket.on("message", async function(message) {
 		message = message.toString();
 		if (kverif_stage == 0) {
 			try {
@@ -196,6 +201,127 @@ server.on("connection", function(socket, req) {
 								socket.send(message);
 							})
 						} catch {}
+					}
+				}
+				if (packetData.data?.type == "connectionful" && packetData.data?.gate == "deltaUpdate") {
+					if (packetData.data.action == "start") {
+						if (!packetData.data.connectionID) return;
+						if (deltaUpdateConns[packetData.data.connectionID]) return;
+						usableKey = await usableKey;
+						let ephemeralKey = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
+						let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
+						exported = {signedBy: "serverKey", usages: ["connfulSecureEphemeral"], key:exported};
+						let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({
+							name: "ECDSA",
+							hash: "SHA-256"
+						}, usableKey, new TextEncoder().encode(JSON.stringify(exported)))));
+						let theirUsableKey = await crypto.subtle.importKey("jwk", packetData.data.content.keyInfo.key, {
+							name: "ECDH",
+							namedCurve: "P-256"
+						}, true, []);
+						let joinedKeys = await crypto.subtle.deriveBits({ name: "ECDH", public: theirUsableKey }, ephemeralKey.privateKey, 256);
+						let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {name: "AES-GCM"}, true, ["encrypt", "decrypt"]);
+						deltaUpdateConns[packetData.data.connectionID] = {
+							ourKey: ephemeralKey,
+							from: ip + publicKey,
+							theirMainKeyReceived: false,
+							theirKeyRaw: packetData.data.content,
+							aesUsableKey
+						}
+						socket.send(JSON.stringify({
+							from: serverAddress,
+							data: {
+								type: "connectionful",
+								action: "start",
+								content: {
+									keyInfo: exported,
+									signature
+								},
+								connectionID: packetData.data.connectionID
+							}
+						}));
+					} else if (packetData.data.action == "xchange") {
+						if (!packetData.data.connectionID) return;
+						if (!deltaUpdateConns.hasOwnProperty(packetData.data.connectionID)) return;
+						if (deltaUpdateConns[packetData.data.connectionID].theirMainKeyReceived) return;
+						let theirMainKeyDecrypt = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
+							name: "AES-GCM",
+							iv: hexToU8A(packetData.data.content.iv),
+						}, deltaUpdateConns[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct))));
+						let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {
+							name: "ECDSA",
+							namedCurve: "P-256"
+						}, true, ["verify"]);
+						let verifyKeySignature = await crypto.subtle.verify({
+							name: "ECDSA",
+							hash: "SHA-256"
+						}, usableMainKey, hexToU8A(deltaUpdateConns[packetData.data.connectionID].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(deltaUpdateConns[packetData.data.connectionID].theirKeyRaw.keyInfo)));
+						if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + ip + publicKey)) {
+							delete deltaUpdateConns[packetData.data.connectionID];
+							socket.send(JSON.stringify({
+								from: serverAddress,
+								data: {
+									type: "connectionful",
+									action: "drop",
+									connectionID: packetData.data.connectionID
+								}
+							}));
+							return;
+						}
+						deltaUpdateConns[packetData.data.connectionID].theirMainKeyReceived = true;
+						let iv = crypto.getRandomValues(new Uint8Array(16));
+						socket.send(JSON.stringify({
+							from: serverAddress,
+							data: {
+								type: "connectionful",
+								action: "xchange",
+								connectionID: packetData.data.connectionID,
+								content: {
+									iv: u8aToHex(iv),
+									ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
+										name: "AES-GCM",
+										iv
+									}, deltaUpdateConns[packetData.data.connectionID].aesUsableKey, new TextEncoder().encode(JSON.stringify(serverPublicKey)))))
+								}
+							}
+						}));
+					} else if (packetData.data.action == "drop") {
+						if (!packetData.data.connectionID) return;
+						if (!deltaUpdateConns.hasOwnProperty(packetData.data.connectionID)) return;
+						delete deltaUpdateConns[packetData.data.connectionID];
+						socket.send(JSON.stringify({
+							from: serverAddress,
+							data: {
+								type: "connectionful",
+								action: "drop",
+								connectionID: packetData.data.connectionID
+							}
+						}));
+					} else if (packetData.data.action == "data") {
+						if (!packetData.data.connectionID) return;
+						if (!deltaUpdateConns.hasOwnProperty(packetData.data.connectionID)) return;
+						if (!deltaUpdateConns[packetData.data.connectionID].theirMainKeyReceived) return;
+						if (deltaUpdateConns[packetData.data.connectionID].dataSent) return;
+						let data = new TextDecoder().decode(await crypto.subtle.decrypt({
+							name: "AES-GCM",
+							iv: hexToU8A(packetData.data.content.iv)
+						}, deltaUpdateConns[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct)));
+						deltaUpdateConns[packetData.data.connectionID].dataSent = true;
+						let worker = new worker_threads.Worker(__dirname + "/worker.js", {
+							workerData: {
+								packetData: {
+									data: {
+										connectionID: packetData.data.connectionID,
+										content: JSON.parse(data)
+									}
+								},
+								serverAddress,
+								connData: deltaUpdateConns[packetData.data.connectionID]
+							}
+						});
+						worker.addListener("message", function(message) {
+							socket.send(message);
+						})
 					}
 				}
 				if (packetData.data?.type == "ping") {

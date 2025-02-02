@@ -27,7 +27,7 @@
 	updateFirmwareButton.innerText = await availableAPIs.lookupLocale("UPDATEFW_BUTTON");
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
 	osReinstallButton.addEventListener("click", async function() {
-		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNLESS_LISTEN", "CONNLESS_SEND", "LLDISK_WRITE", "SYSTEM_SHUTDOWN", "FS_READ" ];
+		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "LLDISK_WRITE", "SYSTEM_SHUTDOWN", "FS_READ" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -50,21 +50,27 @@
 			}
 			let serverAddress = await availableAPIs.resolve("pcosserver.pc");
 			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", "pcosserver.pc").replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
-			let randomUserPort = "user_" + Array.from(await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "random",
-				cspArgument: new Uint8Array(16)
-			})).map(a => a.toString(16).padStart(2, "0")).join("");
-			let listen = availableAPIs.connlessListen(randomUserPort);
-			await availableAPIs.connlessSend({
+			let connection = await availableAPIs.connfulConnect({
 				gate: "deltaUpdate",
 				address: serverAddress,
-				content: { from, reply: randomUserPort }
+				verifyByDomain: "pcosserver.pc"
 			});
-			listen = await listen;
+			await availableAPIs.connfulConnectionSettled(connection);
+			await availableAPIs.connfulWrite({
+				connectionID: connection,
+				data: JSON.stringify({ from })
+			})
+			let patch = [];
+			while (true) {
+				let a = JSON.parse(await availableAPIs.connfulRead(connection));
+				extraActivities.innerText = (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length);
+				if (a.final) break;
+				patch.push(a);
+			}
+			await availableAPIs.connfulDisconnect(connection);
 			osArchive = (await availableAPIs.patchDiff({
 				operation: "applyPatch",
-				args: [ originalVersion, listen.data.content ]
+				args: [ originalVersion, patch ]
 			})).join("");
 			await availableAPIs.fs_write({
 				path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",
@@ -177,7 +183,7 @@
 		}
 	});
 	updateSystemButton.addEventListener("click", async function() {
-		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNLESS_LISTEN", "CONNLESS_SEND", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
+		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -200,19 +206,25 @@
 			}
 			let serverAddress = await availableAPIs.resolve("pcosserver.pc");
 			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", "pcosserver.pc").replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
-			let randomUserPort = "user_" + Array.from(await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "random",
-				cspArgument: new Uint8Array(16)
-			})).map(a => a.toString(16).padStart(2, "0")).join("");
-			let listen = availableAPIs.connlessListen(randomUserPort);
-			await availableAPIs.connlessSend({
+			let connection = await availableAPIs.connfulConnect({
 				gate: "deltaUpdate",
 				address: serverAddress,
-				content: { from, reply: randomUserPort }
+				verifyByDomain: "pcosserver.pc"
 			});
-			listen = await listen;
-			if (listen.data.content.length == 0) {
+			await availableAPIs.connfulConnectionSettled(connection);
+			await availableAPIs.connfulWrite({
+				connectionID: connection,
+				data: JSON.stringify({ from })
+			})
+			let patch = [];
+			while (true) {
+				let a = JSON.parse(await availableAPIs.connfulRead(connection));
+				extraActivities.innerText = (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length);
+				if (a.final) break;
+				patch.push(a);
+			}
+			await availableAPIs.connfulDisconnect(connection);
+			if (patch.length == 0) {
 				await availableAPIs.closeability(true);
 				extraActivities.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
 				container.hidden = false;
@@ -220,7 +232,7 @@
 			}
 			osArchive = (await availableAPIs.patchDiff({
 				operation: "applyPatch",
-				args: [ originalVersion, listen.data.content ]
+				args: [ originalVersion, patch ]
 			})).join("");
 			await availableAPIs.fs_write({
 				path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",

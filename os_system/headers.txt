@@ -304,7 +304,8 @@ connfulListen({
     gate: String,
     key: Object,
     private: Object,
-    verifyClientKeyChain: Boolean
+    verifyClientKeyChain: Boolean,
+    verifyByDomain: String
 }) -> String // CONNFUL_LISTEN (may also require CONNFUL_LISTEN_GLOBAL)
 connfulListenConnections(String networkListenID) -> String // CONNFUL_LISTEN
 getBuildTime() -> Number // GET_BUILD

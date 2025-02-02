@@ -492,7 +492,8 @@ function localization() {
 			"OLD_USER_DELETION": "Deleting old user \"%s\"",
 			"BATTERY_STATUS_UNAVAILABLE": "The battery status is unavailable.",
 			"BATTERY_STATUS_CHARGING": "The battery is charging (%s%, %suntil full)",
-			"BATTERY_STATUS_DISCHARGING": "The battery is discharging (%s%, %sof play)"
+			"BATTERY_STATUS_DISCHARGING": "The battery is discharging (%s%, %sof play)",
+			"PATCH_HUNK_COUNT": "Patch hunks: %s"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -985,7 +986,8 @@ function localization() {
 			"OLD_USER_DELETION": "Удаление старого пользователя \"%s\"",
 			"BATTERY_STATUS_UNAVAILABLE": "Статус батареи недоступен.",
 			"BATTERY_STATUS_CHARGING": "Батарея заряжается (%s%, %sдо полной)",
-			"BATTERY_STATUS_DISCHARGING": "Батарея разряжается (%s%, %sигры)"
+			"BATTERY_STATUS_DISCHARGING": "Батарея разряжается (%s%, %sигры)",
+			"PATCH_HUNK_COUNT": "Фраз разности: %s"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
