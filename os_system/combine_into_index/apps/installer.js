@@ -258,7 +258,7 @@ Used libraries:
 					let systemCode = "let localSystemMount = \"storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(diskDataPartition) + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
 					await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
 					description.innerHTML = await availableAPIs.lookupLocale("INSTALLATION_SUCCESSFUL");
-					await availableAPIs.closeability(true);
+					if (!automatic_configuration.autoRestart) await availableAPIs.closeability(true);
 					onClose = function() {
 						onClose = () => availableAPIs.terminate();
 						availableAPIs.shutdown({

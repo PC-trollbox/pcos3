@@ -16,8 +16,13 @@ async function logOut(target) {
 	function allProcessesClosed() {
 		return new Promise(function(resolve) {
 			let int = setInterval(function() {
-				taskList = modules.session.attrib(session, "openReeWindows") || [];
-				if (Object.keys(taskList).length == 0) {
+				try {
+					taskList = modules.session.attrib(session, "openReeWindows") || [];
+					if (Object.keys(taskList).length == 0) {
+						resolve();
+						clearInterval(int);
+					}
+				} catch {
 					resolve();
 					clearInterval(int);
 				}

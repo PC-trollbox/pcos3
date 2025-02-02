@@ -246,9 +246,9 @@
 				data: "requireLogon();\n"
 			});
 			description.innerHTML = await availableAPIs.lookupLocale("SETUP_SUCCESSFUL");
-			await availableAPIs.closeability(true);
-			if (automatic_configuration.autoClose) {	
-				if (automatic_configuration.restartOnClose) await availableAPIs.shutdown({ isReboot: true, isKexec: automatic_configuration.restartOnClose == "kexec" });
+			if (!automatic_configuration.autoClose) await availableAPIs.closeability(true);
+			if (automatic_configuration.autoClose) {
+				if (automatic_configuration.restartOnClose) return availableAPIs.shutdown({ isReboot: true, isKexec: automatic_configuration.restartOnClose == "kexec" });
 				await availableAPIs.terminate();
 			}
 		}
