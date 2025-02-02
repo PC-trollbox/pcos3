@@ -233,7 +233,7 @@ async function prefmgr() {
 				} else {
 					tty_bios_api.print("Registering...\t");
 					try {
-						await navigator.serviceWorker.register("offline.js");
+						await navigator.serviceWorker.register("offline.js", {scope: "/"});
 						tty_bios_api.println("done");
 					} catch (e) {
 						console.error(e);

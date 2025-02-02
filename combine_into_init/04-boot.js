@@ -130,7 +130,7 @@ async function sysHaltedHook() {
 					tty_bios_api.println("worker already exists");
 				} else {
 					try {
-						await navigator.serviceWorker.register("offline.js");
+						await navigator.serviceWorker.register("offline.js", {scope: "/"});
 						tty_bios_api.println("done");
 					} catch (e) {
 						console.error(e);
