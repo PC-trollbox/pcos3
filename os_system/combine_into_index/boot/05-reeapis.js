@@ -46,16 +46,17 @@ function reeAPIs() {
 				throw new Error("FS_ACTION_FAILED");
 			}
 		}
-		async function recursiveKeyVerify(key, ksrl) {
+		async function recursiveKeyVerify(key, khrl) {
 			if (!key) throw new Error("NO_KEY");
-			if (ksrl.includes(key.signature)) throw new Error("KEY_REVOKED");
+			let hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(key.keyInfo?.key || key.key)));
 			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+			if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 			let signedByKey = modules.ksk_imported;
 			if (key.keyInfo && key.keyInfo?.signedBy) {
 				signedByKey = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
 				if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
 				if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
-				await recursiveKeyVerify(signedByKey, ksrl);
+				await recursiveKeyVerify(signedByKey, khrl);
 				signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, {
 					name: "ECDSA",
 					namedCurve: "P-256"
@@ -72,6 +73,15 @@ function reeAPIs() {
 
 		ree.beforeCloseDown(async function() {
 			for (let processPipe of processPipes) delete modules.ipc._ipc[processPipe];
+			for (let connection in connections) try { networkListens[connections[connection].networkListenID].ws.send(JSON.stringify({
+				receiver: connections[connection].from,
+				data: {
+					type: "connectionful",
+					action: "drop",
+					connectionID: connection.slice(0, -7),
+					gate: connections[connection].gateIfNeeded
+				}
+			})); } catch {}
 			for (let networkListen in networkListens) networkListens[networkListen].ws.removeEventListener("message", networkListens[networkListen].fn);
 			for (let websocket of websockets) modules.websocket.close(websocket);
 			await modules.tokens.revoke(token);
@@ -897,7 +907,7 @@ function reeAPIs() {
 							},
 							id: packetId
 						}))
-					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
+					}), new Promise((_, reject) => modules.network.runOnClose.then(_ => reject(new Error("NETWORK_CLOSED")))) ]);
 				},
 				logOut: async function(desiredUser) {
 					if (desiredUser != user && !privileges.includes("LOGOUT_OTHERS")) throw new Error("UNAUTHORIZED_ACTION");
@@ -938,7 +948,7 @@ function reeAPIs() {
 						}
 						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
 						websocket.addEventListener("message", eventListener);
-					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
+					}), new Promise((_, reject) => modules.network.runOnClose.then(_ => reject(new Error("NETWORK_CLOSED")))) ]);
 				},
 				connlessSend: async function(sendOpts) {
 					if (!privileges.includes("CONNLESS_SEND")) throw new Error("UNAUTHORIZED_ACTION");
@@ -973,7 +983,7 @@ function reeAPIs() {
 						}
 						networkListens[networkListenID] = { ws: websocket, fn: eventListener };
 						websocket.addEventListener("message", eventListener);
-					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
+					}), new Promise((_, reject) => modules.network.runOnClose.then(_ => reject(new Error("NETWORK_CLOSED")))) ]);
 				},
 				getUsers: async function(token) {
 					if (!privileges.includes("GET_USER_LIST")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1061,22 +1071,25 @@ function reeAPIs() {
 									hash: "SHA-256"
 								}, usableMainKey, hexToU8A(connections[packet.data.connectionID + ":server"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packet.data.connectionID + ":server"].theirKeyRaw.keyInfo)));
 								if (verifyClientKeyChain && verifyKeySignature) {
-									let ksrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
-									let ksrlSignatures = [];
-									for (let ksrlFile of ksrlFiles) {
-										let ksrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
-										let ksrlSignature = ksrl.signature;
-										delete ksrl.signature;
-										if (await crypto.subtle.verify({
-											name: "ECDSA",
-											hash: {
-												name: "SHA-256"
+									verifyKeySignature = false;
+									try {
+										let khrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/khrl", processToken);
+										let khrlSignatures = [];
+										for (let khrlFile of khrlFiles) {
+											let khrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, processToken));
+											let khrlSignature = khrl.signature;
+											delete khrl.signature;
+											if (await crypto.subtle.verify({
+												name: "ECDSA",
+												hash: {
+													name: "SHA-256"
+												}
+											}, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+												khrlSignatures.push(...khrl.list);
 											}
-										}, modules.ksk_imported, hexToU8A(ksrlSignature), new TextEncoder().encode(JSON.stringify(ksrl.list)))) {
-											ksrlSignatures.push(...ksrl.list);
 										}
-									}
-									verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, ksrlSignatures);
+										verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, khrlSignatures);
+									} catch {}
 								}
 								if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + packet.from)) {
 									delete connections[packet.data.connectionID + ":server"];
@@ -1195,7 +1208,8 @@ function reeAPIs() {
 					let _dataBufferPromise = null;
 					let dataBufferPromise = new Promise(r => _dataBufferPromise = r);
 					let _settlePromise = null;
-					let settlePromise = new Promise(r => _settlePromise = r);
+					let _rejectPromise = null;
+					let settlePromise = new Promise((r, e) => [_settlePromise, _rejectPromise] = [r, e]);
 					connections[connID + ":client"] = {
 						ourKey: ephemeralKey,
 						from: address,
@@ -1257,25 +1271,30 @@ function reeAPIs() {
 									hash: "SHA-256"
 								}, usableMainKey, hexToU8A(connections[connID + ":client"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[connID + ":client"].theirKeyRaw.keyInfo)));
 								if (!doNotVerifyServer && verifyKeySignature) {
-									let ksrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
-									let ksrlSignatures = [];
-									for (let ksrlFile of ksrlFiles) {
-										let ksrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
-										let ksrlSignature = ksrl.signature;
-										delete ksrl.signature;
-										if (await crypto.subtle.verify({
-											name: "ECDSA",
-											hash: {
-												name: "SHA-256"
+									try {
+										let khrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/khrl", processToken);
+										let khrlSignatures = [];
+										for (let khrlFile of khrlFiles) {
+											let khrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, processToken));
+											let khrlSignature = khrl.signature;
+											delete khrl.signature;
+											if (await crypto.subtle.verify({
+												name: "ECDSA",
+												hash: {
+													name: "SHA-256"
+												}
+											}, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+												khrlSignatures.push(...khrl.list);
 											}
-										}, modules.ksk_imported, hexToU8A(ksrlSignature), new TextEncoder().encode(JSON.stringify(ksrl.list)))) {
-											ksrlSignatures.push(...ksrl.list);
 										}
+										verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, khrlSignatures);
+									} catch {
+										verifyKeySignature = false;
 									}
-									verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, ksrlSignatures);
 								}
 								if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address) &&
 										!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain))) {
+									_rejectPromise(new Error("SERVER_SIGNATURE_VERIFICATION_FAILED"));
 									websocket.removeEventListener("message", eventListener);
 									delete connections[connID + ":client"];
 									delete networkListens[networkListenID];
@@ -1422,7 +1441,7 @@ function reeAPIs() {
 					return Promise.race([ new Promise(async function(resolve) {
 						networkListens[networkListenID] = { ws: websocket, fn: _ => resolve(_.data) };
 						websocket.addEventListener("message", eventListener);
-					}), new Promise((_, reject) => modules.network.runOnClose.then(a => reject("NETWORK_CLOSED"))) ]);
+					}), new Promise((_, reject) => modules.network.runOnClose.then(_ => reject(new Error("NETWORK_CLOSED")))) ]);
 				},
 				getHostname: async function() {
 					if (!privileges.includes("GET_HOSTNAME")) throw new Error("UNAUTHORIZED_ACTION");

@@ -99,15 +99,16 @@ function loadTasks() {
 				throw new Error("NO_APP_ALLOWLIST");
 			}
 
-			async function recursiveKeyVerify(key, ksrl) {
+			async function recursiveKeyVerify(key, khrl) {
 				if (!key) throw new Error("NO_KEY");
-				if (ksrl.includes(key.signature)) throw new Error("KEY_REVOKED");
+				let hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(key.keyInfo?.key || key.key)));
+				if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 				let signedByKey = modules.ksk_imported;
 				if (key.keyInfo && key.keyInfo?.signedBy) {
 					signedByKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
 					if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
 					if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
-					await recursiveKeyVerify(signedByKey, ksrl);
+					await recursiveKeyVerify(signedByKey, khrl);
 					signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, {
 						name: "ECDSA",
 						namedCurve: "P-256"
@@ -124,24 +125,24 @@ function loadTasks() {
 
 			if ((execSignature.signer || appHardening.requireSignature || execSignature.selfContainedSigner) && !disableHarden) {
 				try {
-					let ksrlFiles = await this.fs.ls(modules.defaultSystem + "/etc/keys/ksrl", token);
-					let ksrlSignatures = [];
-					for (let ksrlFile of ksrlFiles) {
-						let ksrl = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/ksrl/" + ksrlFile, token));
-						let ksrlSignature = ksrl.signature;
-						delete ksrl.signature;
+					let khrlFiles = await this.fs.ls(modules.defaultSystem + "/etc/keys/khrl", token);
+					let khrlSignatures = [];
+					for (let khrlFile of khrlFiles) {
+						let khrl = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, token));
+						let khrlSignature = khrl.signature;
+						delete khrl.signature;
 						if (await crypto.subtle.verify({
 							name: "ECDSA",
 							hash: {
 								name: "SHA-256"
 							}
-						}, modules.ksk_imported, hexToU8A(ksrlSignature), new TextEncoder().encode(JSON.stringify(ksrl.list)))) {
-							ksrlSignatures.push(...ksrl.list);
+						}, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+							khrlSignatures.push(...khrl.list);
 						}
 					}
 					let signingKey = JSON.parse(execSignature.selfContainedSigner || "null");
 					if (!signingKey || appHardening.disableASCK) signingKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + execSignature.signer, token));
-					await recursiveKeyVerify(signingKey, ksrlSignatures);
+					await recursiveKeyVerify(signingKey, khrlSignatures);
 					if (signingKey.keyInfo) if (!signingKey.keyInfo.usages.includes("appTrust")) throw new Error("NOT_APP_SIGNING_KEY");
 					let importSigningKey = await crypto.subtle.importKey("jwk", signingKey.keyInfo?.key || signingKey.key, {
 						name: "ECDSA",

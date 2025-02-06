@@ -81,7 +81,20 @@ function createMediaStructure(currentlyScanning = __dirname, notFirstStep = fals
 				let mime = ext2mime[extension];
 				let newExt = mimeBase2pcos[mime.split("/")[0]];
 				structure[filenameWithoutExt + newExt] = "data:" + mime + ";base64," + fs.readFileSync(currentlyScanning + "/" + file).toString("base64");
-			} else structure[file] = fs.readFileSync(currentlyScanning + "/" + file).toString();
+			} else {
+				if (extension == "khrl") {
+					let fileData = fs.readFileSync(currentlyScanning + "/" + file).toString().replaceAll("\r", "").split("\n");
+					fileData = fileData.filter(a => a && !a.startsWith("#")).map(a => a.trim().startsWith("sha256:") ? a.trim().slice(7) : crypto.createHash("sha256").update(a).digest("hex"));
+					structure[file] = JSON.stringify({
+						list: fileData,
+						signature: crypto.sign("sha256", JSON.stringify(fileData), {
+							key: keypair.ksk_private,
+							format: "jwk",
+							dsaEncoding: "ieee-p1363"
+						}).toString("hex")
+					})
+				} else structure[file] = fs.readFileSync(currentlyScanning + "/" + file).toString();
+			}
 		}
 	}
 	return structure;

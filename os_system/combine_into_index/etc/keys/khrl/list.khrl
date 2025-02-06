@@ -1,0 +1,3 @@
+# List of the hashes of the JWKs (or the exact JWKs) that shouldn't be trusted.
+# {"crv":"P-256","x":3,"y":7}
+# sha256:f12aa42171cabcdd27740dc004ed496565e00e956a8bf6e2d8eec4bf58a954ad

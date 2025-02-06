@@ -268,6 +268,7 @@ function loadUi() {
 
 	let session = {
 		mksession: function() {
+			if (modules.shuttingDown) throw new Error("SYSTEM_SHUTDOWN_REQUESTED");
 			let identifier = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 			let session = document.createElement('div');
 			session.className = "session hidden";

@@ -493,7 +493,11 @@ function localization() {
 			"BATTERY_STATUS_UNAVAILABLE": "The battery status is unavailable.",
 			"BATTERY_STATUS_CHARGING": "The battery is charging (%s%, %suntil full)",
 			"BATTERY_STATUS_DISCHARGING": "The battery is discharging (%s%, %sof play)",
-			"PATCH_HUNK_COUNT": "Patch hunks: %s"
+			"PATCH_HUNK_COUNT": "Patch hunks: %s",
+			"SERVER_SIGNATURE_VERIFICATION_FAILED": "Signature verification for the server failed.",
+			"NETWORK_UNREACHABLE": "Network is unreachable.",
+			"ADDRESS_UNREACHABLE": "Address is unreachable.",
+			"NETWORK_CLOSED": "The network closed before a response."
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -987,7 +991,11 @@ function localization() {
 			"BATTERY_STATUS_UNAVAILABLE": "Статус батареи недоступен.",
 			"BATTERY_STATUS_CHARGING": "Батарея заряжается (%s%, %sдо полной)",
 			"BATTERY_STATUS_DISCHARGING": "Батарея разряжается (%s%, %sигры)",
-			"PATCH_HUNK_COUNT": "Фраз разности: %s"
+			"PATCH_HUNK_COUNT": "Фраз разности: %s",
+			"SERVER_SIGNATURE_VERIFICATION_FAILED": "Проверка подписи сервера не удалась.",
+			"NETWORK_UNREACHABLE": "Сеть недоступна.",
+			"ADDRESS_UNREACHABLE": "Адрес недоступен.",
+			"NETWORK_CLOSED": "Сеть была закрыта до получения ответа."
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
