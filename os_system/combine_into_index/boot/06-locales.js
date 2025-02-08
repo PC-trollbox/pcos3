@@ -497,7 +497,16 @@ function localization() {
 			"SERVER_SIGNATURE_VERIFICATION_FAILED": "Signature verification for the server failed.",
 			"NETWORK_UNREACHABLE": "Network is unreachable.",
 			"ADDRESS_UNREACHABLE": "Address is unreachable.",
-			"NETWORK_CLOSED": "The network closed before a response."
+			"NETWORK_CLOSED": "The network closed before a response.",
+			"CONNECTION_DROPPED": "The server dropped the connection before it settled.",
+			"BLOG_BROWSER_NAME": "Blog Browser",
+			"BLOG_BROWSER_LOADING": "Hold on, loading this page...",
+			"BLOG_BROWSER_PROTO": "There's no such protocol. This version only supports the bdp:// protocol.",
+			"BLOG_BROWSER_GATESET": "To set a connful gate, use the username part of the URL: bdp://gate@myblog.pc",
+			"HOSTNAME_RESOLUTION_FAILED": "Failed to resolve hostname.",
+			"BLOG_BROWSER_POSTCLOSE": "This interactive post has been closed.",
+			"BLOG_BROWSER_FILEPOST": "This is a file post. You can save it to this system.",
+			"BLOG_BROWSER_DLFILEPOST": "You have downloaded this file post."
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -995,7 +1004,16 @@ function localization() {
 			"SERVER_SIGNATURE_VERIFICATION_FAILED": "Проверка подписи сервера не удалась.",
 			"NETWORK_UNREACHABLE": "Сеть недоступна.",
 			"ADDRESS_UNREACHABLE": "Адрес недоступен.",
-			"NETWORK_CLOSED": "Сеть была закрыта до получения ответа."
+			"NETWORK_CLOSED": "Сеть была закрыта до получения ответа.",
+			"CONNECTION_DROPPED": "Сервер закрыл соединение до его полной установки.",
+			"BLOG_BROWSER_NAME": "Обозреватель блогов",
+			"BLOG_BROWSER_LOADING": "Подождите, страница загружается...",
+			"BLOG_BROWSER_PROTO": "Нет такого протокола. Эта версия поддерживает только протокол bdp://.",
+			"BLOG_BROWSER_GATESET": "Для того, чтобы задать ворота, используйте часть имени пользователя: bdp://gate@myblog.pc",
+			"HOSTNAME_RESOLUTION_FAILED": "Не удалось преобразовать имя компьютера.",
+			"BLOG_BROWSER_POSTCLOSE": "Этот интерактивный пост был закрыт.",
+			"BLOG_BROWSER_FILEPOST": "Это пост-файл. Вы можете скачать его на этот компьютер.",
+			"BLOG_BROWSER_DLFILEPOST": "Вы скачали этот пост-файл."
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

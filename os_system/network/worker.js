@@ -15,13 +15,14 @@ if (worker_threads.isMainThread) {
             fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(packetData.data.content.from.match(/\w+/g)) + ".js").toString();
         let generator = diff.calcPatch(fromBuild, fs.readFileSync(__dirname + "/../index.js").toString());
         let patch;
+        let ctr = 0;
         if (connData) {
             for (let hunk of generator) {
                 let iv = crypto.getRandomValues(new Uint8Array(16));
                 let ct = u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
                     name: "AES-GCM",
                     iv
-                }, connData.aesUsableKey, new TextEncoder().encode(JSON.stringify(hunk)))));
+                }, connData.aesUsableKey, new TextEncoder().encode(JSON.stringify(packetData.data.content.handlesCtr ? {hunk,ctr} : hunk)))));
                 worker_threads.parentPort.postMessage(JSON.stringify({
                     from: serverAddress,
                     data: {
@@ -34,6 +35,7 @@ if (worker_threads.isMainThread) {
                         connectionID: packetData.data.connectionID
                     }
                 }));
+                ctr++;
             }
         } else patch = [...generator];
         let finalIV = crypto.getRandomValues(new Uint8Array(16));

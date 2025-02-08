@@ -33,13 +33,13 @@
 		await availableAPIs.connfulConnectionSettled(connection);
 		await availableAPIs.connfulWrite({
 			connectionID: connection,
-			data: JSON.stringify({ from })
+			data: JSON.stringify({ from, handlesCtr: true })
 		})
 		let patch = [];
 		while (true) {
 			let a = JSON.parse(await availableAPIs.connfulRead(connection));
 			if (a.final) break;
-			patch.push(a);
+			patch[a.ctr] = a.hunk;
 			await availableAPIs.toMyCLI("\r" + (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length));
 		}
 		await availableAPIs.connfulDisconnect(connection);

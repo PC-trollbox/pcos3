@@ -157,13 +157,16 @@ for (let buildFile of buildFiles) {
 					}
 				}
 				app = parsingLines.join("\n");
-				let signature = crypto.sign("sha256", app, {
-					key: keypair[manifestStats.find(x => x.lineType == "signer")?.data + "_private"],
-					format: "jwk",
-					dsaEncoding: "ieee-p1363"
-				}).toString("hex");
-				parsingLines.splice(parsingBoundEnd, 0, "// signature: " + signature);
-				app = parsingLines.join("\n");
+				let signer = manifestStats.find(x => x.lineType == "signer")?.data;
+				if (signer) {
+					let signature = crypto.sign("sha256", app, {
+						key: keypair[signer + "_private"],
+						format: "jwk",
+						dsaEncoding: "ieee-p1363"
+					}).toString("hex");
+					parsingLines.splice(parsingBoundEnd, 0, "// signature: " + signature);
+					app = parsingLines.join("\n");
+				}
 			}
 			
 			let fnName = (manifestStats.filter(x => x.lineType == "fnName") || [])[0]?.data || (appName + "Installer");

@@ -1,0 +1,192 @@
+// =====BEGIN MANIFEST=====
+// link: lrn:BLOG_BROWSER_NAME
+// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT
+// =====END MANIFEST=====
+function createREE(direction) {
+	let ownIframeID = undefined;
+	try {
+		ownIframeID = iframeId;
+	} catch {}
+	return new Promise(function(resolve) {
+		let iframe = document.createElement("iframe");
+		let iframeId = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+		let prefix = ownIframeID ? (ownIframeID + "_") : "";
+		iframeId = prefix + iframeId;
+		iframe.src = "data:text/html;base64," + btoa("<!DOCTYPE HTML>\n<script>const iframeId = " + JSON.stringify(iframeId) + ";\n" + reed.toString() + "\nreed();</script>");
+		iframe.style.border = "none";
+		iframe.setAttribute("credentialless", "true");
+		iframe.sandbox = "allow-scripts";
+		direction.appendChild(iframe);
+		let prezhn = [];
+		let prerm = [];
+		iframe.addEventListener("load", function s() {
+			iframe.removeEventListener("load", s);
+			return resolve({
+				iframe,
+				exportAPI: function(id, fn) {
+					iframe.contentWindow.postMessage({type: "export_api", id: id, iframeId}, "*");
+					async function prezhn_it(e) {
+						if (e.data.iframeId != iframeId) return;
+						if (e.data.id != id) return;
+						if (e.data.type != "call_api") return;
+						try {
+							e.source.postMessage({
+								result: await fn({
+									caller: iframeId,
+									arg: e.data.arg
+								}),
+								type: "api_response",
+								responseToken: e.data.responseToken,
+								iframeId
+							}, "*");
+						} catch (er) {
+							e.source.postMessage({
+								result: {
+									name: er.name,
+									message: er.message
+								},
+								type: "api_error",
+								responseToken: e.data.responseToken,
+								iframeId
+							}, "*");
+						}
+					}
+					window.addEventListener("message", prezhn_it);
+					prezhn.push(prezhn_it);
+				},
+				eval: function(code) {
+					let responseToken = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+					return new Promise(function(resolve, reject) {
+						iframe.contentWindow.postMessage({type: "run", code, responseToken, iframeId}, "*");
+						function sel(e) {
+							if (e.data.iframeId != iframeId) return;
+							if (e.data.responseToken != responseToken) return;
+							prezhn = prezhn.filter(x => x != sel);
+							window.removeEventListener("message", sel);
+							if (e.data.type == "ran_response")
+								resolve(e.data.result);
+							else if (e.data.type == "ran_error")
+								reject(e.data.result);
+						};
+						window.addEventListener("message", sel);
+						prezhn.push(sel);
+					});
+				},
+				closeDown: async function() {
+					for (let i of prerm) await i(this);
+					prerm = [];
+					for (let i in prezhn) window.removeEventListener("message", prezhn[i]);
+					iframe.remove();
+					iframe = null;
+				},
+				beforeCloseDown: function(fn) {
+					prerm.push(fn);
+				},
+				iframeId
+			});
+		});
+	});
+}
+(async function() {
+	// @pcos-app-mode isolatable
+	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("BLOG_BROWSER_NAME"));
+	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
+	document.body.innerText = "";
+    document.documentElement.style.height = "100%";
+	document.documentElement.style.width = "100%";
+	document.body.style.height = "100%";
+	document.body.style.width = "100%";
+	document.body.style.margin = "0";
+    let browserContainer = document.createElement("div");
+    let urlBar = document.createElement("form");
+    let urlInput = document.createElement("input");
+    let urlButton = document.createElement("button");
+    let theWebsite = document.createElement("div");
+    browserContainer.style.display = "flex";
+    browserContainer.style.flexDirection = "column";
+    browserContainer.style.width = "100%";
+    browserContainer.style.height = "100%";
+    urlBar.style.display = "flex";
+    urlBar.style.flexDirection = "row";
+    urlBar.style.width = "100%";
+    urlInput.style.flexGrow = "1";
+    theWebsite.style.flexGrow = "1";
+    urlBar.appendChild(urlInput);
+    urlBar.appendChild(urlButton);
+    urlButton.innerText = "->";
+    browserContainer.appendChild(urlBar);
+    browserContainer.appendChild(theWebsite);
+    document.body.appendChild(browserContainer);
+    let ree;
+    urlButton.onclick = async function() {
+        urlInput.disabled = true;
+        urlButton.disabled = true;
+        if (ree) ree.closeDown();
+        ree = null;
+        theWebsite.hidden = false;
+        theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING");
+        try {
+            let url = new URL(urlInput.value);
+            if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
+            if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
+            let hostname = url.hostname, address;
+            if (url.hostname.includes("[")) {
+                hostname = url.hostname.slice(1, -1).replaceAll(":", "");
+                address = hostname;
+            } else address = await availableAPIs.resolve(hostname);
+            if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
+            let connection = await availableAPIs.connfulConnect({
+                gate: url.username || "blog",
+                address,
+                verifyByDomain: hostname
+            });
+            await availableAPIs.connfulConnectionSettled(connection);
+            await availableAPIs.connfulWrite({
+                connectionID: connection,
+                data: url.pathname + url.search
+            });
+            let data = await availableAPIs.connfulRead(connection);
+            try {
+                await availableAPIs.connfulClose(connection);
+            } catch {}
+            data = JSON.parse(data);
+            if (data.type == "script") {
+                theWebsite.innerText = "";
+                ree = await createREE(browserContainer);
+                ree.iframe.style = "flex-grow: 1;";
+                theWebsite.hidden = true;
+                await ree.exportAPI("isDarkThemed", availableAPIs.isDarkThemed);
+                await ree.exportAPI("navigate", function(newUrl) {
+                    urlInput.value = newUrl;
+                    urlButton.click();
+                    ree.closeDown();
+                });
+                ree.beforeCloseDown(async function() {
+                    theWebsite.hidden = false;
+                    theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_POSTCLOSE");
+                });
+                await ree.eval(data.content);
+            } else if (data.type == "file") {
+                theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_FILEPOST");
+                let ipcPipe = await availableAPIs.createPipe();
+                await availableAPIs.windowVisibility(false);
+                await availableAPIs.startTask({ file: (await availableAPIs.getSystemMount()) + "/apps/filePicker.js", argPassed: [ipcPipe, "save"] });
+                let result = await availableAPIs.listenToPipe(ipcPipe);
+                await availableAPIs.closePipe(ipcPipe);
+                await availableAPIs.windowVisibility(true);
+                if (result.success) {
+                    await availableAPIs.fs_write({ path: result.selected, data: data.content });
+                    theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_DLFILEPOST");
+                }
+            }
+        } catch (e) {
+            theWebsite.innerText = await availableAPIs.lookupLocale(e.message);
+        }
+        urlInput.disabled = false;
+        urlButton.disabled = false;
+    }
+})();
+addEventListener("signal", async function(e) {
+	if (e.detail == 15) await window.availableAPIs.terminate();
+}); null;

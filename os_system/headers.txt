@@ -312,8 +312,8 @@ getBuildTime() -> Number // GET_BUILD
 connfulConnect({
     address: String,
     gate: String,
-    key: Object | undefined,
-    private: Object | undefined,
+    key: Object || undefined,
+    private: Object || undefined,
     doNotVerifyServer: Boolean
 }) -> String // CONNFUL_CONNECT
 connfulConnectionSettled(String connectionID) // CONNFUL_CONNECT
@@ -321,10 +321,11 @@ connfulDisconnect(String connectionID) // CONNFUL_DISCONNECT
 connfulForceDisconnect(String connectionID) // CONNFUL_DISCONNECT
 connfulWrite({
     connectionID: String,
-    data: any
+    data: String
 }) // CONNFUL_WRITE
-connfulRead(String connectionID) -> any // CONNFUL_READ
+connfulRead(String connectionID) -> String // CONNFUL_READ
 connfulAddressGet(String connectionID) -> String // CONNFUL_ADDRESS_GET
+connfulIdentityGet(String connectionID) -> Object // CONNFUL_IDENTITY_GET
 systemUptime() -> Number // SYSTEM_UPTIME
 networkRawWrite(any data) // NETWORK_RAW_WRITE
 networkRawRead() -> any // NETWORK_RAW_READ

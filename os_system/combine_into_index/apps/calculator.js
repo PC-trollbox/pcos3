@@ -3,8 +3,6 @@
 // signer: automaticSigner
 // allow: GET_LOCALE, GET_THEME
 // =====END MANIFEST=====
-let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
-let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("CALC_TITLE"));

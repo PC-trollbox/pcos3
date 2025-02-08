@@ -1003,7 +1003,6 @@ function reeAPIs() {
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
 					let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
-					if (!key.keyInfo.usages.includes("connfulSecureServer:" + modules.network.address)) throw new Error("INVALID_KEY_ACTIONS");
 					let usableKey = await crypto.subtle.importKey("jwk", private, {name: "ECDSA", namedCurve: "P-256"}, true, ["sign"]);
 					let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
@@ -1059,6 +1058,7 @@ function reeAPIs() {
 								if (!packet.data.connectionID) return;
 								if (!connections.hasOwnProperty(packet.data.connectionID + ":server")) return;
 								if (connections[packet.data.connectionID + ":server"].theirMainKeyReceived) return;
+								if (connections[packet.data.connectionID + ":server"].dying) return;
 								let theirMainKeyDecrypt = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv),
@@ -1104,7 +1104,7 @@ function reeAPIs() {
 									}));
 									return;
 								}
-								connections[packet.data.connectionID + ":server"].theirMainKeyReceived = true;
+								connections[packet.data.connectionID + ":server"].theirMainKeyReceived = theirMainKeyDecrypt;
 								let iv = crypto.getRandomValues(new Uint8Array(16));
 								websocket.send(JSON.stringify({
 									receiver: packet.from,
@@ -1124,7 +1124,7 @@ function reeAPIs() {
 							} else if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "drop") {
 								if (!packet.data.connectionID) return;
 								if (!connections.hasOwnProperty(packet.data.connectionID + ":server")) return;
-								delete connections[packet.data.connectionID + ":server"];
+								if (connections[packet.data.connectionID + ":server"].dying) return;
 								websocket.send(JSON.stringify({
 									receiver: packet.from,
 									data: {
@@ -1132,8 +1132,16 @@ function reeAPIs() {
 										action: "drop",
 										connectionID: packet.data.connectionID
 									}
-								}))
+								}));
+								connections[packet.data.connectionID + ":server"].dying = true;
+								if (!connections[packet.data.connectionID + ":server"].dataBuffer.length)
+									delete connections[packet.data.connectionID + ":server"];
 							} else if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "nice2meetu") {
+								if (!packet.data.connectionID) return;
+								if (!connections.hasOwnProperty(packet.data.connectionID + ":server")) return;
+								if (!connections[packet.data.connectionID + ":server"].theirMainKeyReceived) return;
+								if (!connections[packet.data.connectionID + ":server"].aesUsableKey) return;
+								if (connections[packet.data.connectionID + ":server"].dying) return;
 								networkListens[networkListenID].connectionBuffer.push(packet.data.connectionID + ":server");
 								let _curcbp = _connectionBufferPromise;
 								connectionBufferPromise = new Promise(r => _connectionBufferPromise = r);
@@ -1144,6 +1152,7 @@ function reeAPIs() {
 								if (!connections.hasOwnProperty(packet.data.connectionID + ":server")) return;
 								if (!connections[packet.data.connectionID + ":server"].aesUsableKey) return;
 								if (!connections[packet.data.connectionID + ":server"].theirMainKeyReceived) return;
+								if (connections[packet.data.connectionID + ":server"].dying) return;
 								if (connections[packet.data.connectionID + ":server"].writingLock) await connections[packet.data.connectionID + ":server"].writingLock;
 								let writingLockRelease;
 								let writingLock = new Promise(r => writingLockRelease = r);
@@ -1162,7 +1171,14 @@ function reeAPIs() {
 							}
 						} catch {}
 					}
-					networkListens[networkListenID] = { ws: websocket, gate: gate, fn: eventListener, connectionBuffer: [], connectionBufferPromise };
+					networkListens[networkListenID] = { ws: websocket, gate: gate, fn: eventListener, connectionBuffer: [], connectionBufferPromise }
+					modules.network.runOnClose.then(function() {
+						for (let connectionID in connections) if (connections[connectionID].networkListenID == networkListenID) {
+							connections[connectionID].dying = true;
+							if (!connections[connectionID].dataBuffer.length) delete connections[connectionID];
+						}
+						delete networkListens[networkListenID];
+					});
 					websocket.addEventListener("message", eventListener);
 					return networkListenID;
 				},
@@ -1309,7 +1325,7 @@ function reeAPIs() {
 										}
 									}));
 								}
-								connections[connID + ":client"].theirMainKeyReceived = true;
+								connections[connID + ":client"].theirMainKeyReceived = theirMainKeyDecrypt;
 								websocket.send(JSON.stringify({
 									receiver: address,
 									data: {
@@ -1321,9 +1337,8 @@ function reeAPIs() {
 								}));
 								_settlePromise();
 							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "drop") {
-								websocket.removeEventListener("message", eventListener);
-								delete connections[connID + ":client"];
-								delete networkListens[networkListenID];
+								if (connections[connID + ":client"].dying) return;
+								_rejectPromise(new Error("CONNECTION_DROPPED"));
 								websocket.send(JSON.stringify({
 									receiver: address,
 									data: {
@@ -1333,6 +1348,10 @@ function reeAPIs() {
 										gate
 									}
 								}));
+								connections[connID + ":client"].dying = true;
+								websocket.removeEventListener("message", eventListener);
+								delete networkListens[networkListenID];
+								if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
 							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "data") {
 								if (!connections[connID + ":client"].aesUsableKey) return;
 								if (!connections[connID + ":client"].theirMainKeyReceived) return;
@@ -1363,6 +1382,13 @@ function reeAPIs() {
 							content: { keyInfo: exported, signature }
 						}
 					}));
+					modules.network.runOnClose.then(function() {
+						if (connections.hasOwnProperty(connID + ":client")) {
+							connections[connID + ":client"].dying = true;
+							if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
+						}
+						delete networkListens[networkListenID];
+					});
 					return connID + ":client";
 				},
 				connfulConnectionSettled: async function(connectionID) {
@@ -1373,6 +1399,7 @@ function reeAPIs() {
 				connfulDisconnect: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_DISCONNECT")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
+					if (connections[connectionID].dying) return;
 					networkListens[connections[connectionID].networkListenID].ws.send(JSON.stringify({
 						receiver: connections[connectionID].from,
 						data: {
@@ -1390,6 +1417,7 @@ function reeAPIs() {
 				connfulWrite: async function(sendOpts) {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
+					if (connections[sendOpts.connectionID].dying) return;
 					let iv = crypto.getRandomValues(new Uint8Array(16));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({
@@ -1414,12 +1442,18 @@ function reeAPIs() {
 					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
 					if (!connections[connectionID].dataBuffer.length) await connections[connectionID].dataBufferPromise;
 					let data = connections[connectionID].dataBuffer.shift();
+					if (connections[connectionID].dying && connections[connectionID].dataBuffer.length == 0) delete connections[connectionID]; 
 					return data;
 				},
 				connfulAddressGet: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_ADDRESS_GET")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
 					return connections[connectionID].from;
+				},
+				connfulIdentityGet: async function(connectionID) {
+					if (!privileges.includes("CONNFUL_IDENTITY_GET")) throw new Error("UNAUTHORIZED_ACTION");
+					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
+					return connections[connectionID].theirMainKeyReceived;
 				},
 				systemUptime: async function() {
 					if (!privileges.includes("SYSTEM_UPTIME")) throw new Error("UNAUTHORIZED_ACTION");

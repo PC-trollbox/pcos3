@@ -58,14 +58,14 @@
 			await availableAPIs.connfulConnectionSettled(connection);
 			await availableAPIs.connfulWrite({
 				connectionID: connection,
-				data: JSON.stringify({ from })
+				data: JSON.stringify({ from, handlesCtr: true })
 			})
 			let patch = [];
 			while (true) {
 				let a = JSON.parse(await availableAPIs.connfulRead(connection));
 				extraActivities.innerText = (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length);
 				if (a.final) break;
-				patch.push(a);
+				patch[a.ctr] = a.hunk;
 			}
 			await availableAPIs.connfulDisconnect(connection);
 			osArchive = (await availableAPIs.patchDiff({
@@ -214,14 +214,14 @@
 			await availableAPIs.connfulConnectionSettled(connection);
 			await availableAPIs.connfulWrite({
 				connectionID: connection,
-				data: JSON.stringify({ from })
+				data: JSON.stringify({ from, handlesCtr: true })
 			})
 			let patch = [];
 			while (true) {
 				let a = JSON.parse(await availableAPIs.connfulRead(connection));
 				extraActivities.innerText = (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length);
 				if (a.final) break;
-				patch.push(a);
+				patch[a.ctr] = a.hunk;
 			}
 			await availableAPIs.connfulDisconnect(connection);
 			if (patch.length == 0) {
