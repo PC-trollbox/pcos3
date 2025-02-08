@@ -1,3 +1,7 @@
-# List of the hashes of the JWKs (or the exact JWKs) that shouldn't be trusted.
-# {"crv":"P-256","x":3,"y":7}
-# sha256:f12aa42171cabcdd27740dc004ed496565e00e956a8bf6e2d8eec4bf58a954ad
+# List of the JWKs, their x and y coordinates in a form of 6363...|06bb... or
+# the hashes of the coordinates in the same form, that represent public keys
+# that should no longer be trusted.
+# Examples:
+# jwk:{"crv":"P-256","x":3,"y":7}
+# 3|7
+# sha256:c95255dc0d87c332988bf693b9d3dabb8552e23c331f01339527e393ce0aaa69

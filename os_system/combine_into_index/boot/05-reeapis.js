@@ -49,7 +49,7 @@ function reeAPIs() {
 		async function recursiveKeyVerify(key, khrl) {
 			if (!key) throw new Error("NO_KEY");
 			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-			let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(key.keyInfo?.key || key.key)))));
+			let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo?.key || key.key).x + "|" + (key.keyInfo?.key || key.key).y))));
 			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 			if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 			let signedByKey = modules.ksk_imported;

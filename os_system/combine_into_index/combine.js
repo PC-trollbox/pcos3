@@ -84,7 +84,15 @@ function createMediaStructure(currentlyScanning = __dirname, notFirstStep = fals
 			} else {
 				if (extension == "khrl") {
 					let fileData = fs.readFileSync(currentlyScanning + "/" + file).toString().replaceAll("\r", "").split("\n");
-					fileData = fileData.filter(a => a && !a.startsWith("#")).map(a => a.trim().startsWith("sha256:") ? a.trim().slice(7) : crypto.createHash("sha256").update(a).digest("hex"));
+					fileData = fileData.filter(a => a && !a.startsWith("#")).map(function(a) {
+						a = a.trim();
+						if (a.startsWith("sha256:")) return a.slice(7);
+						if (a.startsWith("jwk:")) {
+							a = JSON.parse(a.slice(4));
+							a = a.x + "|" + a.y;
+						}
+						return crypto.createHash("sha256").update(a).digest("hex");
+					});
 					structure[file] = JSON.stringify({
 						list: fileData,
 						signature: crypto.sign("sha256", JSON.stringify(fileData), {

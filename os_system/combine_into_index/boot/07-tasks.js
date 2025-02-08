@@ -102,7 +102,7 @@ function loadTasks() {
 
 			async function recursiveKeyVerify(key, khrl) {
 				if (!key) throw new Error("NO_KEY");
-				let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(key.keyInfo?.key || key.key)))));
+				let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo?.key || key.key).x + "|" + (key.keyInfo?.key || key.key).y))));
 				if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 				let signedByKey = modules.ksk_imported;
 				if (key.keyInfo && key.keyInfo?.signedBy) {
