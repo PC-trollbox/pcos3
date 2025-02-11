@@ -157,6 +157,8 @@ function createREE(direction) {
 						ok();
 					}
 					abort.onclick = async _ => ab(new Error(await availableAPIs.lookupLocale("SERVER_SIGNATURE_VERIFICATION_FAILED")));
+					theWebsite.appendChild(allowNoVerify);
+					theWebsite.appendChild(abort);
 				});
             let hostname = url.hostname, address;
             if (url.hostname.includes("[")) {
