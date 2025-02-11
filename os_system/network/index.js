@@ -5,8 +5,10 @@ const { b64dec, generateString } = require("./b64dec");
 const app = express();
 const http = require("http").createServer(app);
 const path = require("path/posix");
+const fs = require("fs");
 const server = new ws.Server({ server: http });
 const worker_threads = require("worker_threads");
+const events = require("events");
 let socketList = {};
 let sfspMountModule = require("./sfsp_mount");
 let globalMount = sfspMountModule({});
@@ -155,6 +157,41 @@ server.on("connection", function(socket, req) {
 				hostname
 			}));
 			socketList[ip + publicKey] = socket;
+			let {connectedEvent} = ConnfulServer("deltaUpdate", socket, ip + publicKey);
+			connectedEvent.on("connected", function(a) {
+				let {messageReceiveEvent, messageSendEvent} = a;
+				messageReceiveEvent.once("message", function(d) {
+					let worker = new worker_threads.Worker(__dirname + "/worker_connful.js", {
+						workerData: JSON.parse(d)
+					});
+					worker.addListener("message", function(message) {
+						messageSendEvent.emit("message", message);
+					})
+				})
+			});
+			let {connectedEvent:connectedEvent2} = ConnfulServer("blog", socket, ip + publicKey);
+			connectedEvent2.on("connected", function(a) {
+				let {messageReceiveEvent, messageSendEvent} = a;
+				messageReceiveEvent.once("message", function(d) {
+					messageSendEvent.emit("message", JSON.stringify({
+						type: "script",
+						length: 1
+					}));
+					if (path.normalize(path.join(__dirname, "js_files", d)) != path.join(__dirname, "js_files", d)) return messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = 'You cannot do that!';" }));
+					let pathname = path.join(__dirname, "js_files", d);
+					if (!pathname.endsWith(".js")) pathname = path.join(pathname, "index.js");
+					try {
+						let file = fs.readFileSync(pathname).toString();
+						messageSendEvent.emit("message", JSON.stringify({
+							type: "script",
+							chunk: file,
+							ctr: 0
+						}));
+					} catch {
+						messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = '404. File not found';" }));
+					}
+				})
+			});
 		} else {
 			let packetData;
 			try {
@@ -203,129 +240,6 @@ server.on("connection", function(socket, req) {
 						} catch {}
 					}
 				}
-				if (packetData.data?.type == "connectionful" && packetData.data?.gate == "deltaUpdate") {
-					try {
-						if (packetData.data.action == "start") {
-							if (!packetData.data.connectionID) return;
-							if (deltaUpdateConns[packetData.data.connectionID]) return;
-							usableKey = await usableKey;
-							let ephemeralKey = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
-							let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
-							exported = {signedBy: "serverKey", usages: ["connfulSecureEphemeral"], key:exported};
-							let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({
-								name: "ECDSA",
-								hash: "SHA-256"
-							}, usableKey, new TextEncoder().encode(JSON.stringify(exported)))));
-							let theirUsableKey = await crypto.subtle.importKey("jwk", packetData.data.content.keyInfo.key, {
-								name: "ECDH",
-								namedCurve: "P-256"
-							}, true, []);
-							let joinedKeys = await crypto.subtle.deriveBits({ name: "ECDH", public: theirUsableKey }, ephemeralKey.privateKey, 256);
-							let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {name: "AES-GCM"}, true, ["encrypt", "decrypt"]);
-							deltaUpdateConns[packetData.data.connectionID] = {
-								ourKey: ephemeralKey,
-								from: ip + publicKey,
-								theirMainKeyReceived: false,
-								theirKeyRaw: packetData.data.content,
-								aesUsableKey
-							}
-							socket.send(JSON.stringify({
-								from: serverAddress,
-								data: {
-									type: "connectionful",
-									action: "start",
-									content: {
-										keyInfo: exported,
-										signature
-									},
-									connectionID: packetData.data.connectionID
-								}
-							}));
-						} else if (packetData.data.action == "xchange") {
-							if (!packetData.data.connectionID) return;
-							if (!deltaUpdateConns.hasOwnProperty(packetData.data.connectionID)) return;
-							if (deltaUpdateConns[packetData.data.connectionID].theirMainKeyReceived) return;
-							let theirMainKeyDecrypt = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
-								name: "AES-GCM",
-								iv: hexToU8A(packetData.data.content.iv),
-							}, deltaUpdateConns[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct))));
-							let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {
-								name: "ECDSA",
-								namedCurve: "P-256"
-							}, true, ["verify"]);
-							let verifyKeySignature = await crypto.subtle.verify({
-								name: "ECDSA",
-								hash: "SHA-256"
-							}, usableMainKey, hexToU8A(deltaUpdateConns[packetData.data.connectionID].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(deltaUpdateConns[packetData.data.connectionID].theirKeyRaw.keyInfo)));
-							if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + ip + publicKey)) {
-								delete deltaUpdateConns[packetData.data.connectionID];
-								socket.send(JSON.stringify({
-									from: serverAddress,
-									data: {
-										type: "connectionful",
-										action: "drop",
-										connectionID: packetData.data.connectionID
-									}
-								}));
-								return;
-							}
-							deltaUpdateConns[packetData.data.connectionID].theirMainKeyReceived = true;
-							let iv = crypto.getRandomValues(new Uint8Array(16));
-							socket.send(JSON.stringify({
-								from: serverAddress,
-								data: {
-									type: "connectionful",
-									action: "xchange",
-									connectionID: packetData.data.connectionID,
-									content: {
-										iv: u8aToHex(iv),
-										ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
-											name: "AES-GCM",
-											iv
-										}, deltaUpdateConns[packetData.data.connectionID].aesUsableKey, new TextEncoder().encode(JSON.stringify(serverPublicKey)))))
-									}
-								}
-							}));
-						} else if (packetData.data.action == "drop") {
-							if (!packetData.data.connectionID) return;
-							if (!deltaUpdateConns.hasOwnProperty(packetData.data.connectionID)) return;
-							delete deltaUpdateConns[packetData.data.connectionID];
-							socket.send(JSON.stringify({
-								from: serverAddress,
-								data: {
-									type: "connectionful",
-									action: "drop",
-									connectionID: packetData.data.connectionID
-								}
-							}));
-						} else if (packetData.data.action == "data") {
-							if (!packetData.data.connectionID) return;
-							if (!deltaUpdateConns.hasOwnProperty(packetData.data.connectionID)) return;
-							if (!deltaUpdateConns[packetData.data.connectionID].theirMainKeyReceived) return;
-							if (deltaUpdateConns[packetData.data.connectionID].dataSent) return;
-							let data = new TextDecoder().decode(await crypto.subtle.decrypt({
-								name: "AES-GCM",
-								iv: hexToU8A(packetData.data.content.iv)
-							}, deltaUpdateConns[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct)));
-							deltaUpdateConns[packetData.data.connectionID].dataSent = true;
-							let worker = new worker_threads.Worker(__dirname + "/worker.js", {
-								workerData: {
-									packetData: {
-										data: {
-											connectionID: packetData.data.connectionID,
-											content: JSON.parse(data)
-										}
-									},
-									serverAddress,
-									connData: deltaUpdateConns[packetData.data.connectionID]
-								}
-							});
-							worker.addListener("message", function(message) {
-								socket.send(message);
-							})
-						}
-					} catch {}
-				}
 				if (packetData.data?.type == "ping") {
 					if (typeof packetData.data.resend === "string" && packetData.data.resend?.length <= 64) socket.send(JSON.stringify({
 						from: serverAddress,
@@ -361,6 +275,150 @@ server.on("connection", function(socket, req) {
 		clearInterval(pingCycle);
 	});
 });
+
+function ConnfulServer(gate, socket, address) {
+	let connectedEvent = new events.EventEmitter();
+	let connections = {};
+	socket.on("message", async function(packetData) {
+		try {
+			packetData = JSON.parse(packetData.toString());
+		} catch { return; }
+		if (packetData.data?.type == "connectionful" && packetData.data?.gate == gate && packetData.receiver == serverAddress) {
+			try {
+				if (packetData.data.action == "start") {
+					if (!packetData.data.connectionID) return;
+					if (connections[packetData.data.connectionID]) return;
+					usableKey = await usableKey;
+					let ephemeralKey = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
+					let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
+					exported = {signedBy: "serverKey", usages: ["connfulSecureEphemeral"], key:exported};
+					let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({
+						name: "ECDSA",
+						hash: "SHA-256"
+					}, usableKey, new TextEncoder().encode(JSON.stringify(exported)))));
+					let theirUsableKey = await crypto.subtle.importKey("jwk", packetData.data.content.keyInfo.key, {
+						name: "ECDH",
+						namedCurve: "P-256"
+					}, true, []);
+					let joinedKeys = await crypto.subtle.deriveBits({ name: "ECDH", public: theirUsableKey }, ephemeralKey.privateKey, 256);
+					let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {name: "AES-GCM"}, true, ["encrypt", "decrypt"]);
+					connections[packetData.data.connectionID] = {
+						ourKey: ephemeralKey,
+						from: address,
+						theirMainKeyReceived: false,
+						theirKeyRaw: packetData.data.content,
+						aesUsableKey
+					}
+					socket.send(JSON.stringify({
+						from: serverAddress,
+						data: {
+							type: "connectionful",
+							action: "start",
+							content: {
+								keyInfo: exported,
+								signature
+							},
+							connectionID: packetData.data.connectionID
+						}
+					}));
+				} else if (packetData.data.action == "xchange") {
+					if (!packetData.data.connectionID) return;
+					if (!connections.hasOwnProperty(packetData.data.connectionID)) return;
+					if (connections[packetData.data.connectionID].theirMainKeyReceived) return;
+					let theirMainKeyDecrypt = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
+						name: "AES-GCM",
+						iv: hexToU8A(packetData.data.content.iv),
+					}, connections[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct))));
+					let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {
+						name: "ECDSA",
+						namedCurve: "P-256"
+					}, true, ["verify"]);
+					let verifyKeySignature = await crypto.subtle.verify({
+						name: "ECDSA",
+						hash: "SHA-256"
+					}, usableMainKey, hexToU8A(connections[packetData.data.connectionID].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packetData.data.connectionID].theirKeyRaw.keyInfo)));
+					if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + address)) {
+						delete connections[packetData.data.connectionID];
+						socket.send(JSON.stringify({
+							from: serverAddress,
+							data: {
+								type: "connectionful",
+								action: "drop",
+								connectionID: packetData.data.connectionID
+							}
+						}));
+						return;
+					}
+					connections[packetData.data.connectionID].theirMainKeyReceived = theirMainKeyDecrypt;
+					let iv = crypto.getRandomValues(new Uint8Array(16));
+					socket.send(JSON.stringify({
+						from: serverAddress,
+						data: {
+							type: "connectionful",
+							action: "xchange",
+							connectionID: packetData.data.connectionID,
+							content: {
+								iv: u8aToHex(iv),
+								ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
+									name: "AES-GCM",
+									iv
+								}, connections[packetData.data.connectionID].aesUsableKey, new TextEncoder().encode(JSON.stringify(serverPublicKey)))))
+							}
+						}
+					}));
+					connections[packetData.data.connectionID].messageReceiveEvent = new events.EventEmitter();
+					connections[packetData.data.connectionID].messageSendEvent = new events.EventEmitter();
+					connectedEvent.emit("connected", {
+						connectionID: packetData.data.connectionID,
+						messageReceiveEvent: connections[packetData.data.connectionID].messageReceiveEvent,
+						messageSendEvent: connections[packetData.data.connectionID].messageSendEvent,
+						publicKey: theirMainKeyDecrypt
+					});
+					connections[packetData.data.connectionID].messageSendEvent.on("message", async function(sentMessage) {
+						let iv = crypto.getRandomValues(new Uint8Array(16));
+						socket.send(JSON.stringify({
+							from: serverAddress,
+							data: {
+								type: "connectionful",
+								action: "data",
+								connectionID: packetData.data.connectionID,
+								content: {
+									iv: u8aToHex(iv),
+									ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
+										name: "AES-GCM",
+										iv
+									}, connections[packetData.data.connectionID].aesUsableKey, new TextEncoder().encode(sentMessage))))
+								}
+							}
+						}));
+					})
+				} else if (packetData.data.action == "drop") {
+					if (!packetData.data.connectionID) return;
+					if (!connections.hasOwnProperty(packetData.data.connectionID)) return;
+					delete connections[packetData.data.connectionID];
+					socket.send(JSON.stringify({
+						from: serverAddress,
+						data: {
+							type: "connectionful",
+							action: "drop",
+							connectionID: packetData.data.connectionID
+						}
+					}));
+				} else if (packetData.data.action == "data") {
+					if (!packetData.data.connectionID) return;
+					if (!connections.hasOwnProperty(packetData.data.connectionID)) return;
+					if (!connections[packetData.data.connectionID].theirMainKeyReceived) return;
+					let data = new TextDecoder().decode(await crypto.subtle.decrypt({
+						name: "AES-GCM",
+						iv: hexToU8A(packetData.data.content.iv)
+					}, connections[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct)));
+					connections[packetData.data.connectionID].messageReceiveEvent.emit("message", data);
+				}
+			} catch (e) { console.error(e); }
+		}
+	});
+	return { getConnections: () => connections, connectedEvent };
+}
 
 http.listen(3945, function() {
 	console.log("Listening on port 3945");

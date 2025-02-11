@@ -1,7 +1,7 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
 // link: lrn:BLOG_BROWSER_NAME
-// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT
+// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT
 // =====END MANIFEST=====
 function createREE(direction) {
 	let ownIframeID = undefined;
@@ -89,6 +89,20 @@ function createREE(direction) {
 	});
 }
 (async function() {
+	let pargs = {};
+	let ppos = [];
+	for (let arg of exec_args) {
+		if (arg.startsWith("--")) {
+			let key = arg.split("=")[0].slice(2);
+			let value = arg.split("=").slice(1).join("=");
+			if (arg.split("=")[1] == null) value = true;
+			if (pargs.hasOwnProperty(key)) {
+				let ogValues = pargs[key];
+				if (ogValues instanceof Array) pargs[key] = [ ...ogValues, value ];
+				else pargs[key] = [ ogValues, value ];
+			} else pargs[key] = value;
+		} else ppos.push(arg);
+	}
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("BLOG_BROWSER_NAME"));
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
@@ -131,6 +145,19 @@ function createREE(direction) {
             let url = new URL(urlInput.value);
             if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
             if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
+			if (pargs["no-verification"]) 
+				await new Promise(async function(ok, ab) {
+					let allowNoVerify = document.createElement("button");
+					let abort = document.createElement("button");
+					theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_NOVERIFY");
+					allowNoVerify.innerText = await availableAPIs.lookupLocale("YES");
+					abort.innerText = await availableAPIs.lookupLocale("NO");
+					allowNoVerify.onclick = async function() {
+						theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING");
+						ok();
+					}
+					abort.onclick = async _ => ab(new Error(await availableAPIs.lookupLocale("SERVER_SIGNATURE_VERIFICATION_FAILED")));
+				});
             let hostname = url.hostname, address;
             if (url.hostname.includes("[")) {
                 hostname = url.hostname.slice(1, -1).replaceAll(":", "");
@@ -140,7 +167,14 @@ function createREE(direction) {
             let connection = await availableAPIs.connfulConnect({
                 gate: url.username || "blog",
                 address,
-                verifyByDomain: hostname
+                verifyByDomain: hostname,
+				key: pargs.key ? JSON.parse(await availableAPIs.fs_read({
+					path: pargs.key
+				})).key : undefined,
+				private: pargs.key ? JSON.parse(await availableAPIs.fs_read({
+					path: pargs.key
+				})).private : undefined,
+				doNotVerifyServer: pargs["no-verification"]
             });
             await availableAPIs.connfulConnectionSettled(connection);
             await availableAPIs.connfulWrite({
@@ -148,18 +182,27 @@ function createREE(direction) {
                 data: url.pathname + url.search
             });
             let data = await availableAPIs.connfulRead(connection);
+            data = JSON.parse(data);
+			let chunks = [];
+			theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", "0").replace("%s", data.length);
+			while (chunks.length != data.length) {
+				let newData = await availableAPIs.connfulRead(connection);
+				newData = JSON.parse(newData);
+				chunks[newData.ctr] = newData.chunk;
+				theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", chunks.length).replace("%s", data.length);
+			}
             try {
                 await availableAPIs.connfulClose(connection);
             } catch {}
-            data = JSON.parse(data);
+			data.content = chunks.join("");
             if (data.type == "script") {
                 theWebsite.innerText = "";
                 ree = await createREE(browserContainer);
-                ree.iframe.style = "flex-grow: 1;";
+                ree.iframe.style = "flex-grow: 1; border: none;";
                 theWebsite.hidden = true;
                 await ree.exportAPI("isDarkThemed", availableAPIs.isDarkThemed);
                 await ree.exportAPI("navigate", function(newUrl) {
-                    urlInput.value = newUrl;
+                    urlInput.value = new URL(newUrl.arg, urlInput.value).href;
                     urlButton.click();
                     ree.closeDown();
                 });
@@ -182,11 +225,17 @@ function createREE(direction) {
                 }
             }
         } catch (e) {
+			if (ree) ree.closeDown();
+			theWebsite.hidden = false;
             theWebsite.innerText = await availableAPIs.lookupLocale(e.message);
         }
         urlInput.disabled = false;
         urlButton.disabled = false;
     }
+	if (ppos[0]) {
+		urlInput.value = ppos[0];
+		urlButton.click();
+	}
 })();
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) await window.availableAPIs.terminate();
