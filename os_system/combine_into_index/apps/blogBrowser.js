@@ -143,6 +143,7 @@ function createREE(direction) {
         theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING");
         try {
             let url = new URL(urlInput.value);
+			urlInput.value = url.href;
             if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
             if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
 			if (pargs["no-verification"]) 
