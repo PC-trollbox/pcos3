@@ -32,6 +32,7 @@ let ext2mime = {
 	"jpg": "image/jpeg",
 	"jpeg": "image/jpeg",
 	"gif": "image/gif",
+	"svg": "image/svg+xml",
 	"mp4": "video/mp4",
 	"webm": "video/webm",
 	"mkv": "video/x-matroska",
