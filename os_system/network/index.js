@@ -16,6 +16,7 @@ let sessionTokens = {};
 let deltaUpdateConns = {};
 let serverPublicKey = require("../keypair.json").serverKey;
 let usableKey = crypto.subtle.importKey("jwk", require("../keypair.json").serverKey_private, {name: "ECDSA", namedCurve: "P-256"}, false, ["sign"]);
+const fileNotFoundPage = "document.body.innerText = '404. File not found';";
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 const serverAddress = "7f00000150434f53334e6574776f726b";
@@ -173,22 +174,23 @@ server.on("connection", function(socket, req) {
 			connectedEvent2.on("connected", function(a) {
 				let {messageReceiveEvent, messageSendEvent} = a;
 				messageReceiveEvent.once("message", function(d) {
-					messageSendEvent.emit("message", JSON.stringify({
-						type: "script",
-						length: 1
-					}));
 					if (path.normalize(path.join(__dirname, "js_files", d)) != path.join(__dirname, "js_files", d)) return messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = 'You cannot do that!';" }));
 					let pathname = path.join(__dirname, "js_files", d);
-					if (!pathname.endsWith(".js")) pathname = path.join(pathname, "index.js");
+					if (!path.extname(pathname)) pathname = path.join(pathname, "index.js");
+					let file = fileNotFoundPage;
 					try {
-						let file = fs.readFileSync(pathname).toString();
+						file = fs.readFileSync(pathname).toString();
+					} catch {}
+					messageSendEvent.emit("message", JSON.stringify({
+						type: path.extname(pathname) == ".js" ? "script" : "file",
+						length: Math.ceil(file.length / 131072),
+						error: fileNotFoundPage.length == file.length ? ((file == fileNotFoundPage) ? "NO_SUCH_FILE" : null) : null
+					}));
+					for (let i = 0; i != Math.ceil(file.length / 131072); i++) {
 						messageSendEvent.emit("message", JSON.stringify({
-							type: "script",
-							chunk: file,
-							ctr: 0
+							ctr: i,
+							chunk: file.slice(i * 131072, (i + 1) * 131072)
 						}));
-					} catch {
-						messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = '404. File not found';" }));
 					}
 				})
 			});
@@ -374,7 +376,10 @@ function ConnfulServer(gate, socket, address) {
 						messageSendEvent: connections[packetData.data.connectionID].messageSendEvent,
 						publicKey: theirMainKeyDecrypt
 					});
+					let lock, _lock;
 					connections[packetData.data.connectionID].messageSendEvent.on("message", async function(sentMessage) {
+						await lock;
+						lock = new Promise(r => _lock = r);
 						let iv = crypto.getRandomValues(new Uint8Array(16));
 						socket.send(JSON.stringify({
 							from: serverAddress,
@@ -391,6 +396,7 @@ function ConnfulServer(gate, socket, address) {
 								}
 							}
 						}));
+						_lock();
 					})
 				} else if (packetData.data.action == "drop") {
 					if (!packetData.data.connectionID) return;

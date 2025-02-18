@@ -1007,7 +1007,8 @@ function reeAPIs() {
 					let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					let _connectionBufferPromise = null;
-					let connectionBufferPromise = new Promise(r => _connectionBufferPromise = r);
+					let _connectionBufferReject = null;
+					let connectionBufferPromise = new Promise((r, j) => [_connectionBufferPromise, _connectionBufferReject] = [r, j]);
 					async function eventListener(e) {
 						try {
 							let packet = JSON.parse(e.data);
@@ -1039,7 +1040,8 @@ function reeAPIs() {
 									dataBuffer: [],
 									dataBufferPromise,
 									_dataBufferPromise,
-									networkListenID
+									networkListenID,
+									lock: null
 								}
 
 								websocket.send(JSON.stringify({
@@ -1144,7 +1146,7 @@ function reeAPIs() {
 								if (connections[packet.data.connectionID + ":server"].dying) return;
 								networkListens[networkListenID].connectionBuffer.push(packet.data.connectionID + ":server");
 								let _curcbp = _connectionBufferPromise;
-								connectionBufferPromise = new Promise(r => _connectionBufferPromise = r);
+								connectionBufferPromise = new Promise((r, j) => [_connectionBufferPromise, _connectionBufferReject] = [r, j]);
 								networkListens[networkListenID].connectionBufferPromise = connectionBufferPromise;
 								_curcbp();
 							} else if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "data") {
@@ -1178,6 +1180,7 @@ function reeAPIs() {
 							if (!connections[connectionID].dataBuffer.length) delete connections[connectionID];
 						}
 						delete networkListens[networkListenID];
+						_connectionBufferReject(new Error("NETWORK_CLOSED"));
 					});
 					websocket.addEventListener("message", eventListener);
 					return networkListenID;
@@ -1237,7 +1240,8 @@ function reeAPIs() {
 						dataBuffer: [],
 						dataBufferPromise,
 						settlePromise,
-						gateIfNeeded: gate
+						gateIfNeeded: gate,
+						lock: null
 					}
 					async function eventListener(e) {
 						try {
@@ -1388,6 +1392,7 @@ function reeAPIs() {
 							if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
 						}
 						delete networkListens[networkListenID];
+						_rejectPromise(new Error("NETWORK_CLOSED"));
 					});
 					return connID + ":client";
 				},
@@ -1418,6 +1423,9 @@ function reeAPIs() {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
 					if (connections[sendOpts.connectionID].dying) return;
+					await connections[sendOpts.connectionID].lock;
+					let _lock;
+					connections[sendOpts.connectionID].lock = new Promise(r => _lock = r);
 					let iv = crypto.getRandomValues(new Uint8Array(16));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({
@@ -1436,6 +1444,7 @@ function reeAPIs() {
 							gate: connections[sendOpts.connectionID].gateIfNeeded
 						}
 					}));
+					_lock();
 				},
 				connfulRead: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_READ")) throw new Error("UNAUTHORIZED_ACTION");
