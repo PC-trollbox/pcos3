@@ -1,0 +1,13 @@
+<svg width="128" height="128" version="1.1" xmlns="http://www.w3.org/2000/svg">
+	<g>
+		<rect x="0" y="0" width="128" height="128" fill="#ffffff" />
+		<rect x="0" y="-4" width="48" height="48" fill="#808080" transform="translate(128, -32) rotate(45)" />
+		<text x="6" y="16" font-size="12px">Lorem ipsum dolor</text>
+		<text x="6" y="32" font-size="12px">sit amet, consectetur</text>
+		<text x="6" y="48" font-size="12px">adipiscing elit. Nullam</text>
+		<text x="6" y="64" font-size="12px">ullamcorper mollis</text>
+		<text x="6" y="80" font-size="12px">lacinia. Ut dignissim,</text>
+		<text x="6" y="96" font-size="12px">lorem sed ultrices</text>
+		<text x="6" y="112" font-size="12px">porttitor, tellus...</text>
+	</g>
+</svg>

@@ -1240,8 +1240,7 @@ function reeAPIs() {
 						dataBuffer: [],
 						dataBufferPromise,
 						settlePromise,
-						gateIfNeeded: gate,
-						lock: null
+						gateIfNeeded: gate
 					}
 					async function eventListener(e) {
 						try {
@@ -1423,9 +1422,6 @@ function reeAPIs() {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
 					if (connections[sendOpts.connectionID].dying) return;
-					await connections[sendOpts.connectionID].lock;
-					let _lock;
-					connections[sendOpts.connectionID].lock = new Promise(r => _lock = r);
 					let iv = crypto.getRandomValues(new Uint8Array(16));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({
@@ -1444,7 +1440,6 @@ function reeAPIs() {
 							gate: connections[sendOpts.connectionID].gateIfNeeded
 						}
 					}));
-					_lock();
 				},
 				connfulRead: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_READ")) throw new Error("UNAUTHORIZED_ACTION");

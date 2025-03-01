@@ -76,6 +76,7 @@ let cachedIcons = {};
 	mainComponent.appendChild(pathInputForm);
 	mainComponent.appendChild(displayResult);
 	document.body.appendChild(mainComponent);
+	let availableIcons = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/etc/icons" });
 	displayResult.oncontextmenu = async function(e) {
 		e.stopImmediatePropagation();
 		e.preventDefault();
@@ -322,18 +323,14 @@ let cachedIcons = {};
 					let fileIcon = document.createElement("img");
 					fileIcon.style.width = "12px";
 					fileIcon.style.height = "12px";
+					let fileType = file.split(".").slice(-1)[0];
+					let isDir = await isDirectory(path + "/" + file);
 					try {
-						let availableIcons = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/etc/icons" });
-						let fileType = file.split(".").slice(-1)[0];
-						let isDir = await isDirectory(path + "/" + file);
 						let wantedIcon;
-						
 						if (isDir == "directory") wantedIcon = "foldericon.pic";
 						else if (availableIcons.includes(fileType + ".pic")) wantedIcon = fileType + ".pic";
 						else wantedIcon = "fileicon.pic";
-
 						if (!cachedIcons.hasOwnProperty(wantedIcon)) cachedIcons[wantedIcon] = await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/etc/icons/" + wantedIcon });
-						
 						fileIcon.src = cachedIcons[wantedIcon];
 					} catch {}
 					openButton.innerText = file;
@@ -349,7 +346,7 @@ let cachedIcons = {};
 						displayResult.innerText = "";
 						let copyAllow = false;
 						try {
-							copyAllow = await isDirectory(path + "/" + file) == "file";
+							copyAllow = isDir == "file";
 						} catch {}
 						if (copyAllow) {
 							let copyButton = document.createElement("button");
@@ -453,8 +450,8 @@ let cachedIcons = {};
 				}
 				previousDirectory = path;
 			} else if (type == "file") {
+				let hasError = false;
 				pathElement.value = previousDirectory;
-				await browse();
 				if (path.endsWith(".js")) {
 					if (privileges.includes("START_TASK") && privileges.includes("ELEVATE_PRIVILEGES") && privileges.includes("MANAGE_TOKENS")) {
 						if (!globalToken) globalToken = await availableAPIs.consentGetToken({
@@ -468,6 +465,7 @@ let cachedIcons = {};
 						}
 					} else {
 						displayResult.innerText = await availableAPIs.lookupLocale("MORE_PERMISSION_DENIED");
+						hasError = true;
 					}
 				} else if (path.endsWith(".lnk") && privileges.includes("ELEVATE_PRIVILEGES") && privileges.includes("MANAGE_TOKENS")) {
 					let file = await availableAPIs.fs_read({ path: path });
@@ -484,6 +482,7 @@ let cachedIcons = {};
 						}
 					} else {
 						displayResult.innerText = await availableAPIs.lookupLocale("MORE_PERMISSION_DENIED");
+						hasError = true;
 					}
 				} else {
 					let lookUpAssociation = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/apps/associations" });
@@ -503,8 +502,10 @@ let cachedIcons = {};
 						}
 					} else {
 						displayResult.innerText = await availableAPIs.lookupLocale("MORE_PERMISSION_DENIED");
+						hasError = true;
 					}
 				}
+				if (!hasError) await browse();
 			} else {
 				displayResult.innerText = (await availableAPIs.lookupLocale("FILE_STRUCT_BROWSE_FAIL")).replace("%s", (await availableAPIs.lookupLocale("UNKNOWN_FS_STRUCT")).replace("%s", type));
 			}
