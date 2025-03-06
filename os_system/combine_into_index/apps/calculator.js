@@ -252,6 +252,7 @@
 
 		pageHeaderText.innerText = await availableAPIs.lookupLocale("CALC_TOMIXED_BTN");
 		compute.innerText = "=";
+		resultWholes.readOnly = true;
 		resultNumerator.readOnly = true;
 		resultDenominator.readOnly = true;
 
@@ -264,7 +265,7 @@
 			let fraction1 = fraction(BigInt(operandNumerator.value), BigInt(operandDenominator.value)).simplify();
 			let cleanNum = abs(fraction1.cleanNumerator());
 			let wholes = fraction1.getWholes();
-			resultWholes.value = wholes;
+			resultWholes.value = wholes || (fraction1.numerator < 0 ? "-" : "");
 			resultNumerator.value = cleanNum;
 			resultDenominator.value = fraction1.denominator;
 		}
@@ -318,7 +319,9 @@
 
 		compute.onclick = function() {
 			let sign = operandWholes.value < 0 ? -1 : 1;
-			let fraction1 = fraction(BigInt(operandDenominator.value) * BigInt(operandWholes.value) + BigInt(operandNumerator.value * sign), BigInt(operandDenominator.value)).simplify();
+			let fraction1;
+			if (operandWholes.value == "-") fraction1 = fraction(-BigInt(operandNumerator.value), BigInt(operandDenominator.value)).simplify();
+			else fraction1 = fraction(BigInt(operandDenominator.value) * BigInt(operandWholes.value) + BigInt(operandNumerator.value * sign), BigInt(operandDenominator.value)).simplify();
 			resultNumerator.value = fraction1.numerator;
 			resultDenominator.value = fraction1.denominator;
 		}

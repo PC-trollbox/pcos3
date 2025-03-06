@@ -1029,8 +1029,8 @@ function reeAPIs() {
 								}, true, []);
 								let joinedKeys = await crypto.subtle.deriveBits({ name: "ECDH", public: theirUsableKey }, ephemeralKey.privateKey, 256);
 								let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {name: "AES-GCM"}, true, ["encrypt", "decrypt"]);
-								let _dataBufferPromise = null;
-								let dataBufferPromise = new Promise(r => _dataBufferPromise = r);
+								let _dataBufferPromise = null, _rejectDataPromise = null;
+								let dataBufferPromise = new Promise((r, j) => [_dataBufferPromise, _rejectDataPromise] = [r, j]);
 								connections[packet.data.connectionID + ":server"] = {
 									ourKey: ephemeralKey,
 									from: packet.from,
@@ -1040,8 +1040,8 @@ function reeAPIs() {
 									dataBuffer: [],
 									dataBufferPromise,
 									_dataBufferPromise,
-									networkListenID,
-									lock: null
+									_rejectDataPromise,
+									networkListenID
 								}
 
 								websocket.send(JSON.stringify({
@@ -1135,6 +1135,7 @@ function reeAPIs() {
 										connectionID: packet.data.connectionID
 									}
 								}));
+								connections[packet.data.connectionID + ":server"]._rejectDataPromise(new Error("CONNECTION_DROPPED"));
 								connections[packet.data.connectionID + ":server"].dying = true;
 								if (!connections[packet.data.connectionID + ":server"].dataBuffer.length)
 									delete connections[packet.data.connectionID + ":server"];
@@ -1164,10 +1165,11 @@ function reeAPIs() {
 									iv: hexToU8A(packet.data.content.iv)
 								}, connections[packet.data.connectionID + ":server"].aesUsableKey, hexToU8A(packet.data.content.ct))));
 								let _curdbp = connections[packet.data.connectionID + ":server"].dataBufferPromise;
-								let _dataBufferPromise = null;
-								let dataBufferPromise = new Promise(r => _dataBufferPromise = r);
+								let _dataBufferPromise = null, _rejectDataPromise = null;
+								let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise]);
 								connections[packet.data.connectionID + ":server"].dataBufferPromise = dataBufferPromise;
 								connections[packet.data.connectionID + ":server"]._dataBufferPromise = _dataBufferPromise;
+								connections[packet.data.connectionID + ":server"]._rejectDataPromise = _rejectDataPromise;
 								_curdbp();
 								writingLockRelease();
 							}
@@ -1226,10 +1228,12 @@ function reeAPIs() {
 						hash: "SHA-256"
 					}, newKeyKA, new TextEncoder().encode(JSON.stringify(exported)))));
 					let _dataBufferPromise = null;
-					let dataBufferPromise = new Promise(r => _dataBufferPromise = r);
+					let _rejectDataPromise = null;
+					let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
 					let _settlePromise = null;
 					let _rejectPromise = null;
 					let settlePromise = new Promise((r, e) => [_settlePromise, _rejectPromise] = [r, e]);
+					let packetID = crypto.getRandomValues(new Uint8Array(32)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 					connections[connID + ":client"] = {
 						ourKey: ephemeralKey,
 						from: address,
@@ -1245,7 +1249,11 @@ function reeAPIs() {
 					async function eventListener(e) {
 						try {
 							let packet = JSON.parse(e.data);
-							if (!packet.from) return;
+							if (!packet.from) {
+								if (packet.event == "AddressUnreachable" && packet.packetID == packetID)
+									_rejectPromise(new Error("ADDRESS_UNREACHABLE"));
+								return;
+							}
 							if (packet.data.gate) return;
 							if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "start") {
 								if (connections[connID + ":client"].aesUsableKey) return;
@@ -1342,6 +1350,7 @@ function reeAPIs() {
 							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "drop") {
 								if (connections[connID + ":client"].dying) return;
 								_rejectPromise(new Error("CONNECTION_DROPPED"));
+								_rejectDataPromise(new Error("CONNECTION_DROPPED"));
 								websocket.send(JSON.stringify({
 									receiver: address,
 									data: {
@@ -1367,7 +1376,7 @@ function reeAPIs() {
 									iv: hexToU8A(packet.data.content.iv)
 								}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
 								_dataBufferPromise();
-								dataBufferPromise = new Promise(r => _dataBufferPromise = r);
+								dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
 								connections[packet.data.connectionID + ":client"].dataBufferPromise = dataBufferPromise;
 								writingLockRelease();
 							}
@@ -1383,7 +1392,8 @@ function reeAPIs() {
 							gate,
 							connectionID: connID,
 							content: { keyInfo: exported, signature }
-						}
+						},
+						id: packetID
 					}));
 					modules.network.runOnClose.then(function() {
 						if (connections.hasOwnProperty(connID + ":client")) {

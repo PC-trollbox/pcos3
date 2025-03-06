@@ -1,7 +1,7 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
 // link: lrn:BLOG_BROWSER_NAME
-// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT
+// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET
 // =====END MANIFEST=====
 function createREE(direction) {
 	let ownIframeID = undefined;
@@ -88,6 +88,14 @@ function createREE(direction) {
 		});
 	});
 }
+function IPv6Decompressor(ip) {
+    let array = ip.split(":");
+    array = array.slice(0, 8);
+    let foundTwoOrMoreZeroes = array.indexOf("");
+    while (array.length != 8 && foundTwoOrMoreZeroes !== null) array.splice(foundTwoOrMoreZeroes, 0, "0000");
+    array = array.map(a => parseInt(a || "0", 16).toString(16).padStart(4, "0"));
+    return array.join(":");
+}
 (async function() {
 	let pargs = {};
 	let ppos = [];
@@ -163,7 +171,7 @@ function createREE(direction) {
 				});
             let hostname = url.hostname, address;
             if (url.hostname.includes("[")) {
-                hostname = url.hostname.slice(1, -1).replaceAll(":", "");
+                hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");
                 address = hostname;
             } else address = await availableAPIs.resolve(hostname);
             if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
@@ -201,14 +209,25 @@ function createREE(direction) {
             if (data.type == "script") {
                 theWebsite.innerText = "";
                 ree = await createREE(browserContainer);
-                ree.iframe.style = "flex-grow: 1; border: none;";
+                ree.iframe.style = "flex-grow: 1; border: none; overflow: auto;";
                 theWebsite.hidden = true;
-                await ree.exportAPI("isDarkThemed", availableAPIs.isDarkThemed);
+				let passthroughAPIs = [
+					// UI class
+					"isDarkThemed", "locale", "osLocale", "lookupLocale", "installedLocales",
+					// cryptographic class
+					"cspOperations", "availableCsps",
+					// connful connections class
+					"connfulConnect", "connfulConnectionSettled", "connfulDisconnect", "connfulForceDisconnect", "connfulWrite", "connfulRead", "connfulAddressGet", "connfulIdentityGet"
+				];
+				if (pargs["no-sandbox"]) passthroughAPIs = Object.keys(availableAPIs);
+				for (let api of passthroughAPIs) await ree.exportAPI(api, e => availableAPIs[api](e.arg));
+                await ree.exportAPI("terminate", _ => ree.closeDown());
                 await ree.exportAPI("navigate", function(newUrl) {
                     urlInput.value = new URL(newUrl.arg, urlInput.value).href;
                     urlButton.click();
                     ree.closeDown();
                 });
+                await ree.exportAPI("currentLocation", _ => urlInput.value);
                 ree.beforeCloseDown(async function() {
                     theWebsite.hidden = false;
                     theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_POSTCLOSE");
