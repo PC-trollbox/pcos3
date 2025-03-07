@@ -376,10 +376,12 @@ function ConnfulServer(gate, socket, address) {
 						messageSendEvent: connections[packetData.data.connectionID].messageSendEvent,
 						publicKey: theirMainKeyDecrypt
 					});
-					let lock, _lock;
+					let lock, _lock, lockc = 0;
 					connections[packetData.data.connectionID].messageSendEvent.on("message", async function(sentMessage) {
-						await lock;
+						let mylockc = lockc;
+						while (lockc >= mylockc && lockc != 0) await lock;
 						lock = new Promise(r => _lock = r);
+						lockc++;
 						let iv = crypto.getRandomValues(new Uint8Array(16));
 						socket.send(JSON.stringify({
 							from: serverAddress,
@@ -396,6 +398,7 @@ function ConnfulServer(gate, socket, address) {
 								}
 							}
 						}));
+						lockc--;
 						_lock();
 					})
 				} else if (packetData.data.action == "drop") {

@@ -169,6 +169,21 @@ function IPv6Decompressor(ip) {
 					theWebsite.appendChild(allowNoVerify);
 					theWebsite.appendChild(abort);
 				});
+			if (pargs["no-sandbox"]) 
+				await new Promise(async function(ok, ab) {
+					let allowNoVerify = document.createElement("button");
+					let abort = document.createElement("button");
+					theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_NOSANDBOX");
+					allowNoVerify.innerText = await availableAPIs.lookupLocale("YES");
+					abort.innerText = await availableAPIs.lookupLocale("NO");
+					allowNoVerify.onclick = async function() {
+						theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING");
+						ok();
+					}
+					abort.onclick = async _ => ab(new Error(await availableAPIs.lookupLocale("PERMISSION_DENIED")));
+					theWebsite.appendChild(allowNoVerify);
+					theWebsite.appendChild(abort);
+				});
             let hostname = url.hostname, address;
             if (url.hostname.includes("[")) {
                 hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");

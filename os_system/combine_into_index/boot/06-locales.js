@@ -508,7 +508,8 @@ function localization() {
 			"BLOG_BROWSER_FILEPOST": "This is a file post. You can save it to this system.",
 			"BLOG_BROWSER_DLFILEPOST": "You have downloaded this file post.",
 			"BLOG_BROWSER_LOADING_PROGRESS": "Loading this post (%s of %s chunks received)",
-			"BLOG_BROWSER_NOVERIFY": "You have enabled an option to disable the verification of the server. This is not recommended as the network proxy can execute a man-in-the-middle attack and see your information. Would you let that happen?"
+			"BLOG_BROWSER_NOVERIFY": "You have enabled an option to disable the verification of the server. This is not recommended as the network proxy can execute a man-in-the-middle attack and see your information. Would you let that happen?",
+			"BLOG_BROWSER_NOSANDBOX": "You have enabled an option to pass through all APIs of your operating system. This is not recommended as the blog post can do anything as if it were the blog browser application. Would you let that happen?"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -1017,7 +1018,8 @@ function localization() {
 			"BLOG_BROWSER_FILEPOST": "Это пост-файл. Вы можете скачать его на этот компьютер.",
 			"BLOG_BROWSER_DLFILEPOST": "Вы скачали этот пост-файл.",
 			"BLOG_BROWSER_LOADING_PROGRESS": "Загрузка поста (получено %s из %s частей)",
-			"BLOG_BROWSER_NOVERIFY": "Вы включили параметр, пропускающий проверку сервера. Это не рекомендуется, так как сетевой прокси-сервер сможет выполнить атаку \"человек посередине\" и тем самым, получить доступ к вашим данным. Вы бы позволили этому случиться?"
+			"BLOG_BROWSER_NOVERIFY": "Вы включили параметр, пропускающий проверку сервера. Это не рекомендуется, так как сетевой прокси-сервер сможет выполнить атаку \"человек посередине\" и тем самым, получить доступ к вашим данным. Вы бы позволили этому случиться?",
+			"BLOG_BROWSER_NOSANDBOX": "Вы включили параметр пробрасывания всех ИПП вашей операционной системы. Это не рекомендуется, так как пост может выполнять любое действие, как будто он является этим приложением. Вы бы позволили этому случиться?"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
