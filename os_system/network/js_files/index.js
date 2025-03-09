@@ -4,7 +4,7 @@
         "Breakout": "/breakout.js",
         "Latest OS image": "/os_installer.jsdl",
         "Mini OS, based on build 999": "/minios.jsdl",
-        "Sandbox escape": "/sandbox_escape.js"
+        "Sandbox escape (dangerous!!!)": "/sandbox_escape.js"
     };
 
     let header = document.createElement("h2");
@@ -13,7 +13,7 @@
     let linksDiv = document.createElement("div");
     let linksDescription = document.createElement("p");
     header.innerText = "Hello, world!";
-    description.innerText = "This is the PCOS 3 official blog server.";
+    description.innerText = "This is the PCOS 3 blog server.";
     linksDescription.innerText = "Here are some links:";
     headingDiv.appendChild(header);
     headingDiv.appendChild(description);

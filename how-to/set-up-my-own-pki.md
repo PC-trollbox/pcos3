@@ -2,6 +2,7 @@
 (Public Key Infrastructure)
 
 **THIS COULD RUIN THE SECURITY OF THE SYSTEM!!** It could be useful for developers that want to develop their apps while working with appHarden or for admins that do not trust the original PKI.
+This will also cause diffupdate and other connful services to fail.
 
 1. Log into the OS as administrator.
 2. Open Cryptographic Tools.
