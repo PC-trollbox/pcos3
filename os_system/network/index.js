@@ -194,6 +194,36 @@ server.on("connection", function(socket, req) {
 					}
 				})
 			});
+			let {connectedEvent:connectedEvent3} = ConnfulServer("netfs", socket, ip + publicKey);
+			connectedEvent3.on("connected", function(a) {
+				let {messageReceiveEvent, messageSendEvent} = a;
+				messageReceiveEvent.on("message", function(d) {
+					try {
+						d = JSON.parse(d);
+						if (d.action == "properties") messageSendEvent.emit("message", JSON.stringify({ data: {
+								directory_supported: true,
+								read_only: true,
+								filesystem: "netfs",
+								permissions_supported: false
+							}}));
+						else if (d.action == "read" || d.action == "ls" || d.action == "isDirectory") {
+							let dpath = (d.action == "read" || d.action == "isDirectory") ? d.key : d.directory;
+							if (path.normalize(path.join(__dirname, "fs_files", dpath)) != path.join(__dirname, "fs_files", dpath))
+								return messageSendEvent.emit("message", JSON.stringify({ error: "PERMISSION_DENIED" }));
+							let realPathname = path.join(__dirname, "fs_files", dpath);
+							try {
+								if (d.action == "read") messageSendEvent.emit("message", JSON.stringify({ data: fs.readFileSync(realPathname).toString() }));
+								else if (d.action == "isDirectory") messageSendEvent.emit("message", JSON.stringify({ data: fs.statSync(realPathname).isDirectory() }));
+								else if (d.action == "ls") messageSendEvent.emit("message", JSON.stringify({ data: fs.readdirSync(realPathname) }));
+							} catch {
+								messageSendEvent.emit("message", JSON.stringify({ error: "FS_ACTION_FAILED" }));
+							}
+						} else if (d.action == "sync" || d.action == "unmount")
+							messageSendEvent.emit("message", JSON.stringify({ data: true }));
+						else messageSendEvent.emit("message", JSON.stringify({ error: "FS_ACTION_FAILED" }));
+					} catch {}
+				})
+			});
 		} else {
 			let packetData;
 			try {

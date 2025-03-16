@@ -509,7 +509,12 @@ function localization() {
 			"BLOG_BROWSER_DLFILEPOST": "You have downloaded this file post.",
 			"BLOG_BROWSER_LOADING_PROGRESS": "Loading this post (%s of %s chunks received)",
 			"BLOG_BROWSER_NOVERIFY": "You have enabled an option to disable the verification of the server. This is not recommended as the network proxy can execute a man-in-the-middle attack and see your information. Would you let that happen?",
-			"BLOG_BROWSER_NOSANDBOX": "You have enabled an option to pass through all APIs of your operating system. This is not recommended as the blog post can do anything as if it were the blog browser application. Would you let that happen?"
+			"BLOG_BROWSER_NOSANDBOX": "You have enabled an option to pass through all APIs of your operating system. This is not recommended as the blog post can do anything as if it were the blog browser application. Would you let that happen?",
+			"NETWORKFS_USAGE": "Usage: networkfs <options> [url] [mountpoint]",
+			"NETWORKFS_DESCRIPTION": "Mounts a filesystem available over PCOS Network.",
+			"NETWORKFS_NOVERIFY": "--no-verification: Don't verify the server's key",
+			"NETWORKFS_KEY": "--key=[path]: Path to key for mutual verification",
+			"NETWORKFS_PROTO": "This version only supports the netfs:// protocol."
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -1019,7 +1024,12 @@ function localization() {
 			"BLOG_BROWSER_DLFILEPOST": "Вы скачали этот пост-файл.",
 			"BLOG_BROWSER_LOADING_PROGRESS": "Загрузка поста (получено %s из %s частей)",
 			"BLOG_BROWSER_NOVERIFY": "Вы включили параметр, пропускающий проверку сервера. Это не рекомендуется, так как сетевой прокси-сервер сможет выполнить атаку \"человек посередине\" и тем самым, получить доступ к вашим данным. Вы бы позволили этому случиться?",
-			"BLOG_BROWSER_NOSANDBOX": "Вы включили параметр пробрасывания всех ИПП вашей операционной системы. Это не рекомендуется, так как пост может выполнять любое действие, как будто он является этим приложением. Вы бы позволили этому случиться?"
+			"BLOG_BROWSER_NOSANDBOX": "Вы включили параметр пробрасывания всех ИПП вашей операционной системы. Это не рекомендуется, так как пост может выполнять любое действие, как будто он является этим приложением. Вы бы позволили этому случиться?",
+			"NETWORKFS_USAGE": "Использование: networkfs <параметры> [url] [точка_монтирования]",
+			"NETWORKFS_DESCRIPTION": "Монтирует файловую систему, доступную через PCOS Network.",
+			"NETWORKFS_NOVERIFY": "--no-verification: Не проверять ключ сервера",
+			"NETWORKFS_KEY": "--key=[путь]: Путь до ключа для взаимной проверки",
+			"NETWORKFS_PROTO": "Данная версия поддерживает только протокол netfs://."
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {
