@@ -2,7 +2,7 @@
 // link: lrn:NETCONFIG_TITLE
 // signer: automaticSigner
 // fnName: networkInstaller
-// allow: IDENTIFY_SYSTEM, CSP_OPERATIONS, FS_READ, FS_WRITE, FS_REMOVE, FS_LIST_PARTITIONS, GET_LOCALE, GET_SERVER_URL, LIST_TASKS, GET_THEME, FS_BYPASS_PERMISSIONS
+// allow: RELOAD_NETWORK_CONFIG, IDENTIFY_SYSTEM, CSP_OPERATIONS, FS_READ, FS_WRITE, FS_REMOVE, FS_LIST_PARTITIONS, GET_LOCALE, GET_SERVER_URL, LIST_TASKS, GET_THEME, FS_BYPASS_PERMISSIONS
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -26,9 +26,11 @@
 	let descriptionNetworkURL = document.createElement("span");
 	let descriptionUCBits = document.createElement("span");
 	let descriptionHostname = document.createElement("span");
+	let descriptionUpdates = document.createElement("span");
 	let paramNetworkURL = document.createElement("input");
 	let ucBits = document.createElement("input");
 	let paramHostname = document.createElement("input");
+	let paramUpdates = document.createElement("input");
 	let saveBtn = document.createElement("button");
 	let updatePredictBtn = document.createElement("button");
 	let addressPrediction = document.createElement("span");
@@ -38,12 +40,14 @@
 	descriptionNetworkURL.innerText = await availableAPIs.lookupLocale("NETCONFIG_URLF");
 	descriptionUCBits.innerText = await availableAPIs.lookupLocale("NETCONFIG_UC");
 	descriptionHostname.innerText = await availableAPIs.lookupLocale("NETCONFIG_HOSTNAME");
+	descriptionUpdates.innerText = await availableAPIs.lookupLocale("NETCONFIG_UPDATES");
 	paramNetworkURL.value = existingConfig.url || originUrl.origin;
 	ucBits.type = "number";
 	ucBits.min = 0;
 	ucBits.max = 4294967295;
 	ucBits.value = existingConfig.ucBits;
 	paramHostname.value = existingConfig.hostname || "";
+	paramUpdates.value = existingConfig.updates || "pcosserver.pc";
 	saveBtn.innerText = await availableAPIs.lookupLocale("NETCONFIG_SAVE");
 	updatePredictBtn.innerText = await availableAPIs.lookupLocale("NETCONFIG_PREDICT");
 	form.appendChild(descriptionNetworkURL);
@@ -54,6 +58,9 @@
 	form.appendChild(document.createElement("br"));
 	form.appendChild(descriptionHostname);
 	form.appendChild(paramHostname);
+	form.appendChild(document.createElement("br"));
+	form.appendChild(descriptionUpdates);
+	form.appendChild(paramUpdates);
 	form.appendChild(document.createElement("br"));
 	form.appendChild(saveBtn);
 	form.appendChild(updatePredictBtn);
@@ -69,13 +76,17 @@
 				data: JSON.stringify({
 					url: paramNetworkURL.value,
 					ucBits: Math.round(Math.abs(Number(ucBits.value))),
-					hostname: paramHostname.value
+					hostname: paramHostname.value,
+					updates: paramUpdates.value
 				}, null, "\t")
 			});
 			try {
 				await availableAPIs.fs_rm({
 					path: (await availableAPIs.getSystemMount()) + "/apps/services/networkd.lnk"
 				});
+			} catch {}
+			try {
+				await availableAPIs.reloadNetworkConfig();
 			} catch {}
 			addressPrediction.innerText = await availableAPIs.lookupLocale("NETCONFIG_SAVE_OK");
 		} catch {

@@ -1,11 +1,10 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, FS_LIST_PARTITIONS, CSP_OPERATIONS, START_TASK, LIST_TASKS
+// allow: GET_LOCALE, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, FS_LIST_PARTITIONS, CSP_OPERATIONS, START_TASK, LIST_TASKS, GET_UPDATE_SERVICE
 // allow: FS_WRITE, RUN_KLVL_CODE, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, GET_LOCALE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_READ, FS_BYPASS_PERMISSIONS
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
-	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
 	try {
 		let etcls = await availableAPIs.fs_ls({
@@ -20,9 +19,10 @@
 			from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
 		}
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("CURRENT_OSFILE_VERSION")).replace("%s", from) + "\r\n");
-		let serverDomainOrAddress = exec_args[0] || "pcosserver.pc";
+		let serverDomainOrAddress = exec_args[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
 		let serverAddress = serverDomainOrAddress;
 		if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
+		if (!serverAddress) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
 		serverAddress = serverAddress.replaceAll(":", "");
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", serverDomainOrAddress).replace("%s", serverAddress.match(/.{1,4}/g).join(":")) + "\r\n");
 		let connection = await availableAPIs.connfulConnect({

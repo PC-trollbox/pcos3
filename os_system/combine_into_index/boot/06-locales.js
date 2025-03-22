@@ -514,7 +514,9 @@ function localization() {
 			"NETWORKFS_DESCRIPTION": "Mounts a filesystem available over PCOS Network.",
 			"NETWORKFS_NOVERIFY": "--no-verification: Don't verify the server's key",
 			"NETWORKFS_KEY": "--key=[path]: Path to key for mutual verification",
-			"NETWORKFS_PROTO": "This version only supports the netfs:// protocol."
+			"NETWORKFS_PROTO": "This version only supports the netfs:// protocol.",
+			"NETCONFIG_UPDATES": "Updates from: ",
+			"NETWORK_UPDATES_FIELD": "Updates from: %s"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -1029,7 +1031,9 @@ function localization() {
 			"NETWORKFS_DESCRIPTION": "Монтирует файловую систему, доступную через PCOS Network.",
 			"NETWORKFS_NOVERIFY": "--no-verification: Не проверять ключ сервера",
 			"NETWORKFS_KEY": "--key=[путь]: Путь до ключа для взаимной проверки",
-			"NETWORKFS_PROTO": "Данная версия поддерживает только протокол netfs://."
+			"NETWORKFS_PROTO": "Данная версия поддерживает только протокол netfs://.",
+			"NETCONFIG_UPDATES": "Обновления: ",
+			"NETWORK_UPDATES_FIELD": "Обновления с: %s"
 		},
 		defaultLocale: "en",
 		get: function(key, lang) {

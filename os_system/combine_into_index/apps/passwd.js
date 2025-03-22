@@ -4,7 +4,6 @@
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
-	await availableAPIs.windowVisibility(false);
 	await availableAPIs.attachCLI();
 	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("passwd: Locale permission denied\r\n");
 		return await availableAPIs.terminate();	}

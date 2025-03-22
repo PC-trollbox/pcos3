@@ -375,8 +375,14 @@ let cachedIcons = {};
 							displayResult.appendChild(document.createElement("hr"));
 						}
 						let deleteButton = document.createElement("button");
+						let deleteConfirm = false;
 						deleteButton.innerText = await availableAPIs.lookupLocale("REMOVE_BTN");
 						deleteButton.onclick = async function() {
+							if (!deleteConfirm) {
+								deleteButton.style.fontWeight = "bold";
+								deleteConfirm = true;
+								return;
+							}
 							try {
 								let isDir = await isDirectory(path + "/" + file);
 								if (isDir == "directory") await recursiveRemove(path + "/" + file);

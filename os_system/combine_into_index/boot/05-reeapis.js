@@ -1565,6 +1565,10 @@ function reeAPIs() {
 						chargingTime: battery.chargingTime,
 						dischargingTime: battery.dischargingTime
 					};
+				},
+				getUpdateService: async function() {
+					if (!privileges.includes("GET_UPDATE_SERVICE")) throw new Error("UNAUTHORIZED_ACTION");
+					return modules.network.updates;
 				}
 			}
 		}

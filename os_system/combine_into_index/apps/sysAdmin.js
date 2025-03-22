@@ -2,7 +2,7 @@
 // link: lrn:SYSADMIN_TOOLS_TITLE
 // signer: automaticSigner
 // fnName: sysadminInstaller
-// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, CSP_OPERATIONS
+// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, CSP_OPERATIONS, GET_UPDATE_SERVICE
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -48,12 +48,15 @@
 				});
 				from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
 			}
-			let serverAddress = await availableAPIs.resolve("pcosserver.pc");
-			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", "pcosserver.pc").replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
+			let serverDomainOrAddress = exec_args[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
+			let serverAddress = serverDomainOrAddress;
+			if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
+			serverAddress = serverAddress.replaceAll(":", "");
+			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", serverDomainOrAddress).replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
 			let connection = await availableAPIs.connfulConnect({
 				gate: "deltaUpdate",
 				address: serverAddress,
-				verifyByDomain: "pcosserver.pc"
+				verifyByDomain: serverDomainOrAddress
 			});
 			await availableAPIs.connfulConnectionSettled(connection);
 			await availableAPIs.connfulWrite({
@@ -204,12 +207,15 @@
 				});
 				from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
 			}
-			let serverAddress = await availableAPIs.resolve("pcosserver.pc");
-			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", "pcosserver.pc").replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
+			let serverDomainOrAddress = exec_args[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
+			let serverAddress = serverDomainOrAddress;
+			if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
+			serverAddress = serverAddress.replaceAll(":", "");
+			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", serverDomainOrAddress).replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
 			let connection = await availableAPIs.connfulConnect({
 				gate: "deltaUpdate",
 				address: serverAddress,
-				verifyByDomain: "pcosserver.pc"
+				verifyByDomain: serverDomainOrAddress
 			});
 			await availableAPIs.connfulConnectionSettled(connection);
 			await availableAPIs.connfulWrite({

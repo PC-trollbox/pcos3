@@ -27,11 +27,17 @@ async function networkd() {
 		}
 		modules.network.reloadConfig = async function() {
 			config = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/network.json"));
-			ws.send(JSON.stringify({
-				finalProxyPacket: true
-			}));
-			ws.close();
+			modules.network.updates = config.updates;
+			try {
+				ws.send(JSON.stringify({
+					finalProxyPacket: true
+				}));
+				ws.close();
+			} catch {
+				onclose();
+			}
 		}
+		modules.network.updates = config.updates;
 		let stage = 0;
 		let pukey = (modules.core.prefs.read("system_id") || {}).public;
 		let importedKey = await crypto.subtle.importKey("jwk", (modules.core.prefs.read("system_id") || {}).private, {

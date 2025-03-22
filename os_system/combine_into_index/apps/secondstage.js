@@ -36,7 +36,8 @@
 		network: {
 			url: networkDefaultURL.toString(),
 			ucBits: 1,
-			hostname: new Array(16).fill(0).map(a => networkSymbols[Math.floor(Math.random() * networkSymbols.length)]).join("")
+			hostname: new Array(16).fill(0).map(a => networkSymbols[Math.floor(Math.random() * networkSymbols.length)]).join(""),
+			updates: "pcosserver.pc"
 		},
 		autoClose: true,
 		restartOnClose: "kexec"

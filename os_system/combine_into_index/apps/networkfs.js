@@ -12,7 +12,6 @@ function IPv6Decompressor(ip) {
 }
 (async function() {
 	// @pcos-app-mode isolatable
-	await availableAPIs.windowVisibility(false);
 	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("networkfs: Locale permission denied\r\n");
 		return await availableAPIs.terminate();	}
 	await availableAPIs.attachCLI();

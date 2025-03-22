@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_NETWORK_ADDRESS, GET_HOSTNAME
+// allow: GET_LOCALE, GET_NETWORK_ADDRESS, GET_HOSTNAME, GET_UPDATE_SERVICE
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -11,6 +11,7 @@
 	try {
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("NETWORK_ADDRESS_FIELD")).replace("%s", (await availableAPIs.getNetworkAddress())?.match(/.{1,4}/g)?.join(":") || await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER")) + "\r\n");
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("NETWORK_AUTOHOST_FIELD")).replace("%s", (await availableAPIs.getHostname() || await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER"))) + "\r\n");
+		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("NETWORK_UPDATES_FIELD")).replace("%s", (await availableAPIs.getUpdateService() || await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER"))) + "\r\n");
 	} catch (e) {
 		await availableAPIs.toMyCLI("netinfo: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
 	}
