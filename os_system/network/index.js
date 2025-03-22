@@ -174,8 +174,15 @@ server.on("connection", function(socket, req) {
 			connectedEvent2.on("connected", function(a) {
 				let {messageReceiveEvent, messageSendEvent} = a;
 				messageReceiveEvent.once("message", function(d) {
-					if (path.normalize(path.join(__dirname, "js_files", d)) != path.join(__dirname, "js_files", d)) return messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = 'You cannot do that!';" }));
 					let pathname = path.join(__dirname, "js_files", d);
+					if (!path.normalize(pathname).startsWith(path.join(__dirname, "js_files"))) {
+						messageSendEvent.emit("message", JSON.stringify({
+							type: "script",
+							length: 1,
+							error: "PERMISSION_DENIED"
+						}));
+						return messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = 'You cannot do that!';" }));
+					}
 					if (!path.extname(pathname)) pathname = path.join(pathname, "index.js");
 					let file = fileNotFoundPage;
 					try {
@@ -208,7 +215,7 @@ server.on("connection", function(socket, req) {
 							}}));
 						else if (d.action == "read" || d.action == "ls" || d.action == "isDirectory") {
 							let dpath = (d.action == "read" || d.action == "isDirectory") ? d.key : d.directory;
-							if (path.normalize(path.join(__dirname, "fs_files", dpath)) != path.join(__dirname, "fs_files", dpath))
+							if (!path.normalize(path.join(__dirname, "fs_files", dpath)).startsWith(path.join(__dirname, "fs_files")))
 								return messageSendEvent.emit("message", JSON.stringify({ error: "PERMISSION_DENIED" }));
 							let realPathname = path.join(__dirname, "fs_files", dpath);
 							try {
