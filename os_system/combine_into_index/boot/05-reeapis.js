@@ -1135,7 +1135,8 @@ function reeAPIs() {
 										connectionID: packet.data.connectionID
 									}
 								}));
-								connections[packet.data.connectionID + ":server"]._rejectDataPromise(new Error("CONNECTION_DROPPED"));
+								if (connections[packet.data.connectionID + ":server"]._rejectDataPromise)
+									connections[packet.data.connectionID + ":server"]._rejectDataPromise(new Error("CONNECTION_DROPPED"));
 								connections[packet.data.connectionID + ":server"].dying = true;
 								if (!connections[packet.data.connectionID + ":server"].dataBuffer.length)
 									delete connections[packet.data.connectionID + ":server"];
@@ -1164,13 +1165,15 @@ function reeAPIs() {
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv)
 								}, connections[packet.data.connectionID + ":server"].aesUsableKey, hexToU8A(packet.data.content.ct))));
-								let _curdbp = connections[packet.data.connectionID + ":server"].dataBufferPromise;
-								let _dataBufferPromise = null, _rejectDataPromise = null;
-								let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise]);
-								connections[packet.data.connectionID + ":server"].dataBufferPromise = dataBufferPromise;
-								connections[packet.data.connectionID + ":server"]._dataBufferPromise = _dataBufferPromise;
-								connections[packet.data.connectionID + ":server"]._rejectDataPromise = _rejectDataPromise;
-								_curdbp();
+								if (!(connections[connID + ":server"].dataBuffer.length - 1)) {
+									let _curdbp = connections[packet.data.connectionID + ":server"].dataBufferPromise;
+									let _dataBufferPromise = null, _rejectDataPromise = null;
+									let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
+									connections[packet.data.connectionID + ":server"].dataBufferPromise = dataBufferPromise;
+									connections[packet.data.connectionID + ":server"]._dataBufferPromise = _dataBufferPromise;
+									connections[packet.data.connectionID + ":server"]._rejectDataPromise = _rejectDataPromise;
+									_curdbp();
+								}
 								writingLockRelease();
 							}
 						} catch {}
@@ -1179,6 +1182,7 @@ function reeAPIs() {
 					modules.network.runOnClose.then(function() {
 						for (let connectionID in connections) if (connections[connectionID].networkListenID == networkListenID) {
 							connections[connectionID].dying = true;
+							connections[connectionID]._rejectDataPromise(new Error("NETWORK_CLOSED"));
 							if (!connections[connectionID].dataBuffer.length) delete connections[connectionID];
 						}
 						delete networkListens[networkListenID];
@@ -1350,7 +1354,7 @@ function reeAPIs() {
 							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "drop") {
 								if (connections[connID + ":client"].dying) return;
 								_rejectPromise(new Error("CONNECTION_DROPPED"));
-								_rejectDataPromise(new Error("CONNECTION_DROPPED"));
+								if (_rejectDataPromise) _rejectDataPromise(new Error("CONNECTION_DROPPED"));
 								websocket.send(JSON.stringify({
 									receiver: address,
 									data: {
@@ -1375,9 +1379,11 @@ function reeAPIs() {
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv)
 								}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
-								_dataBufferPromise();
-								dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
-								connections[packet.data.connectionID + ":client"].dataBufferPromise = dataBufferPromise;
+								if (!(connections[connID + ":client"].dataBuffer.length - 1)) {
+									_dataBufferPromise();
+									dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
+									connections[packet.data.connectionID + ":client"].dataBufferPromise = dataBufferPromise;
+								}
 								writingLockRelease();
 							}
 						} catch {}
@@ -1402,6 +1408,7 @@ function reeAPIs() {
 						}
 						delete networkListens[networkListenID];
 						_rejectPromise(new Error("NETWORK_CLOSED"));
+						_rejectDataPromise(new Error("NETWORK_CLOSED"));
 					});
 					return connID + ":client";
 				},
@@ -1431,7 +1438,7 @@ function reeAPIs() {
 				connfulWrite: async function(sendOpts) {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
 					if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
-					if (connections[sendOpts.connectionID].dying) return;
+					if (connections[sendOpts.connectionID].dying) throw new Error("CONNECTION_DROPPED");
 					let iv = crypto.getRandomValues(new Uint8Array(16));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({

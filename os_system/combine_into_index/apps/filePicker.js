@@ -84,6 +84,7 @@ let ipcChannel = exec_args[0];
 			} else if (type == "file" || (type == "unknown" && exec_args[1] == "save")) {
 				if (isDefaultChoice) {
 					pathElement.value = path.split("/").slice(0, -1).join("/");
+					newItemInput.value = path.split("/").slice(-1)[0];
 					return browse();
 				}
 				displayResult.innerText = "";

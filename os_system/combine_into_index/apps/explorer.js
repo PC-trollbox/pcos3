@@ -227,12 +227,29 @@ let cachedIcons = {};
 							displayResult.innerText = (await availableAPIs.lookupLocale("FILE_STRUCT_BROWSE_FAIL")).replace("%s", await availableAPIs.lookupLocale(e.message));
 						}
 					}
+					unmountButton.oncontextmenu = async function(e) {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+						e.stopPropagation();
+						try {
+							await availableAPIs.fs_unmount({ mount: partition, force: true });
+							browse();
+						} catch (e) {
+							displayResult.innerText = (await availableAPIs.lookupLocale("FILE_STRUCT_BROWSE_FAIL")).replace("%s", await availableAPIs.lookupLocale(e.message));
+						}
+					}
 					displayResult.appendChild(unmountButton);
 					displayResult.appendChild(document.createElement("hr"));
 
 					let deleteButton = document.createElement("button");
+					let deleteConfirm = false;
 					deleteButton.innerText = await availableAPIs.lookupLocale("REMOVE_BTN");
 					deleteButton.onclick = async function() {
+						if (!deleteConfirm) {
+							deleteButton.style.fontWeight = "bold";
+							deleteConfirm = true;
+							return;
+						}
 						try {
 							await recursiveRemove(partition);
 							browse();

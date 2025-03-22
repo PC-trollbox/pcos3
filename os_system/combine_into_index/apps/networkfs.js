@@ -66,24 +66,20 @@ function IPv6Decompressor(ip) {
         outPipe = await availableAPIs.createPipe();
         let pipe2conn = (async function() {
             while (true) {
-                try {
-                    let listenToPipe = await availableAPIs.listenToPipe(inPipe);
-                    availableAPIs.connfulWrite({
-                        connectionID: conn,
-                        data: JSON.stringify(listenToPipe)
-                    });
-                } catch {}
+                let listenToPipe = await availableAPIs.listenToPipe(inPipe);
+                availableAPIs.connfulWrite({
+                    connectionID: conn,
+                    data: JSON.stringify(listenToPipe)
+                });
             }
         })();
         let conn2pipe = (async function() {
             while (true) {
-                try {
-                    let networkListen = await availableAPIs.connfulRead(conn);
-                    availableAPIs.sendToPipe({
-                        pipe: outPipe,
-                        data: JSON.parse(networkListen)
-                    });
-                } catch {}
+                let networkListen = await availableAPIs.connfulRead(conn);
+                availableAPIs.sendToPipe({
+                    pipe: outPipe,
+                    data: JSON.parse(networkListen)
+                });
             }
         })();
         await availableAPIs.fs_mount({
