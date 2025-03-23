@@ -334,6 +334,14 @@ patchDiff({
     args: Array
 }) -> Array // PATCH_DIFF
 setFirmware(String new_flash) // SET_FIRMWARE
+reloadNetworkConfig() // RELOAD_NETWORK_CONFIG
+batteryStatus() -> {
+    charging: Boolean,
+    level: Number,
+    chargingTime: Number,
+    dischargingTime: Number
+} // GET_BATTERY_STATUS
+getUpdateService() -> String // GET_UPDATE_SERVICE
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()

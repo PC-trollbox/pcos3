@@ -1,11 +1,25 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, FS_LIST_PARTITIONS, CSP_OPERATIONS, START_TASK, LIST_TASKS, GET_UPDATE_SERVICE
+// allow: GET_LOCALE, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, FS_LIST_PARTITIONS, CSP_OPERATIONS, START_TASK, LIST_TASKS, GET_UPDATE_SERVICE, CONNFUL_IDENTITY_GET
 // allow: FS_WRITE, RUN_KLVL_CODE, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, GET_LOCALE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_READ, FS_BYPASS_PERMISSIONS
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.attachCLI();
+	let pargs = {};
+	let ppos = [];
+	for (let arg of exec_args) {
+		if (arg.startsWith("--")) {
+			let key = arg.split("=")[0].slice(2);
+			let value = arg.split("=").slice(1).join("=");
+			if (arg.split("=")[1] == null) value = true;
+			if (pargs.hasOwnProperty(key)) {
+				let ogValues = pargs[key];
+				if (ogValues instanceof Array) pargs[key] = [ ...ogValues, value ];
+				else pargs[key] = [ ogValues, value ];
+			} else pargs[key] = value;
+		} else ppos.push(arg);
+	}
 	try {
 		let etcls = await availableAPIs.fs_ls({
 			path: (await availableAPIs.getSystemMount()) + "/etc"
@@ -19,7 +33,7 @@
 			from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
 		}
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("CURRENT_OSFILE_VERSION")).replace("%s", from) + "\r\n");
-		let serverDomainOrAddress = exec_args[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
+		let serverDomainOrAddress = ppos[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
 		let serverAddress = serverDomainOrAddress;
 		if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
 		if (!serverAddress) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
@@ -28,9 +42,28 @@
 		let connection = await availableAPIs.connfulConnect({
 			gate: "deltaUpdate",
 			address: serverAddress,
-			verifyByDomain: serverDomainOrAddress.includes(":") ? serverAddress : serverDomainOrAddress
+			verifyByDomain: serverDomainOrAddress.includes(":") ? serverAddress : serverDomainOrAddress,
+			doNotVerifyServer: pargs["fingerprint"] || pargs["no-verification"] || pargs["view-fingerprint"]
 		});
 		await availableAPIs.connfulConnectionSettled(connection);
+		if (pargs["fingerprint"] || pargs["view-fingerprint"]) {
+			let identity = await availableAPIs.connfulIdentityGet(connection);
+			let hash = await availableAPIs.cspOperation({
+				cspProvider: "basic",
+				operation: "digest",
+				cspArgument: {
+					algorithm: "SHA-256",
+					data: new TextEncoder().encode(identity)
+				}
+			});
+			hash = Array.from(new Uint8Array(hash)).map(a => a.toString(16).padStart(2, "0")).join("");
+			if (pargs["view-fingerprint"]) await availableAPIs.toMyCLI("--fingerprint=" + hash + "\r\n");
+			if (pargs["fingerprint"] != hash) {
+				await availableAPIs.connfulDisconnect(connection);
+				if (!pargs["view-fingerprint"]) await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("SERVER_SIGNATURE_VERIFICATION_FAILED") + "\r\n");
+				return await availableAPIs.terminate();
+			}
+		}
 		await availableAPIs.connfulWrite({
 			connectionID: connection,
 			data: JSON.stringify({ from, handlesCtr: true })
