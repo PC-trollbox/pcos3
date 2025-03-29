@@ -9,6 +9,8 @@ function loadTasks() {
 				let errorSound = await modules.fs.read(modules.defaultSystem + "/etc/sounds/error.aud", token);
 				errorAudio.src = errorSound;
 			} catch {}
+			if (modules.session.attrib(windowObject.sessionId, "loggingOut")) throw new Error("LOGGING_OUT");
+			let language = modules.session.attrib(windowObject.sessionId, "language") || undefined;
 			if (modules.shuttingDown) {
 				windowObject.windowDiv.remove();
 				throw new Error("SYSTEM_SHUTDOWN_REQUESTED");
@@ -19,7 +21,7 @@ function loadTasks() {
 			} catch {}
 			if (modules.core.bootMode == "safe") appRedirecting = {};
 			if (appRedirecting.hasOwnProperty(file)) file = appRedirecting[file];
-			windowObject.title.innerText = modules.locales.get("UNTITLED_APP");
+			windowObject.title.innerText = modules.locales.get("UNTITLED_APP", language);
 			windowObject.content.innerText = "";
 			windowObject.content.style = "";
 			let taskId = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
@@ -28,8 +30,8 @@ function loadTasks() {
 				executablePermissions = await this.fs.permissions(file, token);
 				executable = await this.fs.read(file, token);
 			} catch (e) {
-				windowObject.title.innerText = modules.locales.get("APP_STARTUP_CRASH_TITLE");
-				windowObject.content.innerText = modules.locales.get("APP_STARTUP_CRASH");
+				windowObject.title.innerText = modules.locales.get("APP_STARTUP_CRASH_TITLE", language);
+				windowObject.content.innerText = modules.locales.get("APP_STARTUP_CRASH", language);
 				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
@@ -38,18 +40,18 @@ function loadTasks() {
 				throw e;
 			}
 			if (!executablePermissions.world.includes("r") || !executablePermissions.world.includes("x")) {
-				windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
-				windowObject.content.innerText = modules.locales.get("MORE_PERMISSION_DENIED");
+				windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED", language);
+				windowObject.content.innerText = modules.locales.get("MORE_PERMISSION_DENIED", language);
 				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
 				if (silent) windowObject.windowDiv.remove();
 				if (!silent) errorAudio.play();
-				throw new Error("MORE_PERMISSION_DENIED");
+				throw new Error("MORE_PERMISSION_DENIED", language);
 			}
 			if (!executable.includes("// @pcos-app-mode isolat" + "able")) {
-				windowObject.title.innerText = modules.locales.get("COMPATIBILITY_ISSUE_TITLE");
-				windowObject.content.innerText = modules.locales.get("COMPATIBILITY_ISSUE");
+				windowObject.title.innerText = modules.locales.get("COMPATIBILITY_ISSUE_TITLE", language);
+				windowObject.content.innerText = modules.locales.get("COMPATIBILITY_ISSUE", language);
 				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
@@ -90,8 +92,8 @@ function loadTasks() {
 			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 			if (!limitations.some(lim => lim.lineType == "allow") && appHardening.requireAllowlist && !disableHarden) {
-				windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
-				windowObject.content.innerText = modules.locales.get("NO_APP_ALLOWLIST");
+				windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED", language);
+				windowObject.content.innerText = modules.locales.get("NO_APP_ALLOWLIST", language);
 				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
@@ -157,8 +159,8 @@ function loadTasks() {
 					}, importSigningKey, hexToU8A(execSignature.signature), new TextEncoder().encode(executable))) throw new Error("APP_SIGNATURE_VERIFICATION_FAILED");
 				} catch (e) {
 					console.error("Failed to verify app signature:", e);
-					windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED");
-					windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED").replace("%s", execSignature.signer || modules.locales.get("UNKNOWN_PLACEHOLDER"));
+					windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED", language);
+					windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED", language).replace("%s", execSignature.signer || modules.locales.get("UNKNOWN_PLACEHOLDER", language));
 					windowObject.content.style.padding = "8px";
 					windowObject.closeButton.disabled = false;
 					windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
@@ -320,8 +322,8 @@ function loadTasks() {
 				await ree.eval(executable);
 			} catch (e) {
 				ree.closeDown();
-				windowObject.title.innerText = modules.locales.get("APP_STARTUP_CRASH_TITLE");
-				windowObject.content.innerText = modules.locales.get("APP_STARTUP_CRASH");
+				windowObject.title.innerText = modules.locales.get("APP_STARTUP_CRASH_TITLE", language);
+				windowObject.content.innerText = modules.locales.get("APP_STARTUP_CRASH", language);
 				windowObject.content.style.padding = "8px";
 				windowObject.closeButton.disabled = false;
 				windowObject.windowDiv.classList.toggle("hidden", false);

@@ -23,7 +23,8 @@
 		createAccount: {
 			/*password: "password",
 			darkMode: true,
-			create: true,*/
+			create: true,
+			defaultLocale: "en",*/
 			username: "root",
 			lockUsername: true,
 			onlyOnNewInstall: true
@@ -66,19 +67,35 @@
 		let useraccountpassword = document.createElement("input");
 		let darkmode = document.createElement("input");
 		let darkmode_lb = document.createElement("label");
+		let language = document.createElement("select");
+		let language_lb = document.createElement("label");
 		useraccountname.placeholder = await availableAPIs.lookupLocale("USERNAME");
 		useraccountpassword.placeholder = await availableAPIs.lookupLocale("PASSWORD");
 		useraccountpassword.type = "password";
 		darkmode.type = "checkbox";
 		darkmode.id = "darkmode";
+		language.id = "language";
 		darkmode_lb.innerText = await availableAPIs.lookupLocale("DARK_MODE");
 		darkmode_lb.htmlFor = "darkmode";
+		language_lb.innerText = await availableAPIs.lookupLocale("LANGUAGE_SELECT");
+		language_lb.htmlFor = "language";
 		content.appendChild(useraccountname);
 		content.appendChild(document.createElement("br"));
 		content.appendChild(useraccountpassword);
 		content.appendChild(document.createElement("br"));
 		content.appendChild(darkmode);
 		content.appendChild(darkmode_lb);
+		content.appendChild(document.createElement("br"));
+		content.appendChild(language_lb);
+		content.appendChild(language);
+		let locales = await availableAPIs.installedLocales();
+		for (let locale of locales) {
+			let option = document.createElement("option");
+			option.value = locale;
+			option.innerText = await availableAPIs.lookupOtherLocale({ key: "LOCALE_NAME", locale });
+			language.appendChild(option);
+		}
+		language.value = await availableAPIs.osLocale();
 		button.onclick = async function() {
 			let username = useraccountname.value;
 			let password = useraccountpassword.value;
@@ -214,6 +231,16 @@
 				await availableAPIs.fs_chgrp({ path: homedir + "/.darkmode", newGrp: username });
 				await availableAPIs.fs_chmod({ path: homedir + "/.darkmode", newPermissions: "rx" });
 			}
+			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("SETTING_LOCALE_PREFERENCE"));
+			if (!(automatic_configuration?.createAccount?.onlyOnNewInstall && exec_args.includes("usersConfigured"))) {
+				await availableAPIs.fs_write({
+					path: homedir + "/.locale",
+					data: language.value
+				});
+				await availableAPIs.fs_chown({ path: homedir + "/.locale", newUser: username });
+				await availableAPIs.fs_chgrp({ path: homedir + "/.locale", newGrp: username });
+				await availableAPIs.fs_chmod({ path: homedir + "/.locale", newPermissions: "rx" });
+			}
 			description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE2L"));
 			await availableAPIs.fs_write({
 				path: defaultSystem + "/etc/darkLockScreen",
@@ -257,6 +284,7 @@
 			useraccountname.value = automatic_configuration.createAccount.username || useraccountname.value;
 			useraccountpassword.value = automatic_configuration.createAccount.password || "";
 			darkmode.checked = automatic_configuration.createAccount.darkMode || darkmode.checked;
+			language.value = automatic_configuration.createAccount.defaultLocale || language.value;
 			useraccountname.disabled = automatic_configuration.createAccount.lockUsername;
 			if (automatic_configuration.createAccount.lockUsername) useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
 			if (automatic_configuration.createAccount.create) button.click();

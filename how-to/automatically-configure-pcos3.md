@@ -25,6 +25,7 @@
      - `format`: Format the disk unconditionally.
      - `autoInitNewInstalls`: Automatically initiate the disk for new installations.
    - `autoRestart`: Automatically restart the system after installation. Set to `"kexec"` to use faster reboots.
+   - `defaultLocale`: Set the locale automatically to the following value.
 8. Go to `os_system/combine_into_index/apps/secondstage.js` for setup configuration.
 9. Uncomment the partial example of `automatic_configuration`.
 10. Set `automatic_configuration`:
@@ -34,7 +35,9 @@
      - `darkMode`: Set dark mode preference.
      - `create`: Create the new user automatically.
      - `username`: Set the username.
+     - `lockUsername`: Prevent the user from changing the username.
      - `onlyOnNewInstall`: Only create a new user on a new installation.
+     - `defaultLocale`: Set the locale of the user automatically to the following value.
    - `updateOSLink`: Place an "Update OS" link on the desktop.
    - `appHarden`: The appHarden file (see How to secure the system, step 3)
    - `network`: The network.json file

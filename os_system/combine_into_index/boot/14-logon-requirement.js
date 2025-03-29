@@ -38,6 +38,7 @@ async function requireLogon() {
 		let dom = modules.session.tracker[session].html;
 		let bgPic = "";
 		let isDark = false;
+		let locale;
 		let basicPrivilegeChecklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "START_TASK" ];
 		if (!basicPrivilegeChecklist.every(privilege => userInfo.privileges.includes(privilege))) {
 			let failureMessage = modules.window(session);
@@ -69,15 +70,25 @@ async function requireLogon() {
 		} catch (e) {
 			console.error("Failed to read dark mode preference:", e);
 		}
+		try {
+			let permissionsloc = await modules.fs.permissions((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.locale", resolvedLogon.token);
+			if (permissionsloc.owner != userInfo.user && !userInfo.groups.includes(permissionsloc.group) && !(permissionsloc.world.includes("r") && permissionsloc.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
+				throw new Error("Permission denied reading locale preference");
+			}
+			locale = await modules.fs.read((await modules.users.getUserInfo(userInfo.user, false, resolvedLogon.token)).homeDirectory + "/.locale", resolvedLogon.token);
+			modules.session.attrib(session, "language", locale);
+		} catch (e) {
+			console.error("Failed to read dark mode preference:", e);
+		}
 		if (modules.core.bootMode == "safe") {
 			isDark = true;
 			if (!wasLiuLoaded) {
 				let message = document.createElement("span");
-				message.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message.innerText = modules.locales.get("SAFE_MODE_MSG", locale);
 				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
 				dom.appendChild(message);
 				let message2 = document.createElement("span");
-				message2.innerText = modules.locales.get("SAFE_MODE_MSG");
+				message2.innerText = modules.locales.get("SAFE_MODE_MSG", locale);
 				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
 				dom.appendChild(message2);
 			}
@@ -100,9 +111,9 @@ async function requireLogon() {
 			}
 			function breakNecessityFailure() {
 				let failureMessage = modules.window(session);
-				failureMessage.title.innerText = modules.locales.get("PERMISSION_DENIED");
+				failureMessage.title.innerText = modules.locales.get("PERMISSION_DENIED", locale);
 				failureMessage.content.style.padding = "8px";
-				failureMessage.content.innerText = modules.locales.get("AUTORUN_NECESSITIES_FAILED");
+				failureMessage.content.innerText = modules.locales.get("AUTORUN_NECESSITIES_FAILED", locale);
 				failureMessage.closeButton.onclick = async function() {
 					failureMessage.windowDiv.remove();
 					await modules.logOut(userInfo.user);
@@ -270,7 +281,7 @@ async function requireLogon() {
 							appLink._isRealLink = true;
 						}
 					});
-					iconWindow.title.innerText = (appLink.localeReferenceName ? modules.locales.get(appLink.localeReferenceName) : null) || (appLink.localeDatabaseName ? (appLink.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()] || appLink.localeDatabaseName[modules.locales.defaultLocale]) : null) || appLink.name;
+					iconWindow.title.innerText = (appLink.localeReferenceName ? modules.locales.get(appLink.localeReferenceName, locale) : null) || (appLink.localeDatabaseName ? (appLink.localeDatabaseName[locale] || appLink.localeDatabaseName[modules.locales.defaultLocale] || appLink.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()]) : null) || appLink.name;
 					let iconEl = document.createElement("img");
 					try {
 						let permissions = await modules.fs.permissions(appLink.icon, resolvedLogon.token);
@@ -328,13 +339,13 @@ async function requireLogon() {
 			function startMenuStub() {
 				if (startMenu.windowDiv.parentElement == null) startMenu = modules.window(session);
 				startMenu.windowDiv.classList.toggle("hidden", true);
-				startMenu.title.innerText = modules.locales.get("START_MENU");
+				startMenu.title.innerText = modules.locales.get("START_MENU", locale);
 				startMenu.content.style.padding = "8px";
 				startMenu.content.innerText = "";
 				let description = document.createElement("span");
 				let logout = document.createElement("button");
-				description.innerText = modules.locales.get("START_MENU_FAILED");
-				logout.innerText = modules.locales.get("LOG_OUT_BUTTON").replace("%s", userInfo.user);
+				description.innerText = modules.locales.get("START_MENU_FAILED", locale);
+				logout.innerText = modules.locales.get("LOG_OUT_BUTTON", locale).replace("%s", userInfo.user);
 				logout.onclick = _ => modules.logOut(userInfo.user);
 				startMenu.content.appendChild(description);
 				startMenu.content.appendChild(document.createElement("br"));
@@ -344,7 +355,7 @@ async function requireLogon() {
 			}
 
 			startMenuStub();
-			startButton.innerText = modules.locales.get("START_MENU_BTN");
+			startButton.innerText = modules.locales.get("START_MENU_BTN", locale);
 			startButton.style = "padding: 4px;";
 			try {
 				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, startMenuChannel);
@@ -414,16 +425,16 @@ async function requireLogon() {
 			liu[liuUser].clockInterval = setInterval(async function() {
 				clock.innerText = new Date()["toLocale" + (toggle ? "Date" : "Time") + "String"]();
 				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
-				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"))
+				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"), locale)
 				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
-				pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_" + (modules.network.connected ? "ONLINE" : "OFFLINE")).replace("%s", userInfo.privileges.includes("GET_HOSTNAME") ? (modules.network.hostname || modules.locales.get("UNKNOWN_PLACEHOLDER")) : modules.locales.get("UNKNOWN_PLACEHOLDER")).replace("%s", userInfo.privileges.includes("GET_NETWORK_ADDRESS") ? (modules.network.address || "0").match(/.{1,4}/g).join(":") : modules.locales.get("UNKNOWN_PLACEHOLDER"));
-				if (modules.network.serviceStopped) pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_STOPPED");
+				pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_" + (modules.network.connected ? "ONLINE" : "OFFLINE"), locale).replace("%s", userInfo.privileges.includes("GET_HOSTNAME") ? (modules.network.hostname || modules.locales.get("UNKNOWN_PLACEHOLDER", locale)) : modules.locales.get("UNKNOWN_PLACEHOLDER", locale)).replace("%s", userInfo.privileges.includes("GET_NETWORK_ADDRESS") ? (modules.network.address || "0").match(/.{1,4}/g).join(":") : modules.locales.get("UNKNOWN_PLACEHOLDER", locale));
+				if (modules.network.serviceStopped) pcosNetworkIcon.title = modules.locales.get("PCOS_NETWORK_STATUS_STOPPED", locale);
 				let batteryStatus = {charging: true, chargingTime: 0, dischargingTime: 0, level: 1};
 				let batteryStatusIcon = iconCache.readyToPlay_;
-				let batteryStatusDescription = modules.locales.get("BATTERY_STATUS_UNAVAILABLE");
+				let batteryStatusDescription = modules.locales.get("BATTERY_STATUS_UNAVAILABLE", locale);
 				if (navigator.getBattery && userInfo.privileges.includes("GET_BATTERY_STATUS")) {
 					batteryStatus = await navigator.getBattery();
-					batteryStatusDescription = modules.locales.get("BATTERY_STATUS_" + (batteryStatus.charging ? "CHARGING" : "DISCHARGING"))
+					batteryStatusDescription = modules.locales.get("BATTERY_STATUS_" + (batteryStatus.charging ? "CHARGING" : "DISCHARGING"), locale)
 						.replace("%s", (batteryStatus.level * 100).toFixed(2))
 						.replace("%s", modules.userfriendliness.inconsiderateTime(
 							(batteryStatus.charging ? batteryStatus.chargingTime : batteryStatus.dischargingTime) * 1000

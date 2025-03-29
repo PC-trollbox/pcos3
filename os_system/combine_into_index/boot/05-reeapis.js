@@ -28,6 +28,7 @@ function reeAPIs() {
 		let automatedLogonSessions = {};
 		let networkListens = {};
 		let connections = {};
+		let language = modules.session.attrib(ses, "language") || undefined;
 		privileges = await denyUnmanifested(limitations, token);
 
 		async function fs_action(action, privilegeCheck, path, ...xtra) {
@@ -342,11 +343,11 @@ function reeAPIs() {
 				},
 				locale: function() {
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
-					return navigator.languages[0].split("-")[0].toLowerCase();
+					return language || navigator.languages[0].split("-")[0].toLowerCase();
 				},
 				osLocale: function() {
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
-					return modules.locales.get("OS_LOCALE");
+					return modules.locales.get("OS_LOCALE", language);
 				},
 				getUserInfo: async function(arg) {
 					let {desiredUser, token, sensitive} = arg;
@@ -419,6 +420,7 @@ function reeAPIs() {
 					modules.session.attrib(ses, "secureLock", lock);
 					let secureSession = await modules.session.mksession();
 					modules.session.attrib(ses, "secureID", secureSession);
+					modules.session.attrib(secureSession, "language", language);
 
 					let dom = modules.session.tracker[secureSession].html;
 					let ogDom = modules.session.tracker[ses].html;
@@ -532,7 +534,7 @@ function reeAPIs() {
 				},
 				lookupLocale: function(key) {   
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
-					return modules.locales.get(key);
+					return modules.locales.get(key, language);
 				},
 				lookupOtherLocale: function(arg) {
 					let {key, locale} = arg;   
@@ -541,11 +543,11 @@ function reeAPIs() {
 				},
 				ufTimeInc: function(args) {
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
-					return modules.userfriendliness.inconsiderateTime(...args);
+					return modules.userfriendliness.inconsiderateTime(language, ...args);
 				},
 				ufInfoUnits: function(args) {
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
-					return modules.userfriendliness.informationUnits(...args)
+					return modules.userfriendliness.informationUnits(language, ...args)
 				},
 				isDarkThemed: function() {
 					if (!privileges.includes("GET_THEME")) throw new Error("UNAUTHORIZED_ACTION");
@@ -592,7 +594,7 @@ function reeAPIs() {
 				},
 				ufTimeCon: function(args) {
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
-					return modules.userfriendliness.considerateTime(...args);
+					return modules.userfriendliness.considerateTime(language, ...args);
 				},
 				websocketOpen: async function(arg) {
 					if (!privileges.includes("WEBSOCKETS_OPEN")) throw new Error("UNAUTHORIZED_ACTION");
@@ -828,6 +830,7 @@ function reeAPIs() {
 					modules.session.attrib(ses, "secureLock", lock);
 					let secureSession = await modules.session.mksession();
 					modules.session.attrib(ses, "secureID", secureSession);
+					modules.session.attrib(secureSession, "language", language);
 
 					let dom = modules.session.tracker[secureSession].html;
 					let ogDom = modules.session.tracker[ses].html;

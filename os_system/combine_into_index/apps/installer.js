@@ -14,7 +14,8 @@ let onClose = () => availableAPIs.terminate();
 			format: true,
 			autoInitNewInstalls: true
 		},
-		autoRestart: "kexec"
+		autoRestart: "kexec",
+		defaultLocale: "en"
 	};*/
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
@@ -22,6 +23,36 @@ let onClose = () => availableAPIs.terminate();
 	let privileges = await availableAPIs.getPrivileges();
 	let checklist = [ "GET_BUILD", "RUN_KLVL_CODE", "LLDISK_WRITE", "LLDISK_READ", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_REMOVE", "FS_LIST_PARTITIONS", "SYSTEM_SHUTDOWN", "FS_CHANGE_PERMISSION", "LLDISK_LIST_PARTITIONS", "FS_MOUNT", "CSP_OPERATIONS", "LLDISK_INIT_PARTITIONS" ];
 	if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
+	await availableAPIs.closeability(false);
+	await new Promise(async function(resolve) {
+		let locales = await availableAPIs.installedLocales();
+		let localeSelect = document.createElement("select");
+		let localeZero = document.createElement("option");
+		localeZero.value = "";
+		localeZero.innerText = " 🌐 Language 🌐 ";
+		localeZero.selected = true;
+		localeZero.disabled = true;
+		localeZero.hidden = true;
+		localeSelect.appendChild(localeZero);
+		for (let locale of locales) {
+			let option = document.createElement("option");
+			option.value = locale;
+			option.innerText = await availableAPIs.lookupOtherLocale({ key: "LOCALE_NAME", locale });
+			localeSelect.appendChild(option);
+		}
+		localeSelect.addEventListener("change", async function() {
+			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value));
+			await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
+			localeSelect.remove();
+			await availableAPIs.closeability(true);
+			resolve();
+		});
+		if (automatic_configuration.defaultLocale) {
+			localeSelect.value = automatic_configuration.defaultLocale;
+			localeSelect.dispatchEvent(new Event("change"));
+		}
+		document.body.appendChild(localeSelect);
+	});
 	onClose = async function() {
 		mainInstallerContent.hidden = true;
 		closeContent.hidden = false;
@@ -257,6 +288,8 @@ Used libraries:
 					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_FS"));
 					let systemCode = "let localSystemMount = \"storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(diskDataPartition) + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
 					await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
+					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("SETTING_LOCALE_PREFERENCE"));
+					await availableAPIs.fs_write({ path: "target/boot/06-localeset.js", data: "modules.locales.defaultLocale = " + JSON.stringify(await availableAPIs.osLocale()) + ";\n" });
 					description.innerHTML = await availableAPIs.lookupLocale("INSTALLATION_SUCCESSFUL");
 					if (!automatic_configuration.autoRestart) await availableAPIs.closeability(true);
 					onClose = function() {

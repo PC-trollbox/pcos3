@@ -381,6 +381,7 @@ function localization() {
 			"LLDA_USAGE": "Usage: llda_tool [action] [parameters]",
 			"LLDA_ACTION_EXPORT": "action export: [input partition] [output file]",
 			"LLDA_ACTION_IMPORT": "action import: [input file] [output partition]",
+			"LLDA_ACTION_IMPORTSTRING": "action importstring: [input file] [output partition]",
 			"LLDA_ACTION_COPY": "action copy: [input partition] [output partition]",
 			"LLDA_ACTION_REMOVE": "action remove: [partition]",
 			"LLDA_ACTION_LIST": "action list",
@@ -516,7 +517,10 @@ function localization() {
 			"NETWORKFS_KEY": "--key=[path]: Path to key for mutual verification",
 			"NETWORKFS_PROTO": "This version only supports the netfs:// protocol.",
 			"NETCONFIG_UPDATES": "Updates from: ",
-			"NETWORK_UPDATES_FIELD": "Updates from: %s"
+			"NETWORK_UPDATES_FIELD": "Updates from: %s",
+			"LOCALE_NAME": "English",
+			"SETTING_LOCALE_PREFERENCE": "Setting locale preference",
+			"LANGUAGE_SELECT": "Your language: "
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -898,6 +902,7 @@ function localization() {
 			"LLDA_USAGE": "Использование: llda_tool [действие] [параметры]",
 			"LLDA_ACTION_EXPORT": "действие export: [раздел ввода] [файл вывода]",
 			"LLDA_ACTION_IMPORT": "действие import: [файл ввода] [раздел вывода]",
+			"LLDA_ACTION_IMPORTSTRING": "действие importstring: [файл ввода] [раздел вывода]",
 			"LLDA_ACTION_COPY": "действие copy: [раздел ввода] [раздел вывода]",
 			"LLDA_ACTION_REMOVE": "действие remove: [раздел]",
 			"LLDA_ACTION_LIST": "действие list",
@@ -1033,15 +1038,17 @@ function localization() {
 			"NETWORKFS_KEY": "--key=[путь]: Путь до ключа для взаимной проверки",
 			"NETWORKFS_PROTO": "Данная версия поддерживает только протокол netfs://.",
 			"NETCONFIG_UPDATES": "Обновления: ",
-			"NETWORK_UPDATES_FIELD": "Обновления с: %s"
+			"NETWORK_UPDATES_FIELD": "Обновления с: %s",
+			"LOCALE_NAME": "Русский (Russian)",
+			"SETTING_LOCALE_PREFERENCE": "Установка предпочитаемого языка",
+			"LANGUAGE_SELECT": "Ваш язык: "
 		},
-		defaultLocale: "en",
 		get: function(key, lang) {
-			lang = lang || navigator.languages[0].split("-")[0].toLowerCase();
+			lang = lang || locales.defaultLocale || navigator.languages[0].split("-")[0].toLowerCase();
 			let locale = locales[lang];
 			if (!locale) locale = locales[locales.defaultLocale];
 			if (!locale) locale = {};
-			if (!locale.hasOwnProperty(key)) locale = locales[locales.defaultLocale];
+			if (!locale.hasOwnProperty(key)) locale = locales.en;
 			return locale.hasOwnProperty(key) ? locale[key] : key;
 		}
 	}

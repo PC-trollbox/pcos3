@@ -130,6 +130,7 @@ async function setupbase() {
 					"05-tweetnacl.js": tweetnacl.toString() + "\ntweetnacl();\n",
 					"06-csp.js": loadBasicCSP.toString() + "\nloadBasicCSP();\n",
 					"06-locales.js": localization.toString() + "\nlocalization();\n",
+					"06-localeset.js": "/* no-op */",
 					"06-ksk.js": ksk.toString() + "\nawait ksk();\n",
 					"07-tasks.js": loadTasks.toString() + "\nloadTasks();\n",
 					"08-tty.js": js_terminal.toString() + "\n",

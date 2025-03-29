@@ -12,6 +12,7 @@
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_USAGE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_EXPORT") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_IMPORT") + "\r\n");
+		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_IMPORTSTRING") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_COPY") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_REMOVE") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("LLDA_ACTION_LIST") + "\r\n");
@@ -28,6 +29,8 @@
 			});
 		} else if (exec_args[0] == "import") {
 			await availableAPIs.lldaWrite({ partition: exec_args[2], data: JSON.parse(await availableAPIs.fs_read({ path: exec_args[1] })) });
+		} else if (exec_args[0] == "importstring") {
+			await availableAPIs.lldaWrite({ partition: exec_args[2], data: await availableAPIs.fs_read({ path: exec_args[1] }) });
 		} else if (exec_args[0] == "copy") {
 			await availableAPIs.lldaWrite({ partition: exec_args[2], data: await availableAPIs.lldaRead({ partition: exec_args[1] }) });
 		} else if (exec_args[0] == "remove") {

@@ -76,7 +76,10 @@ let cachedIcons = {};
 	mainComponent.appendChild(pathInputForm);
 	mainComponent.appendChild(displayResult);
 	document.body.appendChild(mainComponent);
-	let availableIcons = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/etc/icons" });
+	let availableIcons = [];
+	try {
+		availableIcons = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/etc/icons" });
+	} catch {}
 	displayResult.oncontextmenu = async function(e) {
 		e.stopImmediatePropagation();
 		e.preventDefault();

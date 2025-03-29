@@ -1,8 +1,10 @@
 async function logOut(target) {
 	let liu = modules.liu;
+	if (!liu.hasOwnProperty(target)) throw new Error("USER_NOT_LOGGED_IN");
 	let session = liu[target].session;
 	let token = liu[target].logon.token;
 	let secureSession = modules.session.attrib(session, "secureID");
+	await modules.session.attrib(session, "loggingOut", true);
 	clearInterval(liu[target].clockInterval);
 	if (modules.session.active == session || (secureSession && modules.session.active == secureSession)) await modules.session.muteAllSessions();
 	await modules.session.activateSession(modules.session.systemSession);
