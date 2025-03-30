@@ -8,10 +8,10 @@ async function installer() {
 		await modules.fs.rm(modules.defaultSystem + "/etc/security/automaticLogon");
 		token = await new Promise(async function(resolve) {
 			let consentui = await modules.consentui(modules.session.systemSession, {
-				path: modules.defaultSystem + "/apps/secondstage.js",
+				path: modules.defaultSystem + "/apps/installer.js",
 				args: [ "usersConfigured" ],
-				intent: modules.locales.get("SECONDSTAGE_INSTALLER_INTENT"),
-				name: modules.locales.get("SET_UP_PCOS")
+				intent: modules.locales.get("INSTALLER_INTENT"),
+				name: modules.locales.get("INSTALL_PCOS")
 			});
 			consentui.hook(async function(msg) {
 				if (msg.success) return resolve(msg.token);

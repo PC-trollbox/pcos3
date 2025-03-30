@@ -93,7 +93,7 @@ function reeAPIs() {
 			private: {
 				setUser: async function(newUser) {
 					user = newUser;
-					groups = (await modules.users.getUserInfo(newUser)).groups || [];
+					groups = (await modules.users.getUserInfo(newUser, false, token || processToken)).groups || [];
 				},
 				addPrivilege: (newPrivilege) => !privileges.includes(newPrivilege) && privileges.push(newPrivilege),
 				rmPrivilege: (newPrivilege) => privileges.includes(newPrivilege) && privileges.splice(privileges.indexOf(newPrivilege), 1),
@@ -126,8 +126,9 @@ function reeAPIs() {
 				switchUser: async function(desiredUser) {
 					if (!privileges.includes("SWITCH_USERS_AUTOMATICALLY")) throw new Error("UNAUTHORIZED_ACTION");
 					await modules.tokens.halfInitialize(token, desiredUser);
-					user = (await modules.tokens.info(token)).user;
-					groups = (await modules.users.getUserInfo(desiredUser)).groups || [];
+					let tokenInfo = await modules.tokens.info(token);
+					user = tokenInfo.user;
+					groups = tokenInfo.groups || [];
 					return true;
 				},
 				shutdown: async function(arg) {

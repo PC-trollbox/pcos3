@@ -71,16 +71,6 @@ async function setupUsers() {
 		};
 	}
 
-	try {
-		if (!(await fetch(server + "ping")).ok) throw new Error("Non-OK ping response");
-	} catch (e) {
-		if (!modules.settingUp) await panic("USER_SYSTEM_CONTACT_FAILED", {
-			name: "managedUsers",
-			params: [modules.defaultSystem],
-			underlyingJS: e
-		})
-	}
-
 	modules.users = {
 		mkrecursive: async function(dir, token) {
 			let slices = dir.split("/");
@@ -125,5 +115,15 @@ async function setupUsers() {
 			})).json();
 		},
 	}
+	
+	try {
+		if (!(await fetch(server + "ping")).ok) throw new Error("Non-OK ping response");
+	} catch (e) {
+		await panic("USER_SYSTEM_CONTACT_FAILED", {
+			name: "managedUsers",
+			params: [modules.defaultSystem],
+			underlyingJS: e
+		})
+	}
 }
-await setupUsers();
+setupUsers();

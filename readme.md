@@ -9,9 +9,10 @@ This repository may be more up-to-date than the src_link_list.txt.
 **Node.JS required**
 
 1. Make sure `os.js` is a symlink to `os_system/index.js`.
-2. Go to `os_system/network` in a command line, run `npm i`.
-3. Run `node index`. It will be available on http://localhost:3945.
-4. Optional: tunnel or proxy with HTTPS for non-localhost access.
+2. Make an OS build. You can pass an `-i` parameter to `node combine` to not increment the build number.
+3. Go to `os_system/network` in a command line, run `npm i`.
+4. Run `node index`. It will be available on http://localhost:3945.
+5. Optional: tunnel or proxy with HTTPS for non-localhost access.
 
 ## Build the OS
 
@@ -19,7 +20,7 @@ This repository may be more up-to-date than the src_link_list.txt.
 
 1. If you haven't generated a key yet, go to `os_system` in a command line and run `node keypair.js`.
 2. Go to `os_system/combine_into_index` in a command line, run `node combine`.
-3. Run a self-host server (or a static server if you don't care about PCOS Network) to check out your changes.
+3. Run a self-host server to test your changes.
 
 ## Officially recognized servers
 
