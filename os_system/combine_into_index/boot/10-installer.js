@@ -2,8 +2,31 @@ async function installer() {
 	// @pcos-app-mode native
 	let window = modules.window;
 	let windowDiv = window(modules.session.active);
-	let token = await modules.tokens.generate();
-	await modules.tokens.userInitialize(token, "root");
+	let token;
+	let usersConfigured = await modules.users.configured();
+	if (usersConfigured) {
+		await modules.fs.rm(modules.defaultSystem + "/etc/security/automaticLogon");
+		token = await new Promise(async function(resolve) {
+			let consentui = await modules.consentui(modules.session.systemSession, {
+				path: modules.defaultSystem + "/apps/secondstage.js",
+				args: [ "usersConfigured" ],
+				intent: modules.locales.get("SECONDSTAGE_INSTALLER_INTENT"),
+				name: modules.locales.get("SET_UP_PCOS")
+			});
+			consentui.hook(async function(msg) {
+				if (msg.success) return resolve(msg.token);
+				modules.restart(true);
+			});
+		});
+	} else {
+		await modules.users.init();
+		token = await modules.tokens.generate();
+		await modules.tokens.userInitialize(token, "root");
+		let userInfo = await modules.users.getUserInfo("root", true, token);
+		userInfo.securityChecks = [ { type: "timeout", timeout: 0 } ];
+		await modules.users.moduser("root", userInfo, token);
+	}
+	delete modules.settingUp;
 	await modules.tasks.exec(modules.defaultSystem + "/apps/installer.js", [], windowDiv, token, false);
 }
 
@@ -23,6 +46,7 @@ async function prepare4Running(currentDir = "", targetMount = "installer") {
 let isDirectory = (path) => modules.fs.isDirectory(path);
 
 async function setupbase() {
+	modules.settingUp = true;
 	let _generated = null;
 	let appFns = [ _generated?._automatically?._by?._combine?.js ];
 	let appFnCode = appFns.map(a => a.toString()).join("\n");
@@ -85,31 +109,10 @@ async function setupbase() {
 					}),
 					"network.json": JSON.stringify({
 						url: url.toString(),
-						ucBits: 0
+						ucBits: 1,
+						updates: "pcosserver.pc"
 					}),
 					security: {
-						users: JSON.stringify({
-							root: {
-								groups: [ "root" ],
-								securityChecks: [
-									{
-										type: "timeout",
-										timeout: 0
-									}
-								],
-								homeDirectory: "installer/root"
-							},
-							nobody: {
-								groups: [ "nobody" ],
-								securityChecks: [],
-								homeDirectory: "installer"
-							},
-							authui: {
-								groups: [ "authui" ],
-								securityChecks: [],
-								homeDirectory: "installer"
-							}
-						}),
 						automaticLogon: "root"
 					} 
 				},
@@ -175,16 +178,6 @@ async function setupbase() {
 					group: "root",
 					world: ""
 				},
-				"etc/security/users": {
-					owner: "root",
-					group: "root",
-					world: ""
-				},
-				"etc/security/groups": {
-					owner: "root",
-					group: "root",
-					world: "r"
-				},
 				"etc/security/automaticLogon": {
 					owner: "root",
 					group: "root",
@@ -205,6 +198,7 @@ async function setupbase() {
 	modules.fs.mounts.installer = modules.mounts.ramMount({});
 	await prepare4Running();
 	await mediaInstaller("installer");
+	await consentuiInstaller("installer");
 	await installerInstaller("installer");
 	fsmount = null;
 	delete modules.fs.mounts["roinstaller"];

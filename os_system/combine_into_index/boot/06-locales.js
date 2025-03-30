@@ -520,7 +520,8 @@ function localization() {
 			"NETWORK_UPDATES_FIELD": "Updates from: %s",
 			"LOCALE_NAME": "English",
 			"SETTING_LOCALE_PREFERENCE": "Setting locale preference",
-			"LANGUAGE_SELECT": "Your language: "
+			"LANGUAGE_SELECT": "Your language: ",
+			"CHANGE_LOCALE": "Change language"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -1041,7 +1042,8 @@ function localization() {
 			"NETWORK_UPDATES_FIELD": "Обновления с: %s",
 			"LOCALE_NAME": "Русский (Russian)",
 			"SETTING_LOCALE_PREFERENCE": "Установка предпочитаемого языка",
-			"LANGUAGE_SELECT": "Ваш язык: "
+			"LANGUAGE_SELECT": "Ваш язык: ",
+			"CHANGE_LOCALE": "Изменить язык"
 		},
 		get: function(key, lang) {
 			lang = lang || locales.defaultLocale || navigator.languages[0].split("-")[0].toLowerCase();

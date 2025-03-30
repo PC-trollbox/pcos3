@@ -27,6 +27,7 @@ let onClose = () => availableAPIs.terminate();
 	if (ppos[0] != "install") {
 		await availableAPIs.toMyCLI("Usage: autoinstaller install [options]\r\n");
 		await availableAPIs.toMyCLI("Automatically installs the OS on the disk.\r\n");
+		await availableAPIs.toMyCLI("\t--locale=[locale] - Set the locale to the following\r\n");
 		await availableAPIs.toMyCLI("\t--initdisk - Always initialize disk partitions\r\n");
 		await availableAPIs.toMyCLI("\t--format - Always format the data partition\r\n");
 		await availableAPIs.toMyCLI("\t--real-reboot - Do a real reboot, not \"kexec\".\r\n");
@@ -120,6 +121,8 @@ let onClose = () => availableAPIs.terminate();
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PATCHING_FS") + "\r\n");
 		let systemCode = "let localSystemMount = \"storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(pargs.data || "data") + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
 		await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
+		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("SETTING_LOCALE_PREFERENCE") + "\r\n");
+		await availableAPIs.fs_write({ path: "target/boot/06-localeset.js", data: "modules.locales.defaultLocale = " + JSON.stringify(pargs.locale || await availableAPIs.osLocale()) + ";\n" });
 		await availableAPIs.toMyCLI("Installation complete.\r\n");
 		if (!pargs["no-restart"]) await availableAPIs.shutdown({ isReboot: true, isKexec: !pargs["real-reboot"] });
 		await availableAPIs.terminate();

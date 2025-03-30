@@ -19,6 +19,7 @@
 	let updateSystemButton = document.createElement("button");
 	let updateFirmwareButton = document.createElement("button");
 	let imagingButton = document.createElement("button");
+	let changeLocale = document.createElement("button");
 	osReinstallButton.innerText = await availableAPIs.lookupLocale("REINSTALL_BUTTON");
 	fsckOrderButton.innerText = await availableAPIs.lookupLocale("FSCK_BUTTON");
 	fsckDiscardButton.innerText = await availableAPIs.lookupLocale("DISCARD_BUTTON");
@@ -26,6 +27,7 @@
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	updateFirmwareButton.innerText = await availableAPIs.lookupLocale("UPDATEFW_BUTTON");
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
+	changeLocale.innerText = await availableAPIs.lookupLocale("CHANGE_LOCALE");
 	osReinstallButton.addEventListener("click", async function() {
 		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "LLDISK_WRITE", "SYSTEM_SHUTDOWN", "FS_READ" ];
 		if (!checklist.every(p => privileges.includes(p))) {
@@ -349,6 +351,41 @@
 		await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("SYSTEM_IMAGING"));
 		imaging();
 	});
+	changeLocale.addEventListener("click", async function() {
+		let checklist = [ "GET_THEME", "GET_LOCALE", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "RUN_KLVL_CODE", "FS_LIST_PARTITIONS" ];
+		if (!checklist.every(p => privileges.includes(p))) {
+			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
+			return;
+		}
+		container.hidden = true;
+		extraActivities.innerText = "";
+		let locales = await availableAPIs.installedLocales();
+		let localeSelect = document.createElement("select");
+		let localeZero = document.createElement("option");
+		localeZero.value = "";
+		localeZero.innerText = " 🌐 Language 🌐 ";
+		localeZero.selected = true;
+		localeZero.disabled = true;
+		localeZero.hidden = true;
+		localeSelect.appendChild(localeZero);
+		for (let locale of locales) {
+			let option = document.createElement("option");
+			option.value = locale;
+			option.innerText = await availableAPIs.lookupOtherLocale({ key: "LOCALE_NAME", locale });
+			localeSelect.appendChild(option);
+		}
+		localeSelect.addEventListener("change", async function() {
+			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value));
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/boot/06-localeset.js", 
+				data: "modules.locales.defaultLocale = " + JSON.stringify(await availableAPIs.osLocale()) + ";\n"
+			});
+			localeSelect.remove();
+			container.hidden = false;
+			extraActivities.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+		});
+		extraActivities.appendChild(localeSelect);
+	});
 	container.appendChild(fsckOrderButton);
 	container.appendChild(fsckDiscardButton);
 	container.appendChild(osReinstallButton);
@@ -356,6 +393,7 @@
 	container.appendChild(updateSystemButton);
 	container.appendChild(updateFirmwareButton);
 	container.appendChild(imagingButton);
+	container.appendChild(changeLocale);
 	document.body.appendChild(container);
 	document.body.appendChild(extraActivities);
 })();
