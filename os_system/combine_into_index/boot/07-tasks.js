@@ -227,7 +227,7 @@ function loadTasks() {
 						that.tracker[taskId].cliio.xtermInstance.write(apiArg.arg);
 						for (let registered in registrations) {
 							await registrations[registered]({ type: "write", data: apiArg.arg });
-							registrations.splice(registered, 1);
+							registrations.splice(0, 1);
 						}
 					}
 				});
@@ -235,7 +235,7 @@ function loadTasks() {
 					if (!that.tracker[taskId].cliio.attached) return false;
 					let ti = that.tracker[taskId].cliio.xtermInstance;
 					return new Promise(async function(resolve) {
-						if (cliCache) {
+						if (cliCache.length) {
 							let element = cliCache[0];
 							cliCache = cliCache.slice(1);
 							resolve(element);
