@@ -79,7 +79,7 @@ async function prefmgr() {
 		tty_bios_api.println("13. Poor man's JavaScript console");
 		tty_bios_api.println("14. Install offline access");
 		tty_bios_api.println("15. Remove offline access");
-		tty_bios_api.println("16. Drop disk database");
+		tty_bios_api.println("16. Disk protection");
 		tty_bios_api.println("17. Schedule flash update");
 		tty_bios_api.println("18. Load defaults");
 		tty_bios_api.println("19. Restart system");
@@ -264,18 +264,7 @@ async function prefmgr() {
 				tty_bios_api.println("Service workers not supported.");
 			}
 		} else if (choice == "16") {
-			tty_bios_api.print("Are you sure? (y/n) ");
-			if ((await tty_bios_api.inputLine(true, true)).toLowerCase() == "y") {
-				idb._db = null;
-				idb._transactionCompleteEvent = [];
-				await new Promise(function(resolve) {
-					let awaiting = indexedDB.deleteDatabase("disk");
-					awaiting.onsuccess = resolve;
-				});
-				tty_bios_api.println("Disk wiped.");
-			} else {
-				tty_bios_api.println("Aborted.");
-			}
+			await diskProtection();
 		} else if (choice == "17") {
 			tty_bios_api.print("Are you sure? (y/n) ");
 			if ((await tty_bios_api.inputLine(true, true)).toLowerCase() == "y") {
@@ -454,6 +443,146 @@ async function sysID() {
 			}
 			tty_bios_api.println("The keypair is consistent!")
 		} else if (choice == "7") {
+			break;
+		} else {
+			tty_bios_api.println("Invalid choice.");
+		}
+		tty_bios_api.println("Press any key to proceed.");
+		await tty_bios_api.inputKey();
+	}
+}
+
+async function diskProtection() {
+	while (true) {
+		tty_bios_api.clear();
+		tty_bios_api.println("Disk Protection");
+		tty_bios_api.println("1. Start encryption");
+		tty_bios_api.println("2. Stop encryption");
+		tty_bios_api.println("3. Drop disk database (not a secure wipe)");
+		tty_bios_api.println("4. Reset encryption status");
+		tty_bios_api.println("5. Back");
+		tty_bios_api.println("");
+		tty_bios_api.print(">> ");
+		let choice = await tty_bios_api.inputLine(true, true);
+		if (choice == "1") {
+			if (!prefs.read("encryption")) {
+				tty_bios_api.print("Enter new disk password: ");
+				let passwordInput = await tty_bios_api.inputLine(false, true);
+				let hash = hexToU8A(await pbkdf2(passwordInput, "0".repeat(32)));
+				let cryptoKey = await crypto.subtle.importKey("raw", hash, {
+					name: "AES-GCM",
+					length: 256
+				}, false, ["encrypt", "decrypt"]);
+				tty_bios_api.println("A new encryption key has been created.");
+				tty_bios_api.println("Encrypting the disk database...");
+				let randomID = Math.random().toString(36).slice(2);
+				tty_bios_api.println("<span id=\"" + randomID + "\"></span>", true);
+				let element = document.getElementById(randomID);
+				element.innerText = "encrypted 0 of Infinity parts (0.00%), will complete in Infinity seconds, 0 parts/second";
+				let timesGathered = 0, times = 0;
+				let lastTime = performance.now(), trueTime = performance.now();
+				let parts = await idb.listParts();
+				if (!idb._db) await idb.opendb();
+				for (let partIndex in parts) {
+					let part = parts[partIndex];
+					let data = new TextEncoder().encode(JSON.stringify(await idb.readPart(part)));
+					let iv = crypto.getRandomValues(new Uint8Array(16));
+					let encrypted = new Uint8Array(await crypto.subtle.encrypt({
+						name: "AES-GCM", iv
+					}, cryptoKey, data));
+					let concat = new Uint8Array(iv.length + encrypted.length);
+					concat.set(iv);
+					concat.set(encrypted, iv.length);
+					await idb.writePart(part, u8aToHex(concat));
+					times += performance.now() - lastTime;
+					timesGathered++;
+					element.innerText = "encrypted " + (+partIndex + 1) + " of " + parts.length + " parts (" + ((+partIndex + 1) / parts.length * 100).toFixed(2) + "%), will complete in " + ((parts.length - partIndex - 1) * ((times / timesGathered) / 1000)).toFixed(2) + " seconds, " + (1 / ((times / timesGathered) / 1000)).toFixed(2) + " parts/second";
+					lastTime = performance.now();
+				}
+				element.innerText = "encrypted " + parts.length + " parts (100.00%) in " + ((performance.now() - trueTime) / 1000).toFixed(2) + " seconds, " + (parts.length / ((performance.now() - trueTime) / 1000)).toFixed(2) + " parts/second";
+				tty_bios_api.println("Syncing the disk database...");
+				await idb.sync();
+				await idb.closeDB();
+				idb._db = null;
+				idb._encrypted = true;
+				prefs.write("encryption", true);
+				tty_bios_api.println("Encryption successfully enabled.");
+			} else tty_bios_api.println("Encryption is already enabled.");
+		} else if (choice == "2") {
+			if (prefs.read("encryption")) {
+				if (!idb._db) await idb.opendb();
+				tty_bios_api.println("Decrypting the disk database...");
+				let randomID = Math.random().toString(36).slice(2);
+				tty_bios_api.println("<span id=\"" + randomID + "\"></span>", true);
+				let element = document.getElementById(randomID);
+				element.innerText = "decrypted 0 of Infinity parts (0.00%), will complete in Infinity seconds, 0 parts/second";
+				let timesGathered = 0, times = 0;
+				let lastTime = performance.now(), trueTime = performance.now();
+				let parts = await idb.listParts();
+				let action;
+				if (!idb._db) await idb.opendb();
+				for (let partIndex in parts) {
+					let part = parts[partIndex];
+					idb._encrypted = true;
+					let data;
+					try {
+						data = await idb.readPart(part);
+					} catch {
+						if (!action) {
+							tty_bios_api.println("The disk database might have encryption inconsistencies.");
+							tty_bios_api.println("What would you like to do with corrupted parts?");
+							while (action != "preserve" && action != "delete") {
+								tty_bios_api.print("Action [preserve/delete]: ");
+								action = await tty_bios_api.inputLine(true, true);
+							}
+							lastTime = performance.now();
+						}
+						if (action == "delete") await idb.removePart(part);
+					}	
+					idb._encrypted = false;
+					if (data) await idb.writePart(part, data);
+					times += performance.now() - lastTime;
+					timesGathered++;
+					element.innerText = "decrypted " + (+partIndex + 1) + " of " + parts.length + " parts (" + ((+partIndex + 1) / parts.length * 100).toFixed(2) + "%), will complete in " + ((parts.length - partIndex - 1) * ((times / timesGathered) / 1000)).toFixed(2) + " seconds, " + (1 / ((times / timesGathered) / 1000)).toFixed(2) + " parts/second";
+					lastTime = performance.now();
+				}
+				element.innerText = "decrypted " + parts.length + " parts (100.00%) in " + ((performance.now() - trueTime) / 1000).toFixed(2) + " seconds, " + (parts.length / ((performance.now() - trueTime) / 1000)).toFixed(2) + " parts/second";
+				tty_bios_api.println("Syncing the disk database...");
+				await idb.sync();
+				await idb.closeDB();
+				idb._db = null;
+				idb._encrypted = false;
+				prefs.write("encryption", false);
+				tty_bios_api.println("Encryption successfully disabled.");
+			} else tty_bios_api.println("Encryption is already disabled.");
+		} else if (choice == "3") {
+			tty_bios_api.print("Are you sure? (y/n) ");
+			if ((await tty_bios_api.inputLine(true, true)).toLowerCase() == "y") {
+				idb._db = null;
+				idb._transactionCompleteEvent = [];
+				await new Promise(function(resolve) {
+					let awaiting = indexedDB.deleteDatabase("disk");
+					awaiting.onsuccess = resolve;
+				});
+				prefs.write("encryption", false);
+				idb._encrypted = false;
+				tty_bios_api.println("Disk wiped.");
+			} else {
+				tty_bios_api.println("Aborted.");
+			}
+		} else if (choice == "4") {
+			tty_bios_api.println("This operation will set the encryption status of the disk database to the opposite value.");
+			tty_bios_api.println("Doing that without reason might lead to inconsistencies.");
+			tty_bios_api.println("The current status is: " + (prefs.read("encryption") ? "enabled" : "DISABLED"));
+			tty_bios_api.print("Are you sure? (y/n) ");
+			if ((await tty_bios_api.inputLine(true, true)).toLowerCase() == "y") {
+				prefs.write("encryption", !prefs.read("encryption"));
+				idb._encrypted = !idb._encrypted;
+				tty_bios_api.println("Set the encryption status.");
+			} else {
+				tty_bios_api.println("The encryption status will remain the same.");
+			}
+		} else if (choice == "5") {
 			break;
 		} else {
 			tty_bios_api.println("Invalid choice.");

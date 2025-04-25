@@ -1,5 +1,6 @@
 let idb = {
 	opendb: function() {
+		this._encrypted = prefs.read("encryption");
 		if (this._db) return this._db;
 		let that = this;
 		return new Promise(function(resolve, reject) {
@@ -7,8 +8,17 @@ let idb = {
 			req.onupgradeneeded = function() {
 				req.result.createObjectStore("disk");
 			}
-			req.onsuccess = function() {
+			req.onsuccess = async function() {
 				that._db = req.result;
+				if (that._encrypted) {
+					tty_bios_api.print("Enter disk password: ");
+					let passwordInput = await tty_bios_api.inputLine(false, true);
+					let hash = hexToU8A(await pbkdf2(passwordInput, "0".repeat(32)));
+					that.cryptoKey = await crypto.subtle.importKey("raw", hash, {
+						name: "AES-GCM",
+						length: 256
+					}, false, ["encrypt", "decrypt"]);
+				}
 				resolve(that._db);
 			}
 			req.onerror = reject;
@@ -17,6 +27,18 @@ let idb = {
 	writePart: async function(part, value) {
 		if (!this._db) await this.opendb();
 		let that = this;
+		if (this._encrypted) {
+			let iv = crypto.getRandomValues(new Uint8Array(16));
+			value = new TextEncoder().encode(JSON.stringify(value));
+			let ct = new Uint8Array(await crypto.subtle.encrypt({
+				name: "AES-GCM",
+				iv: iv
+			}, this.cryptoKey, value));
+			value = new Uint8Array(iv.length + ct.length);
+			value.set(iv);
+			value.set(ct, iv.length);
+			value = u8aToHex(value);
+		}
 		let tx = this._db.transaction("disk", "readwrite");
 		tx.objectStore("disk").put(value, part);
 		let promiseID = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
@@ -40,7 +62,20 @@ let idb = {
 		let tx = this._db.transaction("disk", "readonly");
 		let store = tx.objectStore("disk").get(part);
 		return new Promise(function(resolve, reject) {
-			store.onsuccess = (e) => resolve(e.target.result);
+			store.onsuccess = async (e) => {
+				let value = e.target.result;
+				if (idb._encrypted && value) {
+					let iv = hexToU8A(e.target.result.slice(0, 32));
+					let ct = hexToU8A(e.target.result.slice(32));
+					try {
+						value = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
+							name: "AES-GCM",
+							iv: iv
+						}, idb.cryptoKey, ct)));
+					} catch (er) { return reject(er); }
+				}
+				resolve(value);
+			};
 			store.onerror = reject;
 			store.onabort = reject;
 		})
