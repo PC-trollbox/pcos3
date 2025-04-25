@@ -1209,7 +1209,10 @@ async function diskProtection() {
 				tty_bios_api.println("This only works in Chrome, and possibly Chromium-based browsers.");
 				tty_bios_api.print("Enter the disk password: ");
 				let passwordInput = await tty_bios_api.inputLine(false, true);
-				let hash = await pbkdf2(passwordInput, "0".repeat(32));
+				idb._encrypted = false;
+				let salt = (await that.readPart("disk")).slice(0, 128);
+				idb._encrypted = true;
+				let hash = await pbkdf2(passwordInput, salt);
 				try {
 					await navigator.credentials.store(new PasswordCredential({
 						id: "__decrypt_pcos3",
