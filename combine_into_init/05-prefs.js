@@ -483,11 +483,16 @@ async function diskProtection() {
 				element.innerText = "encrypted 0 of Infinity parts (0.00%), will complete in Infinity seconds, 0 parts/second";
 				let timesGathered = 0, times = 0;
 				let lastTime = performance.now(), trueTime = performance.now();
-				let parts = await idb.listParts();
+				let hasDisk = true;
 				if (!idb._db) await idb.opendb();
+				let parts = await idb.listParts();
+				if (!parts.includes("disk")) hasDisk = false;
+				if (!hasDisk) parts.push("disk");
 				for (let partIndex in parts) {
 					let part = parts[partIndex];
-					let data = new TextEncoder().encode(JSON.stringify(await idb.readPart(part)));
+					let data;
+					if (part == "disk" && !hasDisk) data = new TextEncoder().encode("{}");
+					else data = new TextEncoder().encode(JSON.stringify(await idb.readPart(part)));
 					let iv = crypto.getRandomValues(new Uint8Array(16));
 					let encrypted = new Uint8Array(await crypto.subtle.encrypt({
 						name: "AES-GCM", iv
