@@ -11,9 +11,18 @@ let idb = {
 			req.onsuccess = async function() {
 				that._db = req.result;
 				if (that._encrypted) {
-					tty_bios_api.print("Enter disk password: ");
-					let passwordInput = await tty_bios_api.inputLine(false, true);
-					let hash = hexToU8A(await pbkdf2(passwordInput, "0".repeat(32)));
+					let hash;
+					try {
+						hash = await navigator.credentials.get({ password: true });
+						if (hash.id != "__decrypt_pcos3") hash = undefined;
+						hash = hexToU8A(hash.password);
+					} catch { hash = undefined; }
+					if (!hash) {
+						tty_bios_api.print("Enter disk password: ");
+						let passwordInput = await tty_bios_api.inputLine(false, true);
+						let salt = (await that.readPart("disk", true)).slice(0, 128);
+						hash = hexToU8A(await pbkdf2(passwordInput, salt));
+					}
 					that.cryptoKey = await crypto.subtle.importKey("raw", hash, {
 						name: "AES-GCM",
 						length: 256
@@ -24,10 +33,10 @@ let idb = {
 			req.onerror = reject;
 		});
 	},
-	writePart: async function(part, value) {
+	writePart: async function(part, value, raw) {
 		if (!this._db) await this.opendb();
 		let that = this;
-		if (this._encrypted) {
+		if (this._encrypted && !raw) {
 			let iv = crypto.getRandomValues(new Uint8Array(16));
 			value = new TextEncoder().encode(JSON.stringify(value));
 			let ct = new Uint8Array(await crypto.subtle.encrypt({
@@ -38,6 +47,7 @@ let idb = {
 			value.set(iv);
 			value.set(ct, iv.length);
 			value = u8aToHex(value);
+			if (part == "disk") { value = (await this.readPart("disk", true)).slice(0, 128) + value; }
 		}
 		let tx = this._db.transaction("disk", "readwrite");
 		tx.objectStore("disk").put(value, part);
@@ -57,16 +67,16 @@ let idb = {
 		that._transactionCompleteEvent[promiseID] = promise;
 		return promise;
 	},
-	readPart: async function(part) {
+	readPart: async function(part, raw) {
 		if (!this._db) await this.opendb();
 		let tx = this._db.transaction("disk", "readonly");
 		let store = tx.objectStore("disk").get(part);
 		return new Promise(function(resolve, reject) {
 			store.onsuccess = async (e) => {
 				let value = e.target.result;
-				if (idb._encrypted && value) {
-					let iv = hexToU8A(e.target.result.slice(0, 32));
-					let ct = hexToU8A(e.target.result.slice(32));
+				if (idb._encrypted && value && !raw) {
+					let iv = hexToU8A(e.target.result.slice(part == "disk" ? 128 : 0, (part == "disk" ? 128 : 0) + 32));
+					let ct = hexToU8A(e.target.result.slice((part == "disk" ? 128 : 0) + 32));
 					try {
 						value = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
 							name: "AES-GCM",

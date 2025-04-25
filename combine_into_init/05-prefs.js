@@ -460,7 +460,8 @@ async function diskProtection() {
 		tty_bios_api.println("2. Stop encryption");
 		tty_bios_api.println("3. Drop disk database (not a secure wipe)");
 		tty_bios_api.println("4. Reset encryption status");
-		tty_bios_api.println("5. Back");
+		tty_bios_api.println("5. Browser key storage");
+		tty_bios_api.println("6. Back");
 		tty_bios_api.println("");
 		tty_bios_api.print(">> ");
 		let choice = await tty_bios_api.inputLine(true, true);
@@ -468,7 +469,8 @@ async function diskProtection() {
 			if (!prefs.read("encryption")) {
 				tty_bios_api.print("Enter new disk password: ");
 				let passwordInput = await tty_bios_api.inputLine(false, true);
-				let hash = hexToU8A(await pbkdf2(passwordInput, "0".repeat(32)));
+				let salt = u8aToHex(crypto.getRandomValues(new Uint8Array(64)));
+				let hash = hexToU8A(await pbkdf2(passwordInput, salt));
 				let cryptoKey = await crypto.subtle.importKey("raw", hash, {
 					name: "AES-GCM",
 					length: 256
@@ -493,7 +495,7 @@ async function diskProtection() {
 					let concat = new Uint8Array(iv.length + encrypted.length);
 					concat.set(iv);
 					concat.set(encrypted, iv.length);
-					await idb.writePart(part, u8aToHex(concat));
+					await idb.writePart(part, (part == "disk" ? salt : "") + u8aToHex(concat));
 					times += performance.now() - lastTime;
 					timesGathered++;
 					element.innerText = "encrypted " + (+partIndex + 1) + " of " + parts.length + " parts (" + ((+partIndex + 1) / parts.length * 100).toFixed(2) + "%), will complete in " + ((parts.length - partIndex - 1) * ((times / timesGathered) / 1000)).toFixed(2) + " seconds, " + (1 / ((times / timesGathered) / 1000)).toFixed(2) + " parts/second";
@@ -523,7 +525,6 @@ async function diskProtection() {
 				if (!idb._db) await idb.opendb();
 				for (let partIndex in parts) {
 					let part = parts[partIndex];
-					idb._encrypted = true;
 					let data;
 					try {
 						data = await idb.readPart(part);
@@ -539,8 +540,7 @@ async function diskProtection() {
 						}
 						if (action == "delete") await idb.removePart(part);
 					}	
-					idb._encrypted = false;
-					if (data) await idb.writePart(part, data);
+					if (data) await idb.writePart(part, data, true);
 					times += performance.now() - lastTime;
 					timesGathered++;
 					element.innerText = "decrypted " + (+partIndex + 1) + " of " + parts.length + " parts (" + ((+partIndex + 1) / parts.length * 100).toFixed(2) + "%), will complete in " + ((parts.length - partIndex - 1) * ((times / timesGathered) / 1000)).toFixed(2) + " seconds, " + (1 / ((times / timesGathered) / 1000)).toFixed(2) + " parts/second";
@@ -551,6 +551,7 @@ async function diskProtection() {
 				await idb.sync();
 				await idb.closeDB();
 				idb._db = null;
+				idb.cryptoKey = null;
 				idb._encrypted = false;
 				prefs.write("encryption", false);
 				tty_bios_api.println("Encryption successfully disabled.");
@@ -559,6 +560,7 @@ async function diskProtection() {
 			tty_bios_api.print("Are you sure? (y/n) ");
 			if ((await tty_bios_api.inputLine(true, true)).toLowerCase() == "y") {
 				idb._db = null;
+				idb.cryptoKey = null;
 				idb._transactionCompleteEvent = [];
 				await new Promise(function(resolve) {
 					let awaiting = indexedDB.deleteDatabase("disk");
@@ -577,12 +579,31 @@ async function diskProtection() {
 			tty_bios_api.print("Are you sure? (y/n) ");
 			if ((await tty_bios_api.inputLine(true, true)).toLowerCase() == "y") {
 				prefs.write("encryption", !prefs.read("encryption"));
+				if (idb._db) await idb.closeDB();
+				idb._db = null;
 				idb._encrypted = !idb._encrypted;
+				idb.cryptoKey = null;
 				tty_bios_api.println("Set the encryption status.");
 			} else {
 				tty_bios_api.println("The encryption status will remain the same.");
 			}
 		} else if (choice == "5") {
+			if (prefs.read("encryption")) {
+				tty_bios_api.println("This operation will store the decryption key in the password manager of your browser.");
+				tty_bios_api.println("This only works in Chrome, and possibly Chromium-based browsers.");
+				tty_bios_api.print("Enter the disk password: ");
+				let passwordInput = await tty_bios_api.inputLine(false, true);
+				let hash = await pbkdf2(passwordInput, "0".repeat(32));
+				try {
+					await navigator.credentials.store(new PasswordCredential({
+						id: "__decrypt_pcos3",
+						password: hash
+					}));
+				} catch {
+					tty_bios_api.println("Failed to store the decryption key. See if your browser is supported.");
+				}
+			} else tty_bios_api.println("This is meaningless without encryption.");
+		} else if (choice == "6") {
 			break;
 		} else {
 			tty_bios_api.println("Invalid choice.");
