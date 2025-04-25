@@ -1,6 +1,6 @@
 let idb = {
-	opendb: function() {
-		this._encrypted = prefs.read("encryption");
+	opendb: function(noReadPref) {
+		if (!noReadPref) this._encrypted = prefs.read("encryption");
 		if (this._db) return this._db;
 		let that = this;
 		return new Promise(function(resolve, reject) {
