@@ -1210,7 +1210,7 @@ async function diskProtection() {
 				tty_bios_api.print("Enter the disk password: ");
 				let passwordInput = await tty_bios_api.inputLine(false, true);
 				idb._encrypted = false;
-				let salt = (await that.readPart("disk")).slice(0, 128);
+				let salt = (await idb.readPart("disk")).slice(0, 128);
 				idb._encrypted = true;
 				let hash = await pbkdf2(passwordInput, salt);
 				try {
