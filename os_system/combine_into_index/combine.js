@@ -197,22 +197,17 @@ async function ${fnName}(target, token) {
 	let appPath = target + "/apps/" + ${JSON.stringify(appName)} + ".js";
 	let linkPath = target + "/apps/links/" + ${JSON.stringify(appName)} + ".lnk";
 	let assocs = ${(JSON.stringify((manifestStats.filter(x => x.lineType == "association") || []).map(x => x.data)))};
-	if (${link != undefined}) {
-		let lrn = ${JSON.stringify(lrn)} || undefined;
-		let name = ${JSON.stringify(name)} || undefined;
-		await modules.fs.write(linkPath, JSON.stringify({
-			path: appPath,
-			localeReferenceName: lrn,
-			name
-		}), token);
-		await modules.fs.chmod(linkPath, "rx", token);
-	}
+	let lrn, name;
+	${link != undefined ? `
+	lrn = ${JSON.stringify(lrn)} || undefined;
+	name = ${JSON.stringify(name)} || undefined;
+	await modules.fs.write(linkPath, JSON.stringify({
+		path: appPath,
+		localeReferenceName: lrn,
+		name
+	}), token);
+	await modules.fs.chmod(linkPath, "rx", token);` : ``}
 	for (let assoc of assocs) {
-		let lrn, name;
-		if (${link != undefined}) {
-			lrn = ${JSON.stringify(lrn)} || undefined;
-			name = ${JSON.stringify(name)} || undefined;
-		}
 		await modules.fs.write(target + "/apps/associations/" + assoc, JSON.stringify({
 			path: appPath,
 			localeReferenceName: lrn,

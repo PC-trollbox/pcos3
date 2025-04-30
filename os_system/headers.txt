@@ -6,7 +6,9 @@ rmPrivilege(String privilege) -> true
 rmPrivileges(String[] privilegesRemoved) -> true
 switchUser(String desiredUser) -> true // SWITCH_USERS_AUTOMATICALLY
 shutdown({
+    isKexec: Boolean,
     isReboot: Boolean,
+    force: Boolean,
     token: String
 }) -> true // SYSTEM_SHUTDOWN
 fs_read({
