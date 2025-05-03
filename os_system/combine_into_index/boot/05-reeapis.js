@@ -720,6 +720,7 @@ function reeAPIs() {
 				},
 				fs_mount: async function(arg) {
 					if (!privileges.includes("FS_MOUNT")) throw new Error("UNAUTHORIZED_ACTION");
+					if (modules.fs.mounts[arg.mountpoint]) throw new Error("MOUNT_EXISTS");
 					modules.fs.mounts[arg.mountpoint] = await modules.mounts[arg.filesystem](arg.filesystemOptions);
 				},
 				supportedFilesystems: async function() {

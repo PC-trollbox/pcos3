@@ -49,15 +49,15 @@
 
 async function recursiveCopy(source, destination, force, permissions) {
 	try {
+		try {
+			await availableAPIs.fs_mkdir({ path: destination });
+		} catch {}
 		for (let sourceFile of await availableAPIs.fs_ls({ path: source })) {
 			let destinationFile = destination + "/" + sourceFile;
 			try {
-				if (await availableAPIs.fs_isDirectory({ path: source + "/" + sourceFile })) {
-					try {
-						await availableAPIs.fs_mkdir({ path: destinationFile });
-					} catch {}
+				if (await availableAPIs.fs_isDirectory({ path: source + "/" + sourceFile }))
 					await recursiveCopy(source + "/" + sourceFile, destinationFile, force, permissions);
-				} else {
+				else {
 					await availableAPIs.fs_write({
 						path: destinationFile,
 						data: await availableAPIs.fs_read({ path: source + "/" + sourceFile })

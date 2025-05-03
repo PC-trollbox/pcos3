@@ -58,7 +58,9 @@ function restartLoad() {
 			delete modules.websocket._handles[modules.network.ws];
 		} catch {}
 		description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("UNMOUNTING_MOUNTS"));
-		for (let mount in fs.mounts) await fs.unmount(mount, token);
+		for (let mount in fs.mounts) try { await fs.sync(mount, token); } catch {}
+		for (let mount in fs.mounts) try { await fs.umount(mount, token); } catch {}
+		for (let mount in fs.mounts) try { await fs.umount(mount, token, true); } catch {}
 		description.innerText = modules.locales.get("PCOS_RESTARTING").replace("%s", modules.locales.get("RESTARTING"));
 		if (!noAutomaticReload) {
 			if (kexec) {

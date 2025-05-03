@@ -522,7 +522,8 @@ function localization() {
 			"SETTING_LOCALE_PREFERENCE": "Setting locale preference",
 			"LANGUAGE_SELECT": "Your language: ",
 			"CHANGE_LOCALE": "Change language",
-			"INSTALLER_INTENT": "Start the OS installation"
+			"INSTALLER_INTENT": "Start the OS installation",
+			"MOUNT_EXISTS": "Mount already exists"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -1045,7 +1046,8 @@ function localization() {
 			"SETTING_LOCALE_PREFERENCE": "Установка предпочитаемого языка",
 			"LANGUAGE_SELECT": "Ваш язык: ",
 			"CHANGE_LOCALE": "Изменить язык",
-			"INSTALLER_INTENT": "Начать конфигурацию ОС"
+			"INSTALLER_INTENT": "Начать конфигурацию ОС",
+			"MOUNT_EXISTS": "Монтирование уже существует"
 		},
 		get: function(key, lang) {
 			lang = lang || locales.defaultLocale || navigator.languages[0].split("-")[0].toLowerCase();

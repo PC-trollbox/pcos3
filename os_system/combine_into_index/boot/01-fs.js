@@ -44,12 +44,8 @@ function loadFs() {
 		},
 		unmount: async function(mount, sessionToken, force) {
 			if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
-			try {
-				if (!this.mounts[mount].read_only && !force) await this.sync(mount, sessionToken);
-			} catch {}
-			try {
-				if (!force) await this.mounts[mount].unmount(sessionToken);
-			} catch {}
+			if (!this.mounts[mount].read_only && modules.core.bootMode != "readonly" && !force) await this.sync(mount, sessionToken);
+			if (!force) await this.mounts[mount].unmount(sessionToken);
 			delete this.mounts[mount];
 		},
 		chown: async function(file, owner, sessionToken) {
@@ -104,9 +100,7 @@ function loadFs() {
 		},
 		sync: async function(mount, sessionToken) {
 			if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
-			try {
-				if (!this.mounts[mount].read_only || modules.core.bootMode == "readonly") return await this.mounts[mount].sync(sessionToken);
-			} catch {}
+			if (!this.mounts[mount].read_only && modules.core.bootMode != "readonly") return await this.mounts[mount].sync(sessionToken);
 		},
 		mounts: {}
 	}
@@ -164,6 +158,9 @@ function loadFs() {
 				if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
 				if (typeof files === "string") await modules.core.idb.removePart(partitionId + "-" + files);
 				this.backend = this._recursive_op(this.backend, "files/" + key, { type: "delete" });
+				let backend = this.backend;
+				delete backend.permissions[key];
+				this.backend = backend;
 			},
 			ls: async function(directory) {
 				directory = String(directory);
@@ -419,6 +416,9 @@ function loadFs() {
 				if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
 				if (typeof files === "string") await modules.core.idb.removePart(partitionId + "-" + files);
 				await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + key, { type: "delete" }));
+				let backend = await this.getBackend();
+				delete backend.permissions[key];
+				await this.setBackend(backend);
 			},
 			ls: async function(directory) {
 				directory = String(directory);
@@ -618,6 +618,9 @@ function loadFs() {
 				if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
 				if (typeof files === "string") this.ramFiles.delete(files);
 				this.backend = this._recursive_op(this.backend, "files/" + key, { type: "delete" });
+				let backend = this.backend;
+				delete backend.permissions[key];
+				this.backend = backend;
 			},
 			ls: async function(directory) {
 				directory = String(directory);
@@ -1074,6 +1077,184 @@ function loadFs() {
 			...filesystemData
 		};
 	} // ChatGPT code ends here
+
+	async function fileMount(options) {
+		let file = JSON.parse(await modules.fs.read(options.srcFile));
+		return {
+			read: async function(key) {
+				key = String(key);
+				let pathParts = key.split("/");
+				if (pathParts[0] == "") pathParts = pathParts.slice(1);
+				let files = this.backend.files;
+				for (let part of pathParts) {
+					files = files[part];
+					if (!files) throw new Error("NO_SUCH_FILE");
+				}	
+				if (typeof files === "object") throw new Error("IS_A_DIR");
+				return String(this.files[files]);
+			},
+			write: async function(key, value) {
+				key = String(key);
+				value = String(value);
+				let existenceChecks = key.split("/").slice(0, -1);
+				if (existenceChecks[0] == "") existenceChecks = existenceChecks.slice(1);
+				if (existenceChecks[existenceChecks.length - 1] == "") existenceChecks = existenceChecks.slice(0, -1);
+				let basename = key.split("/").slice(-1)[0];
+				let files = this.backend.files;
+				for (let part of existenceChecks) {
+					files = files[part];
+					if (!files) throw new Error("NO_SUCH_DIR");
+				}
+				if (typeof files[basename] === "object") throw new Error("IS_A_DIR");
+				let id = files[basename] || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				this.files[id] = value;
+				if (!files.hasOwnProperty(basename)) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
+			},
+			rm: async function(key) {
+				key = String(key);
+				let pathParts = key.split("/");
+				if (pathParts[0] == "") pathParts = pathParts.slice(1);
+				if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
+				let files = this.backend.files;
+				for (let part of pathParts) {
+					files = files[part];
+					if (!files) throw new Error("NO_SUCH_FILE_DIR");
+				}
+				if (typeof files === "object" && Object.keys(files).length > 0) throw new Error("NON_EMPTY_DIR");
+				if (typeof files === "string") delete this.files[files];
+				this.backend = this._recursive_op(this.backend, "files/" + key, { type: "delete" });
+				let backend = this.backend;
+				delete backend.permissions[key];
+				this.backend = backend;
+			},
+			ls: async function(directory) {
+				directory = String(directory);
+				let pathParts = directory.split("/");
+				if (pathParts[0] == "") pathParts = pathParts.slice(1);
+				if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
+				let files = this.backend.files;
+				for (let part of pathParts) {
+					files = files[part];
+					if (!files) throw new Error("NO_SUCH_DIR");
+				}
+				if (typeof files !== "object") throw new Error("IS_A_FILE");
+				return Object.keys(files);
+			},
+			mkdir: async function(directory) {
+				directory = String(directory);
+				let existenceChecks = directory.split("/").slice(0, -1);
+				if (existenceChecks[0] == "") existenceChecks = existenceChecks.slice(1);
+				if (existenceChecks[existenceChecks.length - 1] == "") existenceChecks = existenceChecks.slice(0, -1);
+				let files = this.backend.files;
+				for (let part of existenceChecks) {
+					files = files[part];
+					if (!files) throw new Error("NO_SUCH_DIR");
+				}
+				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
+				this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} });
+			},
+			permissions: async function(file) {
+				file = String(file);
+				let properFile = file.split("/")
+				if (properFile[0] == "") properFile = properFile.slice(1);
+				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
+				properFile = properFile.join("/");
+				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				let permissions = this.backend.permissions[properFile] || {};
+				return {
+					owner: permissions.owner || randomNames,
+					group: permissions.group || randomNames,
+					world: permissions.world || "",
+				};
+			},
+			chown: async function(file, owner) {
+				file = String(file);
+				owner = String(owner);
+				let properFile = file.split("/")
+				if (properFile[0] == "") properFile = properFile.slice(1);
+				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
+				properFile = properFile.join("/");
+				let backend = this.backend;
+				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				let filePermissions = backend.permissions[properFile] || {
+					owner: randomNames,
+					group: randomNames,
+					world: "",
+				};
+				filePermissions.owner = owner;
+				backend.permissions[properFile] = filePermissions;
+				this.backend = backend;
+			},
+			chgrp: async function(file, group) {
+				file = String(file);
+				group = String(group);
+				let properFile = file.split("/")
+				if (properFile[0] == "") properFile = properFile.slice(1);
+				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
+				properFile = properFile.join("/");
+				let backend = this.backend;
+				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				let filePermissions = backend.permissions[properFile] || {
+					owner: randomNames,
+					group: randomNames,
+					world: "",
+				};
+				filePermissions.group = group;
+				backend.permissions[properFile] = filePermissions;
+				this.backend = backend;
+			},
+			chmod: async function(file, permissions) {
+				file = String(file);
+				permissions = String(permissions);
+				let properFile = file.split("/")
+				if (properFile[0] == "") properFile = properFile.slice(1);
+				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
+				properFile = properFile.join("/");
+				let backend = this.backend;
+				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+				let filePermissions = backend.permissions[properFile] || {
+					owner: randomNames,
+					group: randomNames,
+					world: "",
+				};
+				filePermissions.world = permissions;
+				backend.permissions[properFile] = filePermissions;
+				this.backend = backend;
+			},
+			isDirectory: function(key) {
+				key = String(key);
+				let pathParts = key.split("/").slice(0, -1);
+				if (pathParts[0] == "") pathParts = pathParts.slice(1);
+				if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
+				let basename = key.split("/").slice(-1)[0];
+				let files = this.backend.files;
+				for (let part of pathParts) {
+					files = files[part];
+					if (!files) throw new Error("NO_SUCH_DIR");
+				}
+				if (!files.hasOwnProperty(basename)) throw new Error("NO_SUCH_FILE_DIR");
+				if (typeof files[basename] === "object") return true;
+				return false;
+			},
+			_recursive_op: function(obj, path, action, stage = 0) {
+				if (path.split("/").length == (stage + 1)) {
+					if (action.type == "delete") delete obj[path.split("/").slice(-1)[0]];
+					if (action.type == "write") obj[path.split("/").slice(-1)[0]] = action.value;
+				} else obj[path.split("/")[stage]] = this._recursive_op(obj[path.split("/")[stage]], path, action, stage + 1);
+				return obj;
+			},
+			sync: async function() {
+				return await modules.fs.write(options.srcFile, JSON.stringify({ backend: this.backend, files: this.files }));
+			},
+			unmount: () => true,
+			directory_supported: true,
+			read_only: !!options.read_only,
+			filesystem: "filefs",
+			permissions_supported: true,
+			backend: file.backend,
+			files: file.files
+		};
+	}
 	
 	fs.mounts["ram"] = ramMount({
 		type: "run"
@@ -1084,7 +1265,8 @@ function loadFs() {
 		ramMount,
 		preferenceMount,
 		SFSPMount,
-		IPCMount
+		IPCMount,
+		fileMount
 	};
 	modules.fs = fs;
 	modules.defaultSystem = "ram";
