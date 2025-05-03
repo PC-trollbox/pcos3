@@ -423,7 +423,7 @@ async function requireLogon() {
 			let toggle = false;
 			clock.addEventListener("click", _ => toggle = !toggle);
 			liu[liuUser].clockInterval = setInterval(async function() {
-				clock.innerText = new Date()["toLocale" + (toggle ? "Date" : "Time") + "String"]();
+				clock.innerText = Intl.DateTimeFormat(locale, { timeStyle: toggle ? undefined : "medium" }).format()
 				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
 				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"), locale)
 				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
