@@ -192,7 +192,7 @@ function loadTasks() {
 						}
 					}
 				};
-				let registrations = [];
+				let registrations = {};
 				let attachedCLIRegistrations = [];
 				let cliCache = [];
 				windowObject.closeButton.addEventListener("click", () => that.sendSignal(taskId, 15));
@@ -200,7 +200,7 @@ function loadTasks() {
 					if (that.tracker[taskId].cliio.attached) return true;
 					for (let registration of attachedCLIRegistrations) registration();
 					attachedCLIRegistrations = [];
-					let signup = () => new Promise((resolve) => registrations.push(resolve));
+					let signup = () => new Promise((resolve) => registrations[crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")] = resolve);
 					ree.iframe.hidden = true;
 					let termDiv = document.createElement("div");
 					termDiv.style = "position: absolute; top: 0; left: 0; width: 100%; height: 100%;";
@@ -227,7 +227,7 @@ function loadTasks() {
 						that.tracker[taskId].cliio.xtermInstance.write(apiArg.arg);
 						for (let registered in registrations) {
 							await registrations[registered]({ type: "write", data: apiArg.arg });
-							registrations.splice(0, 1);
+							delete registrations[registered];
 						}
 					}
 				});
@@ -252,7 +252,7 @@ function loadTasks() {
 					if (that.tracker[taskId].cliio.attached) that.tracker[taskId].cliio.xtermInstance.clear();
 					for (let registered in registrations) {
 						await registrations[registered]({ type: "consoleClear" });
-						registrations.splice(registered, 1);
+						delete registrations[registered];
 					}
 				});
 				ree.exportAPI("cliSize", function() {
@@ -268,7 +268,7 @@ function loadTasks() {
 					that.tracker[taskId].cliio.xtermInstance.dispose();
 					delete that.tracker[taskId].cliio.xtermInstance;
 					delete that.tracker[taskId].cliio.signup;
-					registrations = [];
+					registrations = {};
 					ree.iframe.hidden = false;
 					return true;
 				});
