@@ -119,8 +119,11 @@ let onClose = () => availableAPIs.terminate();
 		await recursiveCopy((await availableAPIs.getSystemMount()) + "/boot", "target/boot", true);
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("CHANGING_BOOT_PERMISSIONS") + "\r\n");
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("PATCHING_FS") + "\r\n");
-		let systemCode = "let localSystemMount = \"storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(pargs.data || "data") + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
+		let systemCode = "let localSystemMount = \".storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(pargs.data || "data") + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
 		await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
+		try {
+			await availableAPIs.fs_mkdir({ path: "target/modules" });
+		} catch {}
 		await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("SETTING_LOCALE_PREFERENCE") + "\r\n");
 		await availableAPIs.fs_write({ path: "target/boot/06-localeset.js", data: "modules.locales.defaultLocale = " + JSON.stringify(pargs.locale || await availableAPIs.osLocale()) + ";\n" });
 		await availableAPIs.toMyCLI("Installation complete.\r\n");

@@ -200,6 +200,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
+					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -458,6 +459,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
+					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -660,6 +662,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
+					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -1165,6 +1168,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
+					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -1255,6 +1259,113 @@ function loadFs() {
 			files: file.files
 		};
 	}
+
+	async function overlayMount(options) {
+		return {
+			read: function(key, token) {
+				return this._basic_first_op("read", key, token);
+			},
+			write: function(key, value, token) {
+				return this._basic_first_op("write", key, value, token);
+			},
+			rm: function(key, token) {
+				return this._basic_first_op("rm", key, token);
+			},
+			ls: async function(directory, token) {
+				let listing = [], commonErrorMessages = {}, errors = 0;
+				for (let mount of options.mounts) {
+					try {
+						listing.push(...(await modules.fs.ls(mount + "/" + directory, token)));
+					} catch (e) {
+						errors++;
+						commonErrorMessages[e.message] = (commonErrorMessages[e.message] || 0) + 1;
+					}
+				}
+				if (errors == options.mounts.length) throw new Error(Object.entries(commonErrorMessages).sort((a, b) => b[1] - a[1])[0][0]);
+				return Array.from(new Set(listing));
+			},
+			mkdir: function(directory, token) {
+				return this._basic_first_op("mkdir", directory, token);
+			},
+			permissions: async function(file, token) {
+				let commonErrorMessages = {}, checkedHowMany = 0;
+				for (let mount of options.mounts) {
+					try {
+						checkedHowMany++;
+						let permissions = await modules.fs.permissions(mount + "/" + file, token);
+						if (permissions.random && checkedHowMany != options.mounts.length)
+							throw new Error("PERMISSION_DENIED");
+						return permissions;
+					} catch (e) {
+						commonErrorMessages[e.message] = (commonErrorMessages[e.message] || 0) + 1;
+					}
+				}
+				throw new Error(Object.entries(commonErrorMessages).sort((a, b) => b[1] - a[1])[0][0]);
+			},
+			chown: function(file, owner, token) {
+				return this._basic_first_op("chown", file, owner, token);
+			},
+			chgrp: function(file, group, token) {
+				return this._basic_first_op("chgrp", file, group, token);
+			},
+			chmod: function(file, permissions, token) {
+				return this._basic_first_op("chmod", file, permissions, token);
+			},
+			isDirectory: function(key, token) {
+				return this._basic_first_op("isDirectory", key, token);
+			},
+			sync: function(token) {
+				return this._every_op("sync", token);
+			},
+			unmount: function(token) {
+				if (options.autoManage) return this._every_op("unmount", token);
+			},
+			_basic_first_op: async function(op, key, ...args) {
+				let pathParts = key.split("/");
+				if (pathParts[0] == "") pathParts = pathParts.slice(1);
+				if (pathParts[pathParts.length - 1] == "") pathParts = pathParts.slice(0, -1);
+				key = pathParts.join("/");
+				let previousKey = key.split("/").slice(0, -1).join("/");
+				let basename = key.split("/").slice(-1).join("/");
+				let lookedForMount;
+				for (let mount of options.mounts) {
+					try {
+						let listing = await modules.fs.ls(mount + "/" + previousKey, args[args.length - 1]);
+						if (listing.includes(basename)) {
+							lookedForMount = mount;
+							break;
+						}
+					} catch {}
+				}
+				if (lookedForMount) return modules.fs[op](lookedForMount + "/" + key, ...args);
+				let commonErrorMessages = {};
+				for (let mount of options.mounts) {
+					try {
+						return await modules.fs[op](mount + "/" + key, ...args);
+					} catch (e) {
+						commonErrorMessages[e.message] = (commonErrorMessages[e.message] || 0) + 1;
+					}
+				}
+				throw new Error(Object.entries(commonErrorMessages).sort((a, b) => b[1] - a[1])[0][0]);
+			},
+			_every_op: async function(op) {
+				let commonErrorMessages = {}, gotError;
+				for (let mount of options.mounts) {
+					try {
+						await modules.fs[op](mount);
+					} catch (e) {
+						gotError = true;
+						commonErrorMessages[e.message] = (commonErrorMessages[e.message] || 0) + 1;
+					}
+				}
+				if (gotError) throw new Error(Object.entries(commonErrorMessages).sort((a, b) => b[1] - a[1])[0][0]);
+			},
+			directory_supported: true,
+			read_only: !!options.read_only,
+			filesystem: "overlayfs",
+			permissions_supported: true
+		};
+	}
 	
 	fs.mounts["ram"] = ramMount({
 		type: "run"
@@ -1266,7 +1377,8 @@ function loadFs() {
 		preferenceMount,
 		SFSPMount,
 		IPCMount,
-		fileMount
+		fileMount,
+		overlayMount
 	};
 	modules.fs = fs;
 	modules.defaultSystem = "ram";

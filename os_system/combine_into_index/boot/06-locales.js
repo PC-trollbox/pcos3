@@ -523,7 +523,8 @@ function localization() {
 			"LANGUAGE_SELECT": "Your language: ",
 			"CHANGE_LOCALE": "Change language",
 			"INSTALLER_INTENT": "Start the OS installation",
-			"MOUNT_EXISTS": "Mount already exists"
+			"MOUNT_EXISTS": "Mount already exists",
+			"INSECURE_MODE_MSG": "Insecure configuration!"
 		},
 		ru: {
 			"UNTITLED_APP": "Безымянная программа",
@@ -741,7 +742,7 @@ function localization() {
 			"CREATE_HD": "Создать домашний каталог",
 			"CREATING_HD_OK": "Домашний каталог успешно создан.",
 			"CREATING_HD_FAIL": "Не удалось создать домашний каталог.",
-			"SIGNATURE_VERIFICATION_FAILED": "Эта программа утверждает, что ему доверяет %s, но системе не удалось проверить это утверждение.",
+			"SIGNATURE_VERIFICATION_FAILED": "Эта программа утверждает, что ей доверяет %s, но системе не удалось проверить это утверждение.",
 			"UNKNOWN_PLACEHOLDER": "<Неизвестно>",
 			"NO_APP_ALLOWLIST": "Системный администратор требует, чтобы у программ был белый список разрешений, но у этого программы нет этого списка.",
 			"DISCARD_BUTTON": "Удалить потерянные файлы",
@@ -1047,7 +1048,8 @@ function localization() {
 			"LANGUAGE_SELECT": "Ваш язык: ",
 			"CHANGE_LOCALE": "Изменить язык",
 			"INSTALLER_INTENT": "Начать конфигурацию ОС",
-			"MOUNT_EXISTS": "Монтирование уже существует"
+			"MOUNT_EXISTS": "Монтирование уже существует",
+			"INSECURE_MODE_MSG": "Небезопасные параметры!"
 		},
 		get: function(key, lang) {
 			lang = lang || locales.defaultLocale || navigator.languages[0].split("-")[0].toLowerCase();

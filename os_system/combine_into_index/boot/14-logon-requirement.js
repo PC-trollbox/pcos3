@@ -94,6 +94,16 @@ async function requireLogon() {
 			}
 			bgPic = "";
 		}
+		if (modules.core.bootMode == "disable-harden" && !wasLiuLoaded) {
+			let message = document.createElement("span");
+			message.innerText = modules.locales.get("INSECURE_MODE_MSG", locale);
+			message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
+			dom.appendChild(message);
+			let message2 = document.createElement("span");
+			message2.innerText = modules.locales.get("INSECURE_MODE_MSG", locale);
+			message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
+			dom.appendChild(message2);
+		}
 		modules.session.attrib(session, "dark", isDark);
 		dom.style.background = "url(" + JSON.stringify(bgPic) + ")";
 		if (modules.core.bootMode == "safe") dom.style.background = "black";
@@ -492,6 +502,17 @@ async function requireLogon() {
 				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
 				sysDom.appendChild(message2);
 			}
+		}
+		if (modules.core.bootMode == "disable-harden" && !insertedLockMessage) {
+			insertedLockMessage = true;
+			let message = document.createElement("span");
+			message.innerText = modules.locales.get("INSECURE_MODE_MSG");
+			message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
+			sysDom.appendChild(message);
+			let message2 = document.createElement("span");
+			message2.innerText = modules.locales.get("INSECURE_MODE_MSG");
+			message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
+			sysDom.appendChild(message2);
 		}
 		sysDom.style.background = "url(" + JSON.stringify(lockWallpaper) + ")";
 		if (modules.core.bootMode == "safe") sysDom.style.background = "black";

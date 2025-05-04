@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS
+// allow: FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS, GET_USER_INFO
 // =====END MANIFEST=====
 let ipcChannel = exec_args[0];
 (async function() {
@@ -15,6 +15,14 @@ let ipcChannel = exec_args[0];
 		if (privileges.includes("IPC_SEND_PIPE")) await availableAPIs.sendToPipe({ pipe: ipcChannel, data: { success: false, reason: "permissions" } });
 		return availableAPIs.terminate();
 	}
+	let hideHiddenFiles = false;
+	try {
+		let homedir = (await availableAPIs.getUserInfo({ desiredUser: await availableAPIs.getUser() })).homeDirectory;
+		hideHiddenFiles = true;
+		hideHiddenFiles = (await availableAPIs.fs_read({
+			path: homedir + "/.hiddenFiles",
+		})) != "show";
+	} catch {}
 	document.body.innerText = "";
 	let mainComponent = document.createElement("div");
 	let pathInputForm = document.createElement("form");
@@ -56,6 +64,7 @@ let ipcChannel = exec_args[0];
 		if (path == "") {
 			let partitions = await availableAPIs.fs_mounts();
 			for (let partition of partitions) {
+				if (partition.startsWith(".") && hideHiddenFiles) continue;
 				let openButton = document.createElement("button");
 				openButton.innerText = partition;
 				openButton.onclick = function() {
@@ -72,6 +81,7 @@ let ipcChannel = exec_args[0];
 			if (type == "directory") {
 				let ls = await availableAPIs.fs_ls({ path: path });
 				for (let file of ls) {
+					if (file.startsWith(".") && hideHiddenFiles) continue;
 					let openButton = document.createElement("button");
 					openButton.innerText = file;
 					openButton.onclick = function() {

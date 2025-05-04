@@ -209,6 +209,7 @@ let cachedIcons = {};
 		if (path == "") {
 			let partitions = await availableAPIs.fs_mounts();
 			for (let partition of partitions) {
+				if (partition.startsWith(".") && hideHiddenFiles) continue;
 				let openButton = document.createElement("button");
 				openButton.innerText = partition;
 				openButton.onclick = function() {

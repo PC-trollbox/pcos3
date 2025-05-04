@@ -121,6 +121,7 @@ async function setupbase() {
 					"01-fs.js": loadFs.toString() + "\nloadFs();\n",
 					"01-fsboot.js": "/* no-op */",
 					"01-fsck.js": fsck.toString() + "\nawait fsck();\n",
+					"01-fsmodules.js": loadModules.toString() + "\nawait loadModules();\n",
 					"01-setup-state.js": "modules.settingUp = true;\n",
 					"02-ui.js": loadUi.toString() + "\nloadUi();\n",
 					"03-diff.js": loadDiff.toString() + "\nloadDiff();\n",

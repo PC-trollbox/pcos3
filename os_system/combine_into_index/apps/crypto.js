@@ -1,7 +1,7 @@
 // =====BEGIN MANIFEST=====
 // link: lrn:CRYPTO_TOOLS_TITLE
 // signer: automaticSigner
-// allow: FS_WRITE, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS, START_TASK, GET_LOCALE, CSP_OPERATIONS
+// allow: FS_WRITE, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_READ, FS_LIST_PARTITIONS, IPC_SEND_PIPE, GET_LOCALE, GET_THEME, FS_BYPASS_PERMISSIONS, START_TASK, GET_LOCALE, CSP_OPERATIONS, GET_USER_INFO
 // =====END MANIFEST=====
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
