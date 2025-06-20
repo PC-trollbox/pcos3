@@ -18,7 +18,7 @@ const args = util.parseArgs({
 		"output": {
 			type: "string",
 			short: "o",
-			default: __dirname + "/../index.js"
+			default: __dirname + "/installer.js"
 		},
 		"no-increment": {
 			type: "boolean",
@@ -30,6 +30,9 @@ const args = util.parseArgs({
 		}
 	}
 });
+let installerModules = [ // List of modules included in the installer
+	"bootable", "core", "installer-modules", "keys", "locale-en", "pcos-icons", "pcos-sounds", "pcos-wallpapers"
+];
 let keypair = false;
 let ext2mime = {
 	"png": "image/png",
@@ -60,12 +63,12 @@ try {
 let pcosHeader = fs.readFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js").toString().split("\n");
 let version = pcosHeader[1].match(/\d+/)[0];
 version = parseInt(version);
-if (!args.values["no-increment"]) version++;
+//if (!args.values["no-increment"]) version++;
 version = version + args.values.branch;
 pcosHeader[1] = "const pcos_version = " + JSON.stringify(version) + ";";
 pcosHeader[2] = "const build_time = " + Date.now() + ";";
 pcosHeader = pcosHeader.join("\n");
-if (!args.values["no-increment"] && !args.values["only-modules"]) fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
+//if (!args.values["no-increment"] && !args.values["only-modules"]) fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
 function createModule(directory, permissionsPrefixed = "") {
 	let listing = fs.readdirSync(directory);
 	let module = { backend: { files: {}, permissions: {} }, files: {} };
@@ -78,13 +81,14 @@ function createModule(directory, permissionsPrefixed = "") {
 			module.backend.permissions = { ...module.backend.permissions, ...moduleInclusion.backend.permissions };
 		}
 		if (stats.isFile()) {
-			let fileContents = fs.readFileSync(directory + "/" + file).toString();
+			let fileBuffer = fs.readFileSync(directory + "/" + file);
+			let fileContents = fileBuffer.toString();
 			let fileID = crypto.randomBytes(64).toString("hex");
 			let extension = path.extname(file).slice(1);
 			if (ext2mime.hasOwnProperty(extension)) {
 				let mime = ext2mime[extension];
 				let newExt = mimeBase2pcos[mime.split("/")[0]];
-				fileContents = "data:" + mime + ";base64," + fileContents.toString("base64");
+				fileContents = "data:" + mime + ";base64," + fileBuffer.toString("base64");
 				file = path.basename(file, extension) + newExt;
 			} else if (extension == "js" && fileContents.includes("// @pcos-app-mode isolatable")) { // Handling apps!
 				let manifestStats = [];
@@ -114,22 +118,73 @@ function createModule(directory, permissionsPrefixed = "") {
 						fileContents = parsingLines.join("\n");
 					}
 				}
+			} else if (file == "01-fsmodule-pre.js" && fileContents.includes("// @auto-generated-installer-module-insertion")) { // Inserting installer modules
+				fileContents += "\n";
+				let modulesToDo = [ ...installerModules ];
+				if (modulesToDo.includes("installer-modules"))
+					modulesToDo.splice(modulesToDo.indexOf("installer-modules"), 1);
+				for (let module of modulesToDo) {
+					fileContents += "// modules/" + module + ".fs\n";
+					fileContents += "modules.fs.write(" + JSON.stringify(".installer/modules/" + module + ".fs") + ", " + JSON.stringify(fs.readFileSync(__dirname + "/modules/" + module + ".fs").toString()) + ");\n";
+				}
+			} else if (file == "06-ksk.js" && fileContents.includes("// Key signing key")) { // Inserting KSK
+				fileContents = fileContents.replace('{stub:"present"}', JSON.stringify(keypair.ksk));
+			} else if (file.endsWith(".khrl")) {
+				fileContents = fileContents.replaceAll("\r", "").split("\n").filter(a => a && !a.startsWith("#")).map(function(a) {
+					a = a.trim();
+					if (a.startsWith("sha256:")) return a.slice(7);
+					if (a.startsWith("jwk:")) {
+						a = JSON.parse(a.slice(4));
+						a = a.x + "|" + a.y;
+					}
+					return crypto.createHash("sha256").update(a).digest("hex");
+				});
+				fileContents = JSON.stringify({
+					list: fileContents,
+					signature: crypto.sign("sha256", JSON.stringify(fileContents), {
+						key: keypair.ksk_private,
+						format: "jwk",
+						dsaEncoding: "ieee-p1363"
+					}).toString("hex")
+				});
 			}
 			module.files[fileID] = fileContents;
 			module.backend.permissions[permissionsPrefixed + file] = { world: "rx" };
 			module.backend.files[file] = fileID;
 		}
 	}
+	module.backend.permissions[permissionsPrefixed] = { world: "rx" };
 	if (permissionsPrefixed == "") {
 		module.buildInfo = {
-			for: version + args.values.branch,
+			for: version,
 			when: Date.now()
 		};
 	}
 	return module;
 }
 
-let moduleFolders = fs.readdirSync(__dirname + "/modules").filter(a => a.endsWith(".wrk"));
-for (let moduleFolder of moduleFolders) {
-	fs.writeFileSync(__dirname + "/modules/" + moduleFolder.slice(0, -4), JSON.stringify(createModule(__dirname + "/modules/" + moduleFolder)));
+function getBootInModule(module) {
+	let moduleFiles = JSON.parse(fs.readFileSync(__dirname + "/modules/" + module).toString());
+	let boot = [];
+	if (!moduleFiles.backend.files.boot) return [];
+	for (let bootFile in moduleFiles.backend.files.boot)
+		boot.push([ bootFile, moduleFiles.files[moduleFiles.backend.files.boot[bootFile]] ]);
+	return boot;
 }
+
+let moduleFolders = fs.readdirSync(__dirname + "/modules").filter(a => a.endsWith(".wrk"));
+let installerModulesPresent = moduleFolders.includes("installer-modules.fs.wrk");
+if (installerModulesPresent) moduleFolders.splice(moduleFolders.indexOf("installer-modules.fs.wrk"), 1);
+for (let moduleFolder of moduleFolders)
+	fs.writeFileSync(__dirname + "/modules/" + moduleFolder.slice(0, -4), JSON.stringify(createModule(__dirname + "/modules/" + moduleFolder)));
+if (installerModulesPresent)
+	fs.writeFileSync(__dirname + "/modules/installer-modules.fs", JSON.stringify(createModule(__dirname + "/modules/installer-modules.fs.wrk")));
+if (args.values["only-modules"]) return process.exit();
+let entireBoot = [];
+for (let installerModule of installerModules) entireBoot.push(...getBootInModule(installerModule + ".fs"));
+let installerCode = "// This is a generated file. Please modify the corresponding files, not this file directly.\n" +
+	"// (c) Copyright 2025 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
+entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]));
+entireBoot = entireBoot.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
+installerCode += entireBoot;
+fs.writeFileSync(args.values.output, installerCode);

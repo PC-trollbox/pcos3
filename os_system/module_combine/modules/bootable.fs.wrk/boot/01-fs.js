@@ -200,7 +200,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
-					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
+					random: !(permissions.owner || permissions.group || permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -459,7 +459,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
-					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
+					random: !(permissions.owner || permissions.group || permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -662,7 +662,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
-					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
+					random: !(permissions.owner || permissions.group || permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
@@ -1172,7 +1172,7 @@ function loadFs() {
 					owner: permissions.owner || randomNames,
 					group: permissions.group || randomNames,
 					world: permissions.world || "",
-					random: !(permissions.owner && permissions.group && permissions.world) ? true : undefined
+					random: !(permissions.owner || permissions.group || permissions.world) ? true : undefined
 				};
 			},
 			chown: async function(file, owner) {
