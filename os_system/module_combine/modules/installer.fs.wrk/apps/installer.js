@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS
+// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE
 // =====END MANIFEST=====
 let onClose = () => availableAPIs.terminate();
 (async function() {
@@ -23,6 +23,10 @@ let onClose = () => availableAPIs.terminate();
 	let privileges = await availableAPIs.getPrivileges();
 	let checklist = [ "GET_BUILD", "RUN_KLVL_CODE", "LLDISK_WRITE", "LLDISK_READ", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_REMOVE", "FS_LIST_PARTITIONS", "SYSTEM_SHUTDOWN", "FS_CHANGE_PERMISSION", "LLDISK_LIST_PARTITIONS", "FS_MOUNT", "CSP_OPERATIONS", "LLDISK_INIT_PARTITIONS" ];
 	if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
+	let installed_modules = [
+		"50-bootable.fs", "50-core.fs", "50-diff.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-tweetnacl.fs",
+		"50-xterm.fs"
+	];
 	await availableAPIs.closeability(false);
 	await new Promise(async function(resolve) {
 		let locales = await availableAPIs.installedLocales();
@@ -42,6 +46,7 @@ let onClose = () => availableAPIs.terminate();
 		}
 		localeSelect.addEventListener("change", async function() {
 			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value));
+			installed_modules.push("50-locale-" + localeSelect.value + ".fs");
 			await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
 			localeSelect.remove();
 			await availableAPIs.closeability(true);
@@ -277,22 +282,68 @@ Used libraries:
 					await availableAPIs.fs_chmod({ path: "target", newPermissions: "rx" });
 					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("COPYING_FOLDERS"));
 					try {
-						await recursiveRemove("target/boot");
+						recursiveRemove("target/modules");
 					} catch {}
-					try {
-						await availableAPIs.fs_mkdir({ path: "target/boot" });
-					} catch {}
-					await recursiveCopy((await availableAPIs.getSystemMount()) + "/boot", "target/boot", true);
-					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CHANGING_BOOT_PERMISSIONS"));
-					content.innerHTML = "";
-					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_FS"));
-					let systemCode = "let localSystemMount = \".storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(diskDataPartition) + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
-					await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
 					try {
 						await availableAPIs.fs_mkdir({ path: "target/modules" });
 					} catch {}
+					let modules = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/modules" });
+					for (let module of installed_modules) {
+						if (!modules.includes(module)) throw new Error("Module required (" + module + ")");
+						await availableAPIs.fs_write({
+							path: "target/modules/" + module,
+							data: await availableAPIs.fs_read({
+								path: (await availableAPIs.getSystemMount()) + "/modules/" + module
+							})
+						});
+					}
+					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_DIRECTORY_STRUCTURE"));
+					try {
+						await availableAPIs.fs_mkdir({ path: "target/apps" });
+						await availableAPIs.fs_mkdir({ path: "target/apps/associations" });
+						await availableAPIs.fs_mkdir({ path: "target/apps/links" });
+						await availableAPIs.fs_mkdir({ path: "target/boot" });
+						await availableAPIs.fs_mkdir({ path: "target/etc" });
+						await availableAPIs.fs_mkdir({ path: "target/etc/wallpapers" });
+						await availableAPIs.fs_mkdir({ path: "target/etc/icons" });
+						await availableAPIs.fs_mkdir({ path: "target/etc/sounds" });
+						await availableAPIs.fs_mkdir({ path: "target/etc/keys" });
+						await availableAPIs.fs_mkdir({ path: "target/etc/security" });
+						await availableAPIs.fs_chmod({
+							path: "target/etc/security",
+							newPermissions: ""
+						});
+						await availableAPIs.fs_mkdir({ path: "target/root" });
+						await availableAPIs.fs_mkdir({ path: "target/home" });
+					} catch {}
+					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_FS"));
+					let systemCode = "let localSystemMount = \".storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(diskDataPartition) + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
+					await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
 					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("SETTING_LOCALE_PREFERENCE"));
 					await availableAPIs.fs_write({ path: "target/boot/06-localeset.js", data: "modules.locales.defaultLocale = " + JSON.stringify(await availableAPIs.osLocale()) + ";\n" });
+					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("GENERATING_KERNEL"));
+					let entireBoot = [];
+					let bootFiles = await availableAPIs.fs_ls({ path: "target/boot" });
+					if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
+					if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
+					for (let bootFile of bootFiles) {
+						entireBoot.push([ bootFile, await availableAPIs.fs_read({
+							path: "target/boot/" + bootFile
+						}) ]);
+					}
+					modules = await availableAPIs.fs_ls({ path: "target/modules" });
+					for (let module of modules) {
+						let moduleFile = JSON.parse(await availableAPIs.fs_read({ path: "target/modules/" + module }));
+						for (let bootFile in (moduleFile.backend.files.boot || []))
+							entireBoot.push([ bootFile, moduleFile.files[moduleFile.backend.files.boot[bootFile]] ]);
+					}
+					entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
+						.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
+					await availableAPIs.fs_write({
+						path: "target/boot/00-compiled.js",
+						data: entireBoot + "\nreturn;/*"
+					});
+					await availableAPIs.fs_write({ path: "target/boot/99-zzpatchfinisher.js", data: "*/" });
 					description.innerHTML = await availableAPIs.lookupLocale("INSTALLATION_SUCCESSFUL");
 					if (!automatic_configuration.autoRestart) await availableAPIs.closeability(true);
 					onClose = function() {
@@ -347,22 +398,10 @@ Used libraries:
 		button.onclick = async function() {
 			content.innerHTML = "";
 			content.style.height = "";
-			await availableAPIs.runKlvlCode(`(async function() {
-				let appScripts = await modules.fs.read(modules.defaultSystem + "/boot/15-apps.js");
-				let apps = appScripts.match(/async function (.+)Installer\\(target, token\\)/g).map(a => a.split(" ")[2].split("(")[0]);
-				let fireAfterInstall = null;
-				let firesAfterInstall = new Promise(r => fireAfterInstall = r);
-				let installerCode = "(async function() {\\n" + appScripts + "\\n";
-				for (let app of apps) installerCode += \`await \${app}(modules.defaultSystem);\\n\`;
-				installerCode += "fireAfterInstall(); })();";
-				eval(installerCode);
-				await firesAfterInstall;
-				await modules.fs.write(modules.defaultSystem + "/etc/darkLockScreen", "false");
-				await modules.fs.write(modules.defaultSystem + "/etc/wallpapers/lockscreen.pic", await modules.fs.read(modules.defaultSystem + "/etc/wallpapers/pcos-lock-beta.pic"));
-				await modules.fs.write(modules.defaultSystem + "/root/.wallpaper", await modules.fs.read(modules.defaultSystem + "/etc/wallpapers/pcos-beta.pic"));
-				await modules.fs.write(modules.defaultSystem + "/root/.darkmode", "false");
-				await requireLogon();
-			})(); null;`);
+			await availableAPIs.sendToPipe({
+				pipe: exec_args[0],
+				data: true
+			});
 			await availableAPIs.terminate();
 		}
 	}

@@ -31,13 +31,16 @@ const args = util.parseArgs({
 	}
 });
 let installerModules = [ // List of modules included in the installer
-	"keys", "bootable", "core", "installer-modules", "locale-en", "pcos-icons", "pcos-sounds", "pcos-wallpapers"
+	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "diff", "tweetnacl", "xterm", "installer",
+	"installer-modules" /* Must be present! */
 ];
 let specialOrdering = { // keys must always be the first module loaded.
 	"keys": 0
 };
-let criticalModules = [ "bootable", "core", "keys" ];
-let archivedModules = [ "keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers" ];
+let criticalModules = [ "bootable", "core", "keys", "tweetnacl" ];
+let archivedModules = [
+	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "diff", "tweetnacl", "xterm", "installer"
+];
 let getModuleOrder = module => specialOrdering[module]?.toString().padStart(2, "0") || "50";
 let keypair = false;
 let ext2mime = {

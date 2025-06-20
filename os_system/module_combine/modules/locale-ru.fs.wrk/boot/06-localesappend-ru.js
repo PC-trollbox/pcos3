@@ -41,7 +41,6 @@ modules.locales.ru = {
 	"CHANGING_ROOT_PERMISSIONS": "Изменение разрешений /",
 	"COPYING_FOLDERS": "Копирование каталогов",
 	"PREPARING_FOR_COPY": "Подготовка к копированию",
-	"CHANGING_BOOT_PERMISSIONS": "Изменение разрешений /boot",
 	"PATCHING_FS": "Изменение для монтирования раздела данных",
 	"INSTALLATION_SUCCESSFUL": "Установка успешна. Закройте окно для перезагрузки.",
 	"INSTALLATION_FAILED": "Установка не удалась. Попробуйте ещё раз. Закройте окно для перезагрузки.",
@@ -522,5 +521,7 @@ modules.locales.ru = {
 	"INSTALLER_INTENT": "Начать конфигурацию ОС",
 	"MOUNT_EXISTS": "Монтирование уже существует",
 	"INSECURE_MODE_MSG": "Небезопасные параметры!",
-	"MODULE_REQUIRED": "Для этой функции требуется модуль \"%s\". Обратитесь к системному администратору."
+	"MODULE_REQUIRED": "Для этой функции требуется модуль \"%s\". Обратитесь к системному администратору.",
+	"CREATING_DIRECTORY_STRUCTURE": "Создание структуры каталогов",
+	"GENERATING_KERNEL": "Создание ядра системы"
 };

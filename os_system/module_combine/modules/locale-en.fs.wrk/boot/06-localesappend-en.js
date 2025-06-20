@@ -41,7 +41,6 @@ modules.locales.en = {
 	"CHANGING_ROOT_PERMISSIONS": "Changing / permissions",
 	"COPYING_FOLDERS": "Copying directories",
 	"PREPARING_FOR_COPY": "Preparing for copying",
-	"CHANGING_BOOT_PERMISSIONS": "Changing /boot permissions",
 	"PATCHING_FS": "Patching for data mount",
 	"INSTALLATION_SUCCESSFUL": "Successful installation. Close window to reboot.",
 	"INSTALLATION_FAILED": "Installation of PCOS failed. Please try again. Close window to reboot.",
@@ -522,5 +521,7 @@ modules.locales.en = {
 	"INSTALLER_INTENT": "Start the OS installation",
 	"MOUNT_EXISTS": "Mount already exists",
 	"INSECURE_MODE_MSG": "Insecure configuration!",
-	"MODULE_REQUIRED": "The module \"%s\" is required for this function. Contact the system administrator."
+	"MODULE_REQUIRED": "The module \"%s\" is required for this function. Contact the system administrator.",
+	"CREATING_DIRECTORY_STRUCTURE": "Creating directory structures",
+	"GENERATING_KERNEL": "Generating system kernel"
 };

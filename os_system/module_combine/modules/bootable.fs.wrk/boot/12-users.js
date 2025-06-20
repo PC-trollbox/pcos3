@@ -78,11 +78,6 @@ async function setupUsers() {
 				groups: ["root"],
 				homeDirectory: modules.defaultSystem + "/root"
 			},
-			nobody: {
-				securityChecks: [],
-				groups: ["nobody"],
-				homeDirectory: modules.defaultSystem
-			},
 			authui: {
 				securityChecks: [],
 				groups: ["authui"],

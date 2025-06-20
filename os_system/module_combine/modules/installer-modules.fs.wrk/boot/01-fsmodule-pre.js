@@ -1,13 +1,18 @@
 // @pcos-app-mode native
 modules.fs.mounts[".installer"] = modules.mounts.ramMount({});
 modules.defaultSystem = ".installer";
+// Directory structure
 modules.fs.mkdir(".installer/modules");
 modules.fs.mkdir(".installer/root");
+modules.fs.mkdir(".installer/root/.autorunNecessity");
+modules.fs.mkdir(".installer/root/desktop");
 modules.fs.mkdir(".installer/apps");
+modules.fs.mkdir(".installer/apps/associations");
+modules.fs.mkdir(".installer/apps/links");
 modules.fs.mkdir(".installer/etc");
 modules.fs.mkdir(".installer/etc/wallpapers");
 modules.fs.mkdir(".installer/etc/security");
-// Live CD
+// Live CD setup
 modules.fs.write(".installer/etc/security/users", JSON.stringify({
     root: {
         securityChecks: [ { type: "timeout", timeout: 0 } ],
@@ -24,4 +29,11 @@ modules.fs.write(".installer/etc/security/users", JSON.stringify({
 }));
 modules.fs.write(".installer/etc/security/automaticLogon", "root");
 modules.fs.write(".installer/root/.darkmode", "false");
+let autorunEntry = JSON.stringify({
+	localeReferenceName: "INSTALLER_TITLE",
+	path: "system/apps/installer.js"
+});
+modules.fs.write(".installer/root/.autorunNecessity/installer.lnk", autorunEntry);
+modules.fs.write(".installer/root/desktop/installer.lnk", autorunEntry);
+// Installer modules
 // @auto-generated-installer-module-insertion

@@ -57,7 +57,7 @@ async function loadModules() {
 						}
 					}, modules.ksk_imported, hexToU8A(fullModuleSignature), new TextEncoder().encode(fullModuleFile)))) throw new Error("MODULE_SIGNATURE_VERIFICATION_FAILED");
 				} catch (e) {
-					await panic("KEYS_MODULE_VERIFICATION_FAILED", {
+					if (modules.core.bootMode != "disable-harden") await panic("KEYS_MODULE_VERIFICATION_FAILED", {
 						name: "/modules/00-keys.fs",
 						params: [modules.defaultSystem],
 						underlyingJS: e
@@ -82,12 +82,12 @@ async function loadModules() {
 					}, importSigningKey, hexToU8A(fullModuleSignature), new TextEncoder().encode(fullModuleFile))) throw new Error("MODULE_SIGNATURE_VERIFICATION_FAILED");
 				} catch (e) {
 					console.error("Failed to verify module:", e);
-					if (critical) await panic("CRITICAL_MODULE_VERIFICATION_FAILED", {
+					if (critical && modules.core.bootMode != "disable-harden") await panic("CRITICAL_MODULE_VERIFICATION_FAILED", {
 						name: "/modules/" + moduleName,
 						params: [modules.defaultSystem],
 						underlyingJS: e
 					});
-					continue;
+					if (modules.core.bootMode != "disable-harden") continue;
 				}
 			}
 			modules.fs.mounts["." + moduleName] = await modules.mounts.fileMount({
