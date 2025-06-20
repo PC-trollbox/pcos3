@@ -87,7 +87,10 @@ async function loadModules() {
 						params: [modules.defaultSystem],
 						underlyingJS: e
 					});
-					if (modules.core.bootMode != "disable-harden") continue;
+					if (modules.core.bootMode != "disable-harden") {
+						moduleList.splice(moduleList.indexOf(moduleName), 1);
+						continue;
+					}
 				}
 			}
 			modules.fs.mounts["." + moduleName] = await modules.mounts.fileMount({

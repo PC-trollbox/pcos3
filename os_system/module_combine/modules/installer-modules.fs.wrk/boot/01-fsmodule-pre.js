@@ -35,5 +35,13 @@ let autorunEntry = JSON.stringify({
 });
 modules.fs.write(".installer/root/.autorunNecessity/installer.lnk", autorunEntry);
 modules.fs.write(".installer/root/desktop/installer.lnk", autorunEntry);
+let networkDefaultURL = new URL(location.origin);
+networkDefaultURL.protocol = "ws" + (networkDefaultURL.protocol == "https:" ? "s" : "") + ":";
+networkDefaultURL.pathname = "";
+modules.fs.write(".installer/etc/network.json", JSON.stringify({
+	url: networkDefaultURL.toString(),
+	ucBits: 1,
+	updates: "pcosserver.pc"
+}));
 // Installer modules
 // @auto-generated-installer-module-insertion
