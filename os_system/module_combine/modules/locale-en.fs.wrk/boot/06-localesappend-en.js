@@ -521,5 +521,6 @@ modules.locales.en = {
 	"CHANGE_LOCALE": "Change language",
 	"INSTALLER_INTENT": "Start the OS installation",
 	"MOUNT_EXISTS": "Mount already exists",
-	"INSECURE_MODE_MSG": "Insecure configuration!"
+	"INSECURE_MODE_MSG": "Insecure configuration!",
+	"MODULE_REQUIRED": "The module \"%s\" is required for this function. Contact the system administrator."
 };

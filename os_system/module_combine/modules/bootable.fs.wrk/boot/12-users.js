@@ -218,13 +218,20 @@ async function setupUsers() {
 					}
 				}
 				if (credentials[check].type == "zkpp") {
-					let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
-					let randomChallenge = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-					credentials[check].message = modules.locales.get("PASSWORD_PROMPT");
-					credentials[check].type = "zkpp_password";
-					credentials[check].userInput = true;
-					credentials[check].challenge = randomChallenge;
-					credentials[check].verify = input => nacl.sign.detached.verify(hexToU8A(credentials[check].challenge), hexToU8A(input), hexToU8A(credentials[check].publicKey));
+					credentials[check].message = modules.locales.get("MODULE_REQUIRED").replace("%s", "tweetnacl");
+					credentials[check].type = "informative";
+					credentials[check].userInput = false;
+					credentials[check].verify = () => false;
+					if (window.nacl) {
+						let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+						let randomChallenge = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+						credentials[check].message = modules.locales.get("PASSWORD_PROMPT");
+						credentials[check].type = "zkpp_password";
+						credentials[check].userInput = true;
+						credentials[check].challenge = randomChallenge;
+						credentials[check].verify = input => nacl.sign.detached.verify(hexToU8A(credentials[check].challenge), hexToU8A(input), hexToU8A(credentials[check].publicKey));
+					}
+
 				}
 			}
 			if (credentials.length == 0) {

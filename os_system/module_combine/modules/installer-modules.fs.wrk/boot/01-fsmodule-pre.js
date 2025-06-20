@@ -5,8 +5,9 @@ modules.fs.mkdir(".installer/modules");
 modules.fs.mkdir(".installer/root");
 modules.fs.mkdir(".installer/apps");
 modules.fs.mkdir(".installer/etc");
+modules.fs.mkdir(".installer/etc/wallpapers");
 modules.fs.mkdir(".installer/etc/security");
-// Live CD while working!
+// Live CD
 modules.fs.write(".installer/etc/security/users", JSON.stringify({
     root: {
         securityChecks: [ { type: "timeout", timeout: 0 } ],
@@ -20,5 +21,7 @@ modules.fs.write(".installer/etc/security/users", JSON.stringify({
 		blankPrivileges: true,
 		additionalPrivilegeSet:  [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "FS_READ", "FS_LIST_PARTITIONS", "CSP_OPERATIONS" ]
 	}
-}))
+}));
+modules.fs.write(".installer/etc/security/automaticLogon", "root");
+modules.fs.write(".installer/root/.darkmode", "false");
 // @auto-generated-installer-module-insertion

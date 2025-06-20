@@ -109,7 +109,7 @@ function loadTasks() {
 				if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 				let signedByKey = modules.ksk_imported;
 				if (key.keyInfo && key.keyInfo?.signedBy) {
-					signedByKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
+					signedByKey = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
 					if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
 					if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
 					await recursiveKeyVerify(signedByKey, khrl);
@@ -199,6 +199,7 @@ function loadTasks() {
 				windowObject.closeButton.addEventListener("click", () => that.sendSignal(taskId, 15));
 				ree.exportAPI("attachCLI", async function() {
 					if (that.tracker[taskId].cliio.attached) return true;
+					if (!window.Terminal) return false;
 					for (let registration of attachedCLIRegistrations) registration();
 					attachedCLIRegistrations = [];
 					let signup = () => new Promise((resolve) => registrations.push(resolve));

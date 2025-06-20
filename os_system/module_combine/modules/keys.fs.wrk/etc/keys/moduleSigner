@@ -1,0 +1,1 @@
+{"keyInfo":{"key":{"kty":"EC","x":"3g8o8p-ILv8zNVTvYXL3UenFfgE1rHp0_aMmywPAGTY","y":"xKnzBraxz6SsHpslZobyuI7YtWRjFnhlcfbZbXpY2Uw","crv":"P-256"},"usages":["moduleTrust"],"signedBy":"pcosIntermediate"},"signature":"ae87884c3266142cfa1e146c948bf53839beaefa0ef16f269f03e42d33aaa280ea2546931ec27d790b1ba376edb8edf3476f5e3a38510e9236fca40e3700730a"}

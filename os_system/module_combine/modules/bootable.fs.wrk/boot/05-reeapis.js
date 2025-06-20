@@ -1553,6 +1553,7 @@ function reeAPIs() {
 				},
 				patchDiff: function(libraryOptions) {
 					if (!privileges.includes("PATCH_DIFF")) throw new Error("UNAUTHORIZED_ACTION");
+					if (!window.diff) throw new Error("MODULE_REQUIRED");
 					let operations = { diff_core, diff, lcs, calcPatch, applyPatch, calcSlices };
 					return [ ...operations[libraryOptions.operation](...libraryOptions.args) ];
 				},

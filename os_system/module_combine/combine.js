@@ -18,7 +18,7 @@ const args = util.parseArgs({
 		"output": {
 			type: "string",
 			short: "o",
-			default: __dirname + "/installer.js"
+			default: __dirname + "/../index.js"
 		},
 		"no-increment": {
 			type: "boolean",
@@ -31,8 +31,14 @@ const args = util.parseArgs({
 	}
 });
 let installerModules = [ // List of modules included in the installer
-	"bootable", "core", "installer-modules", "keys", "locale-en", "pcos-icons", "pcos-sounds", "pcos-wallpapers"
+	"keys", "bootable", "core", "installer-modules", "locale-en", "pcos-icons", "pcos-sounds", "pcos-wallpapers"
 ];
+let specialOrdering = { // keys must always be the first module loaded.
+	"keys": 0
+};
+let criticalModules = [ "bootable", "core", "keys" ];
+let archivedModules = [ "keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers" ];
+let getModuleOrder = module => specialOrdering[module]?.toString().padStart(2, "0") || "50";
 let keypair = false;
 let ext2mime = {
 	"png": "image/png",
@@ -63,12 +69,12 @@ try {
 let pcosHeader = fs.readFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js").toString().split("\n");
 let version = pcosHeader[1].match(/\d+/)[0];
 version = parseInt(version);
-//if (!args.values["no-increment"]) version++;
+if (!args.values["no-increment"]) version++;
 version = version + args.values.branch;
 pcosHeader[1] = "const pcos_version = " + JSON.stringify(version) + ";";
 pcosHeader[2] = "const build_time = " + Date.now() + ";";
 pcosHeader = pcosHeader.join("\n");
-//if (!args.values["no-increment"] && !args.values["only-modules"]) fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
+if (!args.values["no-increment"] && !args.values["only-modules"]) fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
 function createModule(directory, permissionsPrefixed = "") {
 	let listing = fs.readdirSync(directory);
 	let module = { backend: { files: {}, permissions: {} }, files: {} };
@@ -124,10 +130,10 @@ function createModule(directory, permissionsPrefixed = "") {
 				if (modulesToDo.includes("installer-modules"))
 					modulesToDo.splice(modulesToDo.indexOf("installer-modules"), 1);
 				for (let module of modulesToDo) {
-					fileContents += "// modules/" + module + ".fs\n";
-					fileContents += "modules.fs.write(" + JSON.stringify(".installer/modules/" + module + ".fs") + ", " + JSON.stringify(fs.readFileSync(__dirname + "/modules/" + module + ".fs").toString()) + ");\n";
+					fileContents += "// modules/" + getModuleOrder(module) + "-" + module + ".fs\n";
+					fileContents += "modules.fs.write(" + JSON.stringify(".installer/modules/" + getModuleOrder(module) + "-" + module + ".fs") + ", " + JSON.stringify(fs.readFileSync(__dirname + "/modules/" + getModuleOrder(module) + "-" + module + ".fs").toString()) + ");\n";
 				}
-			} else if (file == "06-ksk.js" && fileContents.includes("// Key signing key")) { // Inserting KSK
+			} else if (file == "00-pcosksk.js" && fileContents.includes("// Key signing key")) { // Inserting KSK
 				fileContents = fileContents.replace('{stub:"present"}', JSON.stringify(keypair.ksk));
 			} else if (file.endsWith(".khrl")) {
 				fileContents = fileContents.replaceAll("\r", "").split("\n").filter(a => a && !a.startsWith("#")).map(function(a) {
@@ -157,12 +163,23 @@ function createModule(directory, permissionsPrefixed = "") {
 	if (permissionsPrefixed == "") {
 		module.buildInfo = {
 			for: version,
-			when: Date.now()
+			when: Date.now(),
+			signer: "moduleSigner",
+			critical: criticalModules.includes(path.basename(directory.slice(0, -7)))
 		};
+		let signingKey = keypair.moduleTrust_private;
+		if (path.basename(directory) == "keys.fs.wrk") {
+			signingKey = keypair.ksk_private;
+			delete module.buildInfo.signer;
+		}
+		module.buildInfo.signature = crypto.sign("sha256", JSON.stringify(module), {
+			key: signingKey,
+			format: "jwk",
+			dsaEncoding: "ieee-p1363",
+		}).toString("hex");
 	}
 	return module;
 }
-
 function getBootInModule(module) {
 	let moduleFiles = JSON.parse(fs.readFileSync(__dirname + "/modules/" + module).toString());
 	let boot = [];
@@ -176,15 +193,24 @@ let moduleFolders = fs.readdirSync(__dirname + "/modules").filter(a => a.endsWit
 let installerModulesPresent = moduleFolders.includes("installer-modules.fs.wrk");
 if (installerModulesPresent) moduleFolders.splice(moduleFolders.indexOf("installer-modules.fs.wrk"), 1);
 for (let moduleFolder of moduleFolders)
-	fs.writeFileSync(__dirname + "/modules/" + moduleFolder.slice(0, -4), JSON.stringify(createModule(__dirname + "/modules/" + moduleFolder)));
-if (installerModulesPresent)
-	fs.writeFileSync(__dirname + "/modules/installer-modules.fs", JSON.stringify(createModule(__dirname + "/modules/installer-modules.fs.wrk")));
+	fs.writeFileSync(__dirname + "/modules/" + getModuleOrder(moduleFolder.slice(0, -7)) + "-" + moduleFolder.slice(0, -4), JSON.stringify(createModule(__dirname + "/modules/" + moduleFolder)));
+fs.mkdirSync(__dirname + "/../history/build" + version, {
+	recursive: true
+});
+for (let archivedModule of archivedModules) {
+	fs.copyFileSync(__dirname + "/modules/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs",
+		__dirname + "/../history/build" + version + "/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs");
+}
 if (args.values["only-modules"]) return process.exit();
+if (installerModulesPresent)
+	fs.writeFileSync(__dirname + "/modules/" + getModuleOrder("installer-modules") + "-installer-modules.fs", JSON.stringify(createModule(__dirname + "/modules/installer-modules.fs.wrk")));
 let entireBoot = [];
-for (let installerModule of installerModules) entireBoot.push(...getBootInModule(installerModule + ".fs"));
+for (let installerModule of installerModules) entireBoot.push(...getBootInModule(getModuleOrder(installerModule) + "-" + installerModule + ".fs"));
 let installerCode = "// This is a generated file. Please modify the corresponding files, not this file directly.\n" +
 	"// (c) Copyright 2025 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
 entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]));
 entireBoot = entireBoot.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
 installerCode += entireBoot;
 fs.writeFileSync(args.values.output, installerCode);
+fs.rmSync(__dirname + "/modules/50-installer-modules.fs");
+fs.copyFileSync(args.values.output, __dirname + "/../history/build" + version + "/installerImage.js");
