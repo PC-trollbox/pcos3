@@ -1083,6 +1083,10 @@ function loadFs() {
 
 	async function fileMount(options) {
 		let file = JSON.parse(await modules.fs.read(options.srcFile));
+		let backend = file.backend;
+		delete file.backend;
+		let files = file.files;
+		delete file.files;
 		return {
 			read: async function(key) {
 				key = String(key);
@@ -1248,15 +1252,15 @@ function loadFs() {
 				return obj;
 			},
 			sync: async function() {
-				return await modules.fs.write(options.srcFile, JSON.stringify({ backend: this.backend, files: this.files }));
+				return await modules.fs.write(options.srcFile, JSON.stringify({ ...file, backend: this.backend, files: this.files }));
 			},
 			unmount: () => true,
 			directory_supported: true,
 			read_only: !!options.read_only,
 			filesystem: "filefs",
 			permissions_supported: true,
-			backend: file.backend,
-			files: file.files
+			backend: backend,
+			files: files
 		};
 	}
 

@@ -39,7 +39,7 @@ async function requireLogon() {
 		let bgPic = "";
 		let isDark = false;
 		let locale;
-		let basicPrivilegeChecklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "START_TASK" ];
+		let basicPrivilegeChecklist = [ "FS_READ", "FS_LIST_PARTITIONS", "IPC_SEND_PIPE", "IPC_LISTEN_PIPE", "START_TASK", "GET_LOCALE", "GET_THEME", "LOGOUT" ];
 		if (!basicPrivilegeChecklist.every(privilege => userInfo.privileges.includes(privilege))) {
 			let failureMessage = modules.window(session);
 			failureMessage.title.innerText = "Permission denied";
@@ -592,7 +592,7 @@ async function serviceLogon() {
 				console.error("Failed to read service config of", service, ":", e);
 				continue;
 			}
-			if (serviceConfig.disabled) continue;
+			if (serviceConfig.disabled) continue;p
 			let serviceName = (serviceConfig.localeReferenceName ? modules.locales.get(serviceConfig.localeReferenceName) : null) || (serviceConfig.localeDatabaseName ? (serviceConfig.localeDatabaseName[navigator.language.slice(0, 2).toLowerCase()] || serviceConfig.localeDatabaseName[modules.locales.defaultLocale]) : null) || serviceConfig.name;
 			if (!serviceConfig.automaticLogon) {
 				console.error("Service", serviceName, "(", service, ") does not have logon credentials set");

@@ -46,14 +46,6 @@ async function secondstage() {
 		await modules.users.init();
 		token = await modules.tokens.generate();
 		await modules.tokens.userInitialize(token, "root");
-		let user = await modules.users.getUserInfo("root", true, token);
-		user.securityChecks = [
-			{
-				type: "timeout",
-				timeout: 1
-			}
-		];
-		await modules.users.moduser("root", user, token);
 	}
 	krnlDiv.remove();
 	let taskId = await modules.tasks.exec(modules.defaultSystem + "/apps/secondstage.js", [ usersConfigured ? "usersConfigured" : "" ], windowDiv, token, false);

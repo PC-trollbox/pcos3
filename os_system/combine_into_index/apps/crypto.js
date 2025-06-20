@@ -1520,22 +1520,25 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 					keyUsages: [ "deriveBits" ]
 				}
 			});
-			let publicKeyImport = await availableAPIs.cspOperation({
-				cspProvider: "basic",
-				operation: "importKey",
-				cspArgument: {
-					format: importAsOption.value,
-					keyData: publicKeyData,
-					algorithm: {
-						name: algorithmOption.value,
-						hash: hashOption.value,
-						namedCurve: namedCurveOption.value,
-						length: parseInt(lengthField.value)
-					},
-					extractable: false,
-					keyUsages: [ "deriveBits" ]
-				}
-			});
+			let publicKeyImport;
+			if (publicKeyData.value) {
+				publicKeyImport = await availableAPIs.cspOperation({
+					cspProvider: "basic",
+					operation: "importKey",
+					cspArgument: {
+						format: importAsOption.value,
+						keyData: publicKeyData,
+						algorithm: {
+							name: algorithmOption.value,
+							hash: hashOption.value,
+							namedCurve: namedCurveOption.value,
+							length: parseInt(lengthField.value)
+						},
+						extractable: false,
+						keyUsages: []
+					}
+				});
+			}
 			derivedBitsField.value = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
 				cspProvider: "basic",
 				operation: "deriveBits",

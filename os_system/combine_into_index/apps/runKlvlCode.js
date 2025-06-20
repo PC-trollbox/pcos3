@@ -17,7 +17,7 @@
 	try {
 		await availableAPIs.toMyCLI(JSON.stringify(await availableAPIs.runKlvlCode(await availableAPIs.fs_read({ path: exec_args[0] }))) + "\r\n");
 	} catch (e) {
-		await availableAPIs.toMyCLI("runKlvlCode: " + file + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
+		await availableAPIs.toMyCLI("runKlvlCode: " + exec_args[0] + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
 	}
 	await availableAPIs.toMyCLI("\r\n");
 	await availableAPIs.terminate();

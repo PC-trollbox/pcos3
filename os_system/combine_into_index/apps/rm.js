@@ -41,12 +41,13 @@ async function recursiveRemove(target, force) {
 			targetFile = target + "/" + targetFile;
 			try {
 				if (await availableAPIs.fs_isDirectory({ path: targetFile })) await recursiveRemove(targetFile, force);
-				await availableAPIs.fs_rm({ path: targetFile });
+				else await availableAPIs.fs_rm({ path: targetFile });
 			} catch (e) {
 				await availableAPIs.toMyCLI("rm: " + targetFile + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
 				if (!force) return await availableAPIs.terminate();
 			}
 		}
+		await availableAPIs.fs_rm({ path: target });
 	} catch (e) {
 		await availableAPIs.toMyCLI("rm: " + target + ": " + await availableAPIs.lookupLocale(e.message) + "\r\n");
 		if (!force) return await availableAPIs.terminate();

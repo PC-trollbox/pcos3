@@ -6,6 +6,7 @@ async function loadModules() {
                 srcFile: modules.defaultSystem + "/modules/" + moduleName,
                 read_only: true
             });
+            if (modules.core.bootMode == "logboot") modules.core.tty_bios_api.println("\t../modules/" + moduleName);
         }
         let newSystemMount = "system";
         if (modules.defaultSystem == "system") newSystemMount = "system-" + crypto.getRandomValues(new Uint8Array(4)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");

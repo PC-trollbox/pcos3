@@ -325,10 +325,12 @@ let cachedIcons = {};
 				displayResult.appendChild(openButton);
 			}
 			displayResult.appendChild(document.createElement("hr"));
-			let spaceDisplayer = document.createElement("span");
+			let spaceDisplayer = document.createElement("div");
 			let spaces = await availableAPIs.estimateStorage();
 			for (let space in spaces) {
-				spaceDisplayer.innerText += (await availableAPIs.lookupLocale("SPACE_SHOWER")).replace("%s", space).replace("%s", await availableAPIs.ufInfoUnits([spaces[space].used])).replace("%s", await availableAPIs.ufInfoUnits([spaces[space].total])).replace("%s", (spaces[space].used / spaces[space].total * 100).toFixed(2));
+				let newSpace = document.createElement("div");
+				newSpace.innerText = (await availableAPIs.lookupLocale("SPACE_SHOWER")).replace("%s", space).replace("%s", await availableAPIs.ufInfoUnits([spaces[space].used])).replace("%s", await availableAPIs.ufInfoUnits([spaces[space].total])).replace("%s", (spaces[space].used / spaces[space].total * 100).toFixed(2));
+				spaceDisplayer.appendChild(newSpace);
 			}
 			displayResult.appendChild(spaceDisplayer);
 			previousDirectory = path;

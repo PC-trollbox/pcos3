@@ -1,5 +1,6 @@
 function loadTasks() {
 	// @pcos-app-mode native
+	modules.startupWindow.content.innerText = locales.get("PCOS_STARTING");
 	let tasks = {
 		exec: async function(file, arg, windowObject, token, silent, privateData) {
 			let errorAudio = new Audio();

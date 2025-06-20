@@ -26,9 +26,8 @@ let dnsTable = {
 };
 
 app.use(function(req, res, next) {
-	res.set("Cross-Origin-Embedder-Policy", "require-corp");
+	res.set("Cross-Origin-Embedder-Policy", "credentialless");
 	res.set("Cross-Origin-Opener-Policy", "same-origin");
-	res.set("Cross-Origin-Resource-Policy", "cross-origin");
 	next(); 
 });
 

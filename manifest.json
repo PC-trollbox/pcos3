@@ -1,0 +1,13 @@
+{
+	"short_name": "PCOS 3",
+	"icons": [
+		{
+			"src": "/favicon.svg",
+			"sizes": "any"
+		}
+	],
+	"start_url": ".",
+	"display": "fullscreen",
+	"theme_color": "#000000",
+	"background_color": "#ffffff"
+}
