@@ -523,5 +523,6 @@ modules.locales.ru = {
 	"INSECURE_MODE_MSG": "Небезопасные параметры!",
 	"MODULE_REQUIRED": "Для этой функции требуется модуль \"%s\". Обратитесь к системному администратору.",
 	"CREATING_DIRECTORY_STRUCTURE": "Создание структуры каталогов",
-	"GENERATING_KERNEL": "Создание ядра системы"
+	"GENERATING_KERNEL": "Создание ядра системы",
+	"WORK_IN_PROGRESS_AFTER_MODULAR": "Эта функция находится в работе после модуляризации."
 };

@@ -523,5 +523,6 @@ modules.locales.en = {
 	"INSECURE_MODE_MSG": "Insecure configuration!",
 	"MODULE_REQUIRED": "The module \"%s\" is required for this function. Contact the system administrator.",
 	"CREATING_DIRECTORY_STRUCTURE": "Creating directory structures",
-	"GENERATING_KERNEL": "Generating system kernel"
+	"GENERATING_KERNEL": "Generating system kernel",
+	"WORK_IN_PROGRESS_AFTER_MODULAR": "This function is a work-in-progress after modularization."
 };

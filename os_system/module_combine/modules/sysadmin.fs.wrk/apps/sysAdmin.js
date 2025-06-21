@@ -2,7 +2,7 @@
 // link: lrn:SYSADMIN_TOOLS_TITLE
 // signer: automaticSigner
 // fnName: sysadminInstaller
-// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, PATCH_DIFF, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, CSP_OPERATIONS, GET_UPDATE_SERVICE, GET_USER_INFO
+// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, CSP_OPERATIONS, GET_UPDATE_SERVICE, GET_USER_INFO
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -29,74 +29,7 @@
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
 	changeLocale.innerText = await availableAPIs.lookupLocale("CHANGE_LOCALE");
 	osReinstallButton.addEventListener("click", async function() {
-		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "LLDISK_WRITE", "SYSTEM_SHUTDOWN", "FS_READ" ];
-		if (!checklist.every(p => privileges.includes(p))) {
-			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
-			return;
-		}
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING");
-		let osArchive;
-		try {
-			let etcls = await availableAPIs.fs_ls({
-				path: (await availableAPIs.getSystemMount()) + "/etc"
-			});
-			let from = "scratch";
-			let originalVersion = "";
-			if (etcls.includes("diffupdate_cache.js")) {
-				originalVersion = await availableAPIs.fs_read({
-					path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js"
-				});
-				from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
-			}
-			let serverDomainOrAddress = exec_args[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
-			let serverAddress = serverDomainOrAddress;
-			if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
-			serverAddress = serverAddress.replaceAll(":", "");
-			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", serverDomainOrAddress).replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
-			let connection = await availableAPIs.connfulConnect({
-				gate: "deltaUpdate",
-				address: serverAddress,
-				verifyByDomain: serverDomainOrAddress
-			});
-			await availableAPIs.connfulConnectionSettled(connection);
-			await availableAPIs.connfulWrite({
-				connectionID: connection,
-				data: JSON.stringify({ from, handlesCtr: true })
-			})
-			let patch = [];
-			while (true) {
-				let a = JSON.parse(await availableAPIs.connfulRead(connection));
-				extraActivities.innerText = (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length);
-				if (a.final) break;
-				patch[a.ctr] = a.hunk;
-			}
-			await availableAPIs.connfulDisconnect(connection);
-			osArchive = (await availableAPIs.patchDiff({
-				operation: "applyPatch",
-				args: [ originalVersion, patch ]
-			})).join("");
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",
-				data: osArchive
-			});
-		} catch (e) {
-			await availableAPIs.closeability(true);
-			console.error(e);
-			extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOAD_FAILED");
-			container.hidden = false;
-			return;
-		}
-		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_SETTING");
-		await availableAPIs.lldaWrite({
-			partition: "boot",
-			data: osArchive
-		});
-		extraActivities.innerText = await availableAPIs.lookupLocale("RESTARTING");
-		await availableAPIs.shutdown({
-			isReboot: true
-		});
+		extraActivities.innerText = await availableAPIs.lookupLocale("WORK_IN_PROGRESS_AFTER_MODULAR");
 	});
 	fsckOrderButton.addEventListener("click", async function() {
 		let checklist = [ "SYSTEM_SHUTDOWN", "FS_WRITE" ];
@@ -189,128 +122,6 @@
 	});
 	updateSystemButton.addEventListener("click", async function() {
 		extraActivities.innerText = await availableAPIs.lookupLocale("WORK_IN_PROGRESS_AFTER_MODULAR");
-		return;
-		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
-		if (!checklist.every(p => privileges.includes(p))) {
-			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
-			return;
-		}
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING");
-		let osArchive;
-		try {
-			let etcls = await availableAPIs.fs_ls({
-				path: (await availableAPIs.getSystemMount()) + "/etc"
-			});
-			let from = "scratch";
-			let originalVersion = "";
-			if (etcls.includes("diffupdate_cache.js")) {
-				originalVersion = await availableAPIs.fs_read({
-					path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js"
-				});
-				from = originalVersion.split("\n")[5].match(/\d\w+/)[0];
-			}
-			let serverDomainOrAddress = exec_args[0] || ((await availableAPIs.getUpdateService()) || "pcosserver.pc");
-			let serverAddress = serverDomainOrAddress;
-			if (!serverAddress.includes(":")) serverAddress = await availableAPIs.resolve(serverAddress);
-			serverAddress = serverAddress.replaceAll(":", "");
-			extraActivities.innerText = (await availableAPIs.lookupLocale("DOWNLOADING_OS_PATCH")).replace("%s", serverDomainOrAddress).replace("%s", serverAddress.match(/.{1,4}/g).join(":"));
-			let connection = await availableAPIs.connfulConnect({
-				gate: "deltaUpdate",
-				address: serverAddress,
-				verifyByDomain: serverDomainOrAddress
-			});
-			await availableAPIs.connfulConnectionSettled(connection);
-			await availableAPIs.connfulWrite({
-				connectionID: connection,
-				data: JSON.stringify({ from, handlesCtr: true })
-			})
-			let patch = [];
-			while (true) {
-				let a = JSON.parse(await availableAPIs.connfulRead(connection));
-				extraActivities.innerText = (await availableAPIs.lookupLocale("PATCH_HUNK_COUNT")).replace("%s", patch.length);
-				if (a.final) break;
-				patch[a.ctr] = a.hunk;
-			}
-			await availableAPIs.connfulDisconnect(connection);
-			if (patch.length == 0) {
-				await availableAPIs.closeability(true);
-				extraActivities.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
-				container.hidden = false;
-				return;
-			}
-			osArchive = (await availableAPIs.patchDiff({
-				operation: "applyPatch",
-				args: [ originalVersion, patch ]
-			})).join("");
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/diffupdate_cache.js",
-				data: osArchive
-			});
-		} catch (e) {
-			await availableAPIs.closeability(true);
-			console.error(e);
-			extraActivities.innerText = await availableAPIs.lookupLocale("REINSTALL_DOWNLOAD_FAILED");
-			container.hidden = false;
-			return;
-		}
-		let files = osArchive.split(/\/\/ [0-9]+-.+.js\n/g).slice(1);
-		let names = osArchive.match(/\/\/ [0-9]+-.+.js/g);
-		let appIndex = names.indexOf("// " + "1" + "5-ap" + "ps.js");
-		let apps = files[appIndex].match(/async function (.+)Installer\(target, token\)/g).map(a => a.split(" ")[2].split("(")[0]);
-		apps.splice(apps.indexOf("autoinstallerInstaller"), 1);
-		apps.splice(apps.indexOf("installerInstaller"), 1);
-		apps.splice(apps.indexOf("secondstageInstaller"), 1);
-		let ipcPipe = await availableAPIs.createPipe();
-		let pipeResult = availableAPIs.listenToPipe(ipcPipe);
-		let installerCode = "";
-		for (let app of apps) installerCode += `await ${app}(modules.defaultSystem, ${JSON.stringify(await availableAPIs.getProcessToken())});\n`;
-		await availableAPIs.runKlvlCode(`(async function() {
-			try {
-				${files[appIndex]}
-				${installerCode}
-				modules.ipc.send(${JSON.stringify(ipcPipe)}, true);
-			} catch (e) {
-				console.error(e);
-				modules.ipc.send(${JSON.stringify(ipcPipe)}, false);
-			}
-		})();`);
-		pipeResult = await pipeResult;
-		await availableAPIs.closePipe(ipcPipe);
-		if (!pipeResult) {
-			extraActivities.innerText = await availableAPIs.lookupLocale("UPDATE_EXTRA_FAIL");
-			container.hidden = false;
-			return;
-		}
-		files.splice(appIndex, 1);
-		names.splice(appIndex, 1);
-		let installerIndex = names.indexOf("// 1" + "0" + "-ins" + "taller.js");
-		files.splice(installerIndex, 1);
-		names.splice(installerIndex, 1);
-		let secondStageIndex = names.indexOf("// 1" + "7" + "-instal" + "ler-seconds" + "tage.js");
-		files.splice(secondStageIndex, 1);
-		names.splice(secondStageIndex, 1);
-		for (let file in files) {
-			let name = names[file].split(" ").slice(1).join(" ");
-			let content = files[file];
-			try {
-				await availableAPIs.fs_write({
-					path: (await availableAPIs.getSystemMount()) + "/boot/" + name,
-					data: content
-				});
-			} catch {
-				await availableAPIs.closeability(true);
-				extraActivities.innerText = await availableAPIs.lookupLocale("UPDATE_BOOT_FAIL");
-				container.hidden = false;
-				return;
-			}
-		}
-		extraActivities.innerText = await availableAPIs.lookupLocale("RESTARTING");
-		await availableAPIs.shutdown({
-			isReboot: true,
-			isKexec: true
-		});
 	});
 	updateFirmwareButton.addEventListener("click", async function() {
 		let checklist = [ "FETCH_SEND", "SYSTEM_SHUTDOWN", "SET_FIRMWARE" ];
