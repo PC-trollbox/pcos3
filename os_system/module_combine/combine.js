@@ -32,14 +32,16 @@ const args = util.parseArgs({
 });
 let installerModules = [ // List of modules included in the installer
 	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "diff", "tweetnacl", "xterm", "installer",
+	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal",
 	"installer-modules" /* Must be present! */
 ];
 let specialOrdering = { // keys must always be the first module loaded.
 	"keys": 0
 };
-let criticalModules = [ "bootable", "core", "keys", "tweetnacl" ];
+let criticalModules = [ "bootable", "core", "keys", "tweetnacl", "sysadmin", "terminal" ];
 let archivedModules = [
-	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "diff", "tweetnacl", "xterm", "installer"
+	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "diff", "tweetnacl", "xterm", "installer",
+	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal"
 ];
 let getModuleOrder = module => specialOrdering[module]?.toString().padStart(2, "0") || "50";
 let keypair = false;

@@ -24,8 +24,8 @@ let onClose = () => availableAPIs.terminate();
 	let checklist = [ "GET_BUILD", "RUN_KLVL_CODE", "LLDISK_WRITE", "LLDISK_READ", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_REMOVE", "FS_LIST_PARTITIONS", "SYSTEM_SHUTDOWN", "FS_CHANGE_PERMISSION", "LLDISK_LIST_PARTITIONS", "FS_MOUNT", "CSP_OPERATIONS", "LLDISK_INIT_PARTITIONS" ];
 	if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
 	let installed_modules = [
-		"50-bootable.fs", "50-core.fs", "50-diff.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-tweetnacl.fs",
-		"50-xterm.fs"
+		"50-bootable.fs", "50-core.fs", "50-diff.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-sysadmin.fs",
+		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs"
 	];
 	await availableAPIs.closeability(false);
 	await new Promise(async function(resolve) {

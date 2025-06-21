@@ -20,6 +20,11 @@
 			} else pargs[key] = value;
 		} else ppos.push(arg);
 	}
+	if (!pargs["override-modules"]) {
+		await availableAPIs.toMyCLI("diffupdate no longer works on modular systems and will be replaced with a better version.\r\n");
+		await availableAPIs.toMyCLI("To run diffupdate anyway, re-run with --override-modules.\r\n");
+		return await availableAPIs.terminate();
+	}
 	try {
 		let etcls = await availableAPIs.fs_ls({
 			path: (await availableAPIs.getSystemMount()) + "/etc"

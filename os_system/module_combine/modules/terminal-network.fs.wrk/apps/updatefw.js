@@ -16,6 +16,7 @@
 				url: "/init.js",
 				init: {}
 			});
+			if (!fwArchive.ok) throw new Error("Non-OK response (" + fwArchive.status + " " + fwArchive.statusText + ")");
 		} catch (e) {
 			console.error(e);
 			await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("UPDATEFW_DOWNLOAD_FAILED") + "\r\n");

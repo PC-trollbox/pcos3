@@ -21,6 +21,11 @@
 			} else pargs[key] = value;
 		} else ppos.push(arg);
 	}
+	if (!pargs["override-modules"]) {
+		await availableAPIs.toMyCLI("updateos no longer works on modular systems and will be replaced with a better version.\r\n");
+		await availableAPIs.toMyCLI("To run updateos anyway, re-run with --override-modules.\r\n");
+		return await availableAPIs.terminate();
+	}
 	await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REINSTALL_DOWNLOADING") + "\r\n");
 	let osArchive;
 	if (!ppos[0]) {
@@ -29,6 +34,7 @@
 				url: ppos.url || "/os.js",
 				init: {}
 			});
+			if (!osArchive.ok) throw new Error("Non-OK response (" + osArchive.status + " " + osArchive.statusText + ")");
 		} catch (e) {
 			console.error(e);
 			await availableAPIs.toMyCLI(await availableAPIs.lookupLocale("REINSTALL_DOWNLOAD_FAILED") + "\r\n");
