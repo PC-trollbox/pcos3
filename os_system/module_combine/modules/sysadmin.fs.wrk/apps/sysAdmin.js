@@ -188,6 +188,8 @@
 		}
 	});
 	updateSystemButton.addEventListener("click", async function() {
+		extraActivities.innerText = await availableAPIs.lookupLocale("WORK_IN_PROGRESS_AFTER_MODULAR");
+		return;
 		let checklist = [ "CSP_OPERATIONS", "PATCH_DIFF", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "FS_WRITE", "RUN_KLVL_CODE", "IPC_CREATE_PIPE", "IPC_LISTEN_PIPE", "SYSTEM_SHUTDOWN" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
@@ -325,6 +327,7 @@
 				url: "/init.js",
 				init: {}
 			});
+			if (!fwArchive.ok) throw new Error("Download failed");
 		} catch (e) {
 			await availableAPIs.closeability(true);
 			console.error(e);

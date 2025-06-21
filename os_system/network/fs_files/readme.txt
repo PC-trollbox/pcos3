@@ -5,6 +5,6 @@ Directory overview:
     /breakout.js: Access native Breakout.
     /latest.js: Access the latest PCOS 3 installer image.
     /minios.js: Access the PCOS 3 build 999mini installer image.
-    /source: Access the PCOS 3 source code (/os_system/combine_into_index)
+    /source: Access the PCOS 3 source code (/os_system/module_combine)
 
 Sorry for too many symlinks.
