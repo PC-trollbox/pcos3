@@ -80,12 +80,30 @@
 		});
 	});
 	wipeSystemButton.addEventListener("click", async function() {
+		container.hidden = true;
+		let promptMessage = document.createElement("span");
+		let inputBox = document.createElement("input");
+		let randomString = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16);
+		promptMessage.innerText = "Copy-paste " + randomString + " to confirm: ";
+		extraActivities.innerText = "";
+		extraActivities.appendChild(promptMessage);
+		extraActivities.appendChild(inputBox);
+		await new Promise(function(resolve, reject) {
+			inputBox.oninput = async function() {
+				if (inputBox.value.trim() == randomString) resolve();
+				else {
+					container.hidden = false;
+					extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
+					reject("Invalid confirmation");
+				}
+			}
+		});
 		let checklist = [ "FS_REMOVE", "FS_MOUNT", "FS_READ", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "SYSTEM_SHUTDOWN" ];
 		if (!checklist.every(p => privileges.includes(p))) {
+			container.hidden = false;
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
 		}
-		container.hidden = true;
 		await availableAPIs.closeability(false);
 		extraActivities.innerText = await availableAPIs.lookupLocale("WIPING_SYSTEM");
 		try {
