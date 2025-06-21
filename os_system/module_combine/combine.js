@@ -42,7 +42,7 @@ let criticalModules = [ "bootable", "core", "keys", "tweetnacl", "sysadmin", "te
 let archivedModules = [
 	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "diff", "tweetnacl", "xterm", "installer",
 	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal", "blogBrowser", "calculator", "crypto-tools", "legacy-terminal",
-	"multimedia"
+	"arcadeBreakout", "multimedia"
 ];
 let getModuleOrder = module => specialOrdering[module]?.toString().padStart(2, "0") || "50";
 let keypair = false;
