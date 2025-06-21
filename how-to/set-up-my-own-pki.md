@@ -1,6 +1,7 @@
 # How to set up my own PKI
 (Public Key Infrastructure)
 
+**This how-to is outdated due to modularization**
 **THIS COULD RUIN THE SECURITY OF THE SYSTEM!!** It could be useful for developers that want to develop their apps while working with appHarden or for admins that do not trust the original PKI.
 This will also cause diffupdate and other connful services to fail.
 
@@ -25,10 +26,10 @@ For example, if your key is `{"crv":"P-256","x":4,"y":2}`, then the new format i
 14. Choose algorithm "ECDSA".
 15. Sign.
 16. Save the signature. This will be your ASK signature.
-17. Open the automaticSigner key as the plaintext, `{systemMount}/etc/keys/automaticSigner`. The system mount is usually "storage", in that case load `storage/etc/keys/automaticSigner`.
+17. Open the pcosIntermediate key as the plaintext, `{systemMount}/etc/keys/pcosIntermediate`. The system mount is usually "system", in that case load `system/etc/keys/pcosIntermediate`.
 18. Leave only the object inside keyInfo. For example, if your automatic signer is `{"signature":"123","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}`, make it just `{"key":{"x":"456","y":"789"},"usages":["appTrust"]}`
 19. Sign.
-20. Save the signature. This will be your compatibility signature. (If you have any other keys, do the same thing with them)
+20. Save the signature. This will be your compatibility signature, to let you work with previously-signed apps.
 21. Close Cryptographic Tools.
 22. Open text editor.
 23. Load the KSK public key, copy it to clipboard.
@@ -43,7 +44,7 @@ For example, if there was `let ksk = {"crv":"P-256","x":1,"y":3};` and your KSK 
 {"signature":_THE_SIGNATURE_OF_ASK_,"keyInfo":{"usages":["appTrust"],"key":_THE_ACTUAL_PUBLIC_KEY_HERE_}}
 ```
 30. Save as `{systemMount}/etc/keys/{whatever_your_ask_name_will_be}`
-31. Load the automaticSigner key in one text editor, and its new signature in another.
+31. Load the pcosIntermediate key in one text editor, and its new signature in another.
 32. Replace the signature field with the new signature. For example, you have the original key `{"signature":"123","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}` and a new signature of `515`, the new key would be `{"signature":"515","keyInfo":{"key":{"x":"456","y":"789"},"usages":["appTrust"]}}`.
-33. Save the automaticSigner key. (If you have any other keys, do the same thing with them)
+33. Save the pcosIntermediate key. (If you have any other keys, do the same thing with them)
 34. Restart the system.

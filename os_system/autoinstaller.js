@@ -2,6 +2,7 @@
 // signer: automaticSigner
 // allow: GET_LOCALE, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS
 // =====END MANIFEST=====
+// Pending modularization
 let onClose = () => availableAPIs.terminate();
 (async function() {
 	// @pcos-app-mode isolatable

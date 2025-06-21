@@ -1,5 +1,6 @@
 # How to secure the system.
 
+Notice: `appHarden` is done by default now.
 1. Log into the OS as administrator.
 2. Open the text editor.
 3. Type in the following:
@@ -11,7 +12,7 @@ This is an `appHarden` configuration which requires all apps to have a signature
 {"requireSignature":true,"requireAllowlist":true,"disableASCK":true}
 ```
 
-4. Save in `{systemMount}/etc/appHarden`. The system mount is usually "storage", in that case save to `storage/etc/appHarden`.
+4. Save in `{systemMount}/etc/appHarden`. The system mount is usually "system", in that case save to `system/etc/appHarden`.
 5. Restart the system.
 6. Immediately start pressing Enter multiple times until the Preference Manager appears.
 7. Make sure "Insecure REE fallback" is disabled. If it isn't, select the option.
@@ -19,4 +20,7 @@ This is an `appHarden` configuration which requires all apps to have a signature
 9. Make sure "Boot from network" is disallowed.
 10. Create the first password. Select "Add password". You will create a superpassword needed to access the Preference Manager.
 11. Create passwords for users. Select "Add password". You will create a regular password. It won't be able to access the Preference Manager, but it can be used to boot.
-12. Select "Restart system".
+12. Go to "Disk protection".
+13. Start encryption with password. This will enable full-disk encryption.
+14. Leave "Disk protection".
+15. Select "Restart system".

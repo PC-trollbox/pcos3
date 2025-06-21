@@ -1,5 +1,6 @@
 # How to update the OS after a key rotation
 
+**This how-to is outdated due to modularization**
 1. Get the new server key fingerprint. Here is a way to do that:
     1. Log into the OS (you should do this on an updated system)
     2. Open "Terminal".
