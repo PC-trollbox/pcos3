@@ -9,8 +9,6 @@ if (worker_threads.isMainThread) {
 let {packetData, serverAddress} = worker_threads.workerData;
 try {
     let fromBuild = "";
-    if (packetData.data.content.from != "scratch")
-        fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(packetData.data.content.from.match(/\w+/g)) + ".js").toString();
     worker_threads.parentPort.postMessage(JSON.stringify({
         from: serverAddress,
         data: {
