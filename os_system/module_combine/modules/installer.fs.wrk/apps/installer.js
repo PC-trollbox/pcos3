@@ -25,7 +25,8 @@ let onClose = () => availableAPIs.terminate();
 	if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
 	let installed_modules = [
 		"50-bootable.fs", "50-core.fs", "50-diff.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-sysadmin.fs",
-		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs"
+		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs", "50-blogBrowser.fs",
+		"50-calculator.fs", "50-crypto-tools.fs", "50-multimedia.fs"
 	];
 	await availableAPIs.closeability(false);
 	await new Promise(async function(resolve) {
