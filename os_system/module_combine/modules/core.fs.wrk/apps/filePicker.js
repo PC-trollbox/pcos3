@@ -79,7 +79,7 @@ let ipcChannel = exec_args[0];
 		try {
 			let type = await isDirectory(path);
 			if (type == "directory") {
-				let ls = await availableAPIs.fs_ls({ path: path });
+				let ls = (await availableAPIs.fs_ls({ path: path })).sort((a, b) => a.localeCompare(b));
 				for (let file of ls) {
 					if (file.startsWith(".") && hideHiddenFiles) continue;
 					let openButton = document.createElement("button");
