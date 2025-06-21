@@ -12,7 +12,10 @@ modules.fs.mkdir(".installer/apps/links");
 modules.fs.mkdir(".installer/etc");
 modules.fs.mkdir(".installer/etc/wallpapers");
 modules.fs.mkdir(".installer/etc/security");
-// Live CD setup
+modules.fs.write(".installer/etc/appHarden", JSON.stringify({
+	requireSignature: true,
+	requireAllowlist: true
+}));
 modules.fs.write(".installer/etc/security/users", JSON.stringify({
     root: {
         securityChecks: [ { type: "timeout", timeout: 0 } ],
