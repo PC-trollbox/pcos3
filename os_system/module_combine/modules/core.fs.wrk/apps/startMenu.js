@@ -71,7 +71,7 @@ let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")
 		}
 	}
 	try {
-		let enumeration = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/apps/links" });
+		let enumeration = (await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/apps/links" })).sort((a, b) => a.localeCompare(b));
 		for (let app of enumeration) {
 			let appLink = await availableAPIs.fs_read({ path: (await availableAPIs.getSystemMount()) + "/apps/links/" + app });
 			appLink = JSON.parse(appLink);

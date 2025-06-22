@@ -6,7 +6,7 @@ function localization() {
 			let locale = locales[lang];
 			if (!locale) locale = locales[locales.defaultLocale];
 			if (!locale) locale = {};
-			if (!locale.hasOwnProperty(key)) locale = locales.en;
+			if (!locale.hasOwnProperty(key)) locale = locales[locales.defaultLocale];
 			return locale.hasOwnProperty(key) ? locale[key] : key;
 		}
 	}

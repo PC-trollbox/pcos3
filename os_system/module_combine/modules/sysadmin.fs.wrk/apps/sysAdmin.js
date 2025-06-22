@@ -20,6 +20,7 @@
 	let updateFirmwareButton = document.createElement("button");
 	let imagingButton = document.createElement("button");
 	let changeLocale = document.createElement("button");
+	let regenerateKernel = document.createElement("button");
 	osReinstallButton.innerText = await availableAPIs.lookupLocale("REINSTALL_BUTTON");
 	fsckOrderButton.innerText = await availableAPIs.lookupLocale("FSCK_BUTTON");
 	fsckDiscardButton.innerText = await availableAPIs.lookupLocale("DISCARD_BUTTON");
@@ -28,11 +29,12 @@
 	updateFirmwareButton.innerText = await availableAPIs.lookupLocale("UPDATEFW_BUTTON");
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
 	changeLocale.innerText = await availableAPIs.lookupLocale("CHANGE_LOCALE");
+	regenerateKernel.innerText = await availableAPIs.lookupLocale("REGENERATE_KERNEL");
 	osReinstallButton.addEventListener("click", async function() {
 		extraActivities.innerText = await availableAPIs.lookupLocale("WORK_IN_PROGRESS_AFTER_MODULAR");
 	});
 	fsckOrderButton.addEventListener("click", async function() {
-		let checklist = [ "SYSTEM_SHUTDOWN", "FS_WRITE" ];
+		let checklist = [ "SYSTEM_SHUTDOWN", "FS_WRITE", "FS_BYPASS_PERMISSIONS" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -56,7 +58,7 @@
 		});
 	});
 	fsckDiscardButton.addEventListener("click", async function() {
-		let checklist = [ "SYSTEM_SHUTDOWN", "FS_WRITE" ];
+		let checklist = [ "SYSTEM_SHUTDOWN", "FS_WRITE", "FS_BYPASS_PERMISSIONS" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
 			return;
@@ -98,7 +100,7 @@
 				}
 			}
 		});
-		let checklist = [ "FS_REMOVE", "FS_MOUNT", "FS_READ", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "SYSTEM_SHUTDOWN" ];
+		let checklist = [ "FS_REMOVE", "FS_MOUNT", "FS_READ", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "SYSTEM_SHUTDOWN", "FS_BYPASS_PERMISSIONS" ];
 		if (!checklist.every(p => privileges.includes(p))) {
 			container.hidden = false;
 			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
@@ -218,6 +220,43 @@
 		});
 		extraActivities.appendChild(localeSelect);
 	});
+	regenerateKernel.addEventListener("click", async function() {
+		let checklist = [ "FS_READ", "FS_WRITE", "FS_LIST_PARTITIONS", "FS_BYPASS_PERMISSIONS" ];
+		if (!checklist.every(p => privileges.includes(p))) {
+			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
+			return;
+		}
+		await availableAPIs.closeability(false);
+		container.hidden = true;
+		extraActivities.innerText = await availableAPIs.lookupLocale("GENERATING_KERNEL");
+		try {
+			let entireBoot = [];
+			let bootFiles = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/boot" });
+			if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
+			if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
+			for (let bootFile of bootFiles) {
+				entireBoot.push([ bootFile, await availableAPIs.fs_read({
+					path: (await availableAPIs.getSystemMount()) + "/boot/" + bootFile
+				}) ]);
+			}
+			entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
+				.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/boot/00-compiled.js",
+				data: entireBoot + "\nreturn;/*"
+			});
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/boot/99-zzpatchfinisher.js",
+				data: "*/"
+			});
+		} catch (e) {
+			console.error(e);
+			extraActivities.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
+		}
+		await availableAPIs.closeability(true);
+		container.hidden = false;
+		extraActivities.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+	});
 	container.appendChild(fsckOrderButton);
 	container.appendChild(fsckDiscardButton);
 	container.appendChild(osReinstallButton);
@@ -226,6 +265,7 @@
 	container.appendChild(updateFirmwareButton);
 	container.appendChild(imagingButton);
 	container.appendChild(changeLocale);
+	container.appendChild(regenerateKernel);
 	document.body.appendChild(container);
 	document.body.appendChild(extraActivities);
 })();

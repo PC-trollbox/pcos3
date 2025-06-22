@@ -62,7 +62,7 @@ let ipcChannel = exec_args[0];
 		if (path.endsWith("/")) path = path.substring(0, path.length - 1);
 		displayResult.innerText = "";
 		if (path == "") {
-			let partitions = await availableAPIs.fs_mounts();
+			let partitions = (await availableAPIs.fs_mounts()).sort((a, b) => a.localeCompare(b));
 			for (let partition of partitions) {
 				if (partition.startsWith(".") && hideHiddenFiles) continue;
 				let openButton = document.createElement("button");

@@ -524,5 +524,6 @@ modules.locales.ru = {
 	"MODULE_REQUIRED": "Для этой функции требуется модуль \"%s\". Обратитесь к системному администратору.",
 	"CREATING_DIRECTORY_STRUCTURE": "Создание структуры каталогов",
 	"GENERATING_KERNEL": "Создание ядра системы",
-	"WORK_IN_PROGRESS_AFTER_MODULAR": "Эта функция находится в работе после модуляризации."
+	"WORK_IN_PROGRESS_AFTER_MODULAR": "Эта функция находится в работе после модуляризации.",
+	"REGENERATE_KERNEL": "Повторно создать ядро системы"
 };
