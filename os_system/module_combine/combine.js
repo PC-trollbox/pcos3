@@ -204,6 +204,7 @@ fs.mkdirSync(__dirname + "/../history/build" + version, {
 	recursive: true
 });
 for (let archivedModule of archivedModules) {
+	if (installerModules.includes(archivedModule) && !args.values["only-modules"]) continue;
 	fs.copyFileSync(__dirname + "/modules/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs",
 		__dirname + "/../history/build" + version + "/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs");
 }
