@@ -9,7 +9,9 @@ if (worker_threads.isMainThread) {
 let data = worker_threads.workerData;
 try {
 	let fromBuild = "";
-	let generator = diff.calcPatch(fromBuild, fs.readFileSync(__dirname + "/../index.js").toString());
+	if (data.from != "scratch")
+		fromBuild = fs.readFileSync(__dirname + "/../history/build" + String(data.from.match(/\w+/g)) + ".js").toString();
+	let generator = diff.calcPatch(fromBuild, fs.readFileSync(__dirname + "/../migrationos.js").toString());
 	let ctr = 0;
 	for (let hunk of generator) {
 		worker_threads.parentPort.postMessage(JSON.stringify(data.handlesCtr ? {hunk,ctr} : hunk));
