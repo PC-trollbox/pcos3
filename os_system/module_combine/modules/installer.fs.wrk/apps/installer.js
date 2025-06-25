@@ -381,6 +381,7 @@ Used libraries:
 						if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
 						if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
 						for (let bootFile of bootFiles) {
+							entireBootFiles.push(bootFile);
 							entireBoot.push([ bootFile, await availableAPIs.fs_read({
 								path: "target/boot/" + bootFile
 							}) ]);
