@@ -499,10 +499,7 @@ async function sysHaltedHook() {
 		}
 		tty_bios_api.print("\tWriting System ID...\t");
 		if (automatic_configuration.system_id == "register-new") {
-			let generatedKey = await crypto.subtle.generateKey({
-				name: "ECDSA",
-				namedCurve: "P-256"
-			}, true, ["sign", "verify"]);
+			let generatedKey = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
 			let exportedPrivateKey = await crypto.subtle.exportKey("jwk", generatedKey.privateKey);
 			let exportedPublicKey = await crypto.subtle.exportKey("jwk", generatedKey.publicKey);
 			coreExports.prefs.write("system_id", {
@@ -938,10 +935,7 @@ async function sysID() {
 			prefs.write("system_id", undefined);
 			tty_bios_api.println("The System ID was successfully removed.");
 		} else if (choice == "2") {
-			let generatedKey = await crypto.subtle.generateKey({
-				name: "ECDSA",
-				namedCurve: "P-256"
-			}, true, ["sign", "verify"]);
+			let generatedKey = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
 			let exportedPrivateKey = await crypto.subtle.exportKey("jwk", generatedKey.privateKey);
 			let exportedPublicKey = await crypto.subtle.exportKey("jwk", generatedKey.publicKey);
 			prefs.write("system_id", {
@@ -961,10 +955,10 @@ async function sysID() {
 			tty_bios_api.println(JSON.stringify(publicJWK, null, "\t"));
 			tty_bios_api.println("");
 			tty_bios_api.println("Password-like ID:");
-			tty_bios_api.println(generateString(findInputNumberString(publicJWK.x, base64Charset), printableChars) + generateString(findInputNumberString(publicJWK.y, base64Charset), printableChars));
+			tty_bios_api.println(generateString(findInputNumberString(publicJWK.x, base64Charset), printableChars));
 			tty_bios_api.println("");
 			tty_bios_api.println("IPv6-like ID:");
-			tty_bios_api.println((generateString(findInputNumberString(publicJWK.x, base64Charset), hexCharset).slice(0, 16) + generateString(findInputNumberString(publicJWK.y, base64Charset), hexCharset).slice(0, 16)).match(/.{1,4}/g).join(":"));
+			tty_bios_api.println((generateString(findInputNumberString(publicJWK.x, base64Charset), hexCharset).padStart(32, "0").slice(0, 32)).match(/.{1,4}/g).join(":"));
 		} else if (choice == "4") {
 			if (!prefs.read("system_id")) {
 				tty_bios_api.println("No System ID found.");
@@ -977,22 +971,20 @@ async function sysID() {
 			tty_bios_api.println(JSON.stringify(privateJWK, null, "\t"));
 			tty_bios_api.println("");
 			tty_bios_api.println("System ID Formatting: (use this to import)");
-			tty_bios_api.println(generateString(findInputNumberString(privateJWK.d, base64Charset), incompletePrintable) + "|" + generateString(findInputNumberString(privateJWK.x, base64Charset), incompletePrintable) + "|" + generateString(findInputNumberString(privateJWK.y, base64Charset), incompletePrintable));
+			tty_bios_api.println(generateString(findInputNumberString(privateJWK.d, base64Charset), incompletePrintable) + "|" + generateString(findInputNumberString(privateJWK.x, base64Charset), incompletePrintable));
 		} else if (choice == "5") {
 			tty_bios_api.println("On the source system, select \"Show private System ID\" for the System ID Formatting.");
 			tty_bios_api.print("Enter the Formatting now: ");
 			let formatting = await tty_bios_api.inputLine(true, true);
 			let formattingSplit = formatting.split("|");
-			if (formattingSplit.length == 3) {
+			if (formattingSplit.length == 2) {
 				let privateJWK = {
+					crv: "Ed25519",
 					d: generateString(findInputNumberString(formattingSplit[0], incompletePrintable), base64Charset),
-					x: generateString(findInputNumberString(formattingSplit[1], incompletePrintable), base64Charset),
-					y: generateString(findInputNumberString(formattingSplit[2], incompletePrintable), base64Charset),
-					alg: "ES256",
-					crv: "P-256",
-					kty: "EC",
 					ext: true,
-					key_ops: ["sign"]
+					key_ops: ["sign"],
+					kty: "OKP",
+					x: generateString(findInputNumberString(formattingSplit[1], incompletePrintable), base64Charset)
 				};
 				let publicJWK = JSON.parse(JSON.stringify(privateJWK));
 				delete publicJWK.d;
@@ -1011,15 +1003,9 @@ async function sysID() {
 			try {
 				let publicJWK = prefs.read("system_id").public;
 				let privateJWK = prefs.read("system_id").private;
-				publicKey = await crypto.subtle.importKey("jwk", publicJWK, {
-					name: "ECDSA",
-					namedCurve: "P-256"
-				}, true, ["verify"]);
+				publicKey = await crypto.subtle.importKey("jwk", publicJWK, { name: "Ed25519" }, true, ["verify"]);
 				state = "private key";
-				privateKey = await crypto.subtle.importKey("jwk", privateJWK, {
-					name: "ECDSA",
-					namedCurve: "P-256"
-				}, true, ["sign"]);
+				privateKey = await crypto.subtle.importKey("jwk", privateJWK, { name: "Ed25519" }, true, ["sign"]);
 			} catch (e) {
 				console.error(e);
 				tty_bios_api.println("An error occurred when importing " + state + ", press any key to proceed.");
@@ -1031,19 +1017,9 @@ async function sysID() {
 				state = "creating random data";
 				let randomData = crypto.getRandomValues(new Uint8Array(16));
 				state = "signing data";
-				let signature = await crypto.subtle.sign({
-					name: "ECDSA",
-					hash: {
-						name: "SHA-256"
-					}
-				}, privateKey, randomData);
+				let signature = await crypto.subtle.sign({ name: "Ed25519" }, privateKey, randomData);
 				state = "verifying data";
-				let verification = await crypto.subtle.verify({
-					name: "ECDSA",
-					hash: {
-						name: "SHA-256"
-					}
-				}, publicKey, signature, randomData);
+				let verification = await crypto.subtle.verify({ name: "Ed25519" }, publicKey, signature, randomData);
 				state = "checking verification";
 				if (!verification) throw new Error("Verification failed");
 			} catch (e) {

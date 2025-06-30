@@ -525,5 +525,6 @@ modules.locales.ru = {
 	"CREATING_DIRECTORY_STRUCTURE": "Создание структуры каталогов",
 	"GENERATING_KERNEL": "Создание ядра системы",
 	"WORK_IN_PROGRESS_AFTER_MODULAR": "Эта функция находится в работе после модуляризации.",
-	"REGENERATE_KERNEL": "Повторно создать ядро системы"
+	"REGENERATE_KERNEL": "Повторно создать ядро системы",
+	"TECHNICAL_LIMITATIONS": "Этот файл нельзя создать из-за технических ограничений."
 };

@@ -205,7 +205,8 @@ function IPv6Decompressor(ip) {
             await availableAPIs.connfulConnectionSettled(connection);
             await availableAPIs.connfulWrite({
                 connectionID: connection,
-                data: url.pathname + url.search
+                data: url.pathname + url.search,
+				host: hostname
             });
             let data = await availableAPIs.connfulRead(connection);
             data = JSON.parse(data);

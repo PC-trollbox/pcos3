@@ -1,1 +1,1 @@
-{"keyInfo":{"key":{"kty":"EC","x":"rVuGYxQJytmQWpaV6rlU-8uNyYVvyCATXaCI1xA_Gac","y":"dI2kSCzonpKL-k84kD_2sv6Fe7HQ3FXaTzYslZACRY0","crv":"P-256"},"usages":["keyTrust"]},"signature":"5ed7004f897438702125b14ea89e15da34c65316ed4c6d036233f3fed0af09c1d23220bc44c59bc21510e573c800d30fdea498bc2b93d663a9c6bf8f4839210f"}
+{"signature":"495297498a49528b3c7d1cc43173825eac2b3bd4ede5744864e1ba542b8cedd742141b50dd8acbdcaea8b65b564fc70dc801a44891cfa4ee5e5e92a120f4ee01","keyInfo":{"key":{"crv":"Ed25519","x":"qKoTLfZH16PqwOKEnll19B7lDp3tEjeyCXBzGIhGwNY","kty":"OKP"},"usages":["keyTrust"]}}

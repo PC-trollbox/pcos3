@@ -14,10 +14,7 @@ async function ksk() {
 	if (ksk.stub != "present") modules.ksk = ksk;
 	if (modules.ksk) {
 		try {
-			modules.ksk_imported = await crypto.subtle.importKey("jwk", modules.ksk, {
-				name: "ECDSA",
-				namedCurve: "P-256"
-			}, false, ["verify"]);
+			modules.ksk_imported = await crypto.subtle.importKey("jwk", modules.ksk, { name: "Ed25519" }, false, ["verify"]);
 		} catch (e) {
 			panic("KEY_SIGNING_KEY_IMPORT_FAILED", {
 				name: "ksk",

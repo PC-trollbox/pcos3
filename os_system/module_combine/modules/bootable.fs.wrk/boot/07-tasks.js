@@ -105,25 +105,18 @@ function loadTasks() {
 
 			async function recursiveKeyVerify(key, khrl) {
 				if (!key) throw new Error("NO_KEY");
-				let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo?.key || key.key).x + "|" + (key.keyInfo?.key || key.key).y))));
+				let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+				let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo.key).x))));
+				let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 				if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 				let signedByKey = modules.ksk_imported;
-				if (key.keyInfo && key.keyInfo?.signedBy) {
+				if (key.keyInfo.signedBy) {
 					signedByKey = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
-					if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
 					if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
 					await recursiveKeyVerify(signedByKey, khrl);
-					signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, {
-						name: "ECDSA",
-						namedCurve: "P-256"
-					}, false, ["verify"]);
+					signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, { name: "Ed25519" }, false, ["verify"]);
 				}
-				if (!await crypto.subtle.verify({
-					name: "ECDSA",
-					hash: {
-						name: "SHA-256"
-					}
-				}, signedByKey, hexToU8A(key.signature), new TextEncoder().encode(JSON.stringify(key.key || key.keyInfo)))) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
+				if (!await crypto.subtle.verify({ name: "Ed25519" }, signedByKey, hexToU8A(key.signature), new TextEncoder().encode(JSON.stringify(key.keyInfo)))) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
 				return true;
 			}
 
@@ -135,12 +128,7 @@ function loadTasks() {
 						let khrl = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, token));
 						let khrlSignature = khrl.signature;
 						delete khrl.signature;
-						if (await crypto.subtle.verify({
-							name: "ECDSA",
-							hash: {
-								name: "SHA-256"
-							}
-						}, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+						if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
 							khrlSignatures.push(...khrl.list);
 						}
 					}
@@ -148,16 +136,8 @@ function loadTasks() {
 					if (!signingKey || appHardening.disableASCK) signingKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + execSignature.signer, token));
 					await recursiveKeyVerify(signingKey, khrlSignatures);
 					if (signingKey.keyInfo) if (!signingKey.keyInfo.usages.includes("appTrust")) throw new Error("NOT_APP_SIGNING_KEY");
-					let importSigningKey = await crypto.subtle.importKey("jwk", signingKey.keyInfo?.key || signingKey.key, {
-						name: "ECDSA",
-						namedCurve: "P-256"
-					}, false, ["verify"]);
-					if (!await crypto.subtle.verify({
-						name: "ECDSA",
-						hash: {
-							name: "SHA-256"
-						}
-					}, importSigningKey, hexToU8A(execSignature.signature), new TextEncoder().encode(executable))) throw new Error("APP_SIGNATURE_VERIFICATION_FAILED");
+					let importSigningKey = await crypto.subtle.importKey("jwk", signingKey.keyInfo.key, { name: "Ed25519" }, false, ["verify"]);
+					if (!await crypto.subtle.verify({ name: "Ed25519" }, importSigningKey, hexToU8A(execSignature.signature), new TextEncoder().encode(executable))) throw new Error("APP_SIGNATURE_VERIFICATION_FAILED");
 				} catch (e) {
 					console.error("Failed to verify app signature:", e);
 					windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED", language);

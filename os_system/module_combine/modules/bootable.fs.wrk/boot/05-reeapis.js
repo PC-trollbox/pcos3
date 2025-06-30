@@ -50,26 +50,17 @@ function reeAPIs() {
 		async function recursiveKeyVerify(key, khrl) {
 			if (!key) throw new Error("NO_KEY");
 			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-			let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo?.key || key.key).x + "|" + (key.keyInfo?.key || key.key).y))));
+			let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo.key).x))));
 			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 			if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
 			let signedByKey = modules.ksk_imported;
-			if (key.keyInfo && key.keyInfo?.signedBy) {
+			if (key.keyInfo.signedBy) {
 				signedByKey = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/" + key.keyInfo.signedBy, token));
-				if (!signedByKey.keyInfo) throw new Error("NOT_KEYS_V2");
 				if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
 				await recursiveKeyVerify(signedByKey, khrl);
-				signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, {
-					name: "ECDSA",
-					namedCurve: "P-256"
-				}, false, ["verify"]);
+				signedByKey = await crypto.subtle.importKey("jwk", signedByKey.keyInfo.key, { name: "Ed25519" }, false, ["verify"]);
 			}
-			if (!await crypto.subtle.verify({
-				name: "ECDSA",
-				hash: {
-					name: "SHA-256"
-				}
-			}, signedByKey, hexToU8A(key.signature), new TextEncoder().encode(JSON.stringify(key.key || key.keyInfo)))) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
+			if (!await crypto.subtle.verify({ name: "Ed25519" }, signedByKey, hexToU8A(key.signature), new TextEncoder().encode(JSON.stringify(key.keyInfo)))) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
 			return true;
 		}
 
@@ -1001,14 +992,14 @@ function reeAPIs() {
 				},
 				connfulListen: async function(listenOpts) {
 					if (!privileges.includes("CONNFUL_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
-					let {gate, key, private, verifyClientKeyChain} = listenOpts;
+					let {gate, key, private: privateKey, verifyClientKeyChain} = listenOpts;
 					if (!gate.startsWith("user_") && !privileges.includes("CONNFUL_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
 					let websocketHandle = modules.network.ws;
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
 					let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
-					let usableKey = await crypto.subtle.importKey("jwk", private, {name: "ECDSA", namedCurve: "P-256"}, true, ["sign"]);
+					let usableKey = await crypto.subtle.importKey("jwk", privateKey, {name: "Ed25519"}, true, ["sign"]);
 					let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					let _connectionBufferPromise = null;
@@ -1021,18 +1012,14 @@ function reeAPIs() {
 							if (packet.data.type == "connectionful" && packet.data.gate == gate && packet.data.action == "start") {
 								if (!packet.data.connectionID) return;
 								if (connections[packet.data.connectionID + ":server"]) return;
-								let ephemeralKey = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
+								let ephemeralKey = await crypto.subtle.generateKey({name: "Ed25519"}, true, ["deriveBits"]);
 								let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
 								exported = {signedBy: "serverKey", usages: ["connfulSecureEphemeral"], key:exported};
 								let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({
-									name: "ECDSA",
-									hash: "SHA-256"
+									name: "Ed25519"
 								}, usableKey, new TextEncoder().encode(JSON.stringify(exported)))));
-								let theirUsableKey = await crypto.subtle.importKey("jwk", packet.data.content.keyInfo.key, {
-									name: "ECDH",
-									namedCurve: "P-256"
-								}, true, []);
-								let joinedKeys = await crypto.subtle.deriveBits({ name: "ECDH", public: theirUsableKey }, ephemeralKey.privateKey, 256);
+								let theirUsableKey = await crypto.subtle.importKey("jwk", packet.data.content.keyInfo.key, { name: "X25519" }, true, []);
+								let joinedKeys = await crypto.subtle.deriveBits({ name: "X25519", public: theirUsableKey }, ephemeralKey.privateKey, 256);
 								let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {name: "AES-GCM"}, true, ["encrypt", "decrypt"]);
 								let _dataBufferPromise = null, _rejectDataPromise = null;
 								let dataBufferPromise = new Promise((r, j) => [_dataBufferPromise, _rejectDataPromise] = [r, j]);
@@ -1070,14 +1057,8 @@ function reeAPIs() {
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv),
 								}, connections[packet.data.connectionID + ":server"].aesUsableKey, hexToU8A(packet.data.content.ct))));
-								let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {
-									name: "ECDSA",
-									namedCurve: "P-256"
-								}, true, ["verify"]);
-								let verifyKeySignature = await crypto.subtle.verify({
-									name: "ECDSA",
-									hash: "SHA-256"
-								}, usableMainKey, hexToU8A(connections[packet.data.connectionID + ":server"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packet.data.connectionID + ":server"].theirKeyRaw.keyInfo)));
+								let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, { name: "Ed25519" }, true, ["verify"]);
+								let verifyKeySignature = await crypto.subtle.verify({ name: "Ed25519" }, usableMainKey, hexToU8A(connections[packet.data.connectionID + ":server"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packet.data.connectionID + ":server"].theirKeyRaw.keyInfo)));
 								if (verifyClientKeyChain && verifyKeySignature) {
 									verifyKeySignature = false;
 									try {
@@ -1087,12 +1068,7 @@ function reeAPIs() {
 											let khrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, processToken));
 											let khrlSignature = khrl.signature;
 											delete khrl.signature;
-											if (await crypto.subtle.verify({
-												name: "ECDSA",
-												hash: {
-													name: "SHA-256"
-												}
-											}, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+											if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
 												khrlSignatures.push(...khrl.list);
 											}
 										}
@@ -1210,7 +1186,7 @@ function reeAPIs() {
 				},
 				connfulConnect: async function(connOpts) {
 					if (!privileges.includes("CONNFUL_CONNECT")) throw new Error("UNAUTHORIZED_ACTION");
-					let {address, gate, key, private, doNotVerifyServer, verifyByDomain} = connOpts;
+					let {address, gate, key, private: privateKey, doNotVerifyServer, verifyByDomain} = connOpts;
 					let websocketHandle = modules.network.ws;
 					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
 					let websocket = modules.websocket._handles[websocketHandle].ws;
@@ -1220,22 +1196,19 @@ function reeAPIs() {
 					let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 					let newKeyKA, exportedKA;
-					if (!key && !private) {
-						newKeyKA = await crypto.subtle.generateKey({name: "ECDSA", namedCurve: "P-256"}, true, ["sign", "verify"]);
+					if (!key && !privateKey) {
+						newKeyKA = await crypto.subtle.generateKey({name: "Ed25519", namedCurve: "P-256"}, true, ["sign", "verify"]);
 						exportedKA = await crypto.subtle.exportKey("jwk", newKeyKA.publicKey);
 						exportedKA = { keyInfo: { usages: ["connfulSecureClient:" + modules.network.address], key: exportedKA }, signature: null };
 						newKeyKA = newKeyKA.privateKey;
 					} else {
-						newKeyKA = await crypto.subtle.importKey("jwk", private, {name: "ECDSA", namedCurve: "P-256"}, true, ["sign"]);
+						newKeyKA = await crypto.subtle.importKey("jwk", privateKey, {name: "Ed25519"}, true, ["sign"]);
 						exportedKA = key;
 					}
-					let ephemeralKey = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
+					let ephemeralKey = await crypto.subtle.generateKey({name: "X25519"}, true, ["deriveBits"]);
 					let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
 					exported = { signedBy: "clientKey", usages: ["connfulSecureEphemeral"], key: exported };
-					let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({
-						name: "ECDSA",
-						hash: "SHA-256"
-					}, newKeyKA, new TextEncoder().encode(JSON.stringify(exported)))));
+					let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, newKeyKA, new TextEncoder().encode(JSON.stringify(exported)))));
 					let _dataBufferPromise = null;
 					let _rejectDataPromise = null;
 					let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
@@ -1266,14 +1239,8 @@ function reeAPIs() {
 							if (packet.data.gate) return;
 							if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "start") {
 								if (connections[connID + ":client"].aesUsableKey) return;
-								let theirUsableKey = await crypto.subtle.importKey("jwk", packet.data.content.keyInfo.key, {
-									name: "ECDH",
-									namedCurve: "P-256"
-								}, true, []);
-								let joinedKeys = await crypto.subtle.deriveBits({
-									name: "ECDH",
-									public: theirUsableKey
-								}, ephemeralKey.privateKey, 256);
+								let theirUsableKey = await crypto.subtle.importKey("jwk", packet.data.content.keyInfo.key, { name: "X25519" }, true, []);
+								let joinedKeys = await crypto.subtle.deriveBits({ name: "X25519", public: theirUsableKey }, ephemeralKey.privateKey, 256);
 								let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {
 									name: "AES-GCM"
 								}, true, ["encrypt", "decrypt"]);
@@ -1302,11 +1269,8 @@ function reeAPIs() {
 									name: "AES-GCM",
 									iv: hexToU8A(packet.data.content.iv)
 								}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
-								let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {name: "ECDSA", namedCurve: "P-256"}, true, ["verify"]);
-								let verifyKeySignature = await crypto.subtle.verify({
-									name: "ECDSA",
-									hash: "SHA-256"
-								}, usableMainKey, hexToU8A(connections[connID + ":client"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[connID + ":client"].theirKeyRaw.keyInfo)));
+								let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {name: "Ed25519"}, true, ["verify"]);
+								let verifyKeySignature = await crypto.subtle.verify({ name: "Ed25519" }, usableMainKey, hexToU8A(connections[connID + ":client"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[connID + ":client"].theirKeyRaw.keyInfo)));
 								if (!doNotVerifyServer && verifyKeySignature) {
 									try {
 										let khrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/khrl", processToken);
@@ -1315,12 +1279,7 @@ function reeAPIs() {
 											let khrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, processToken));
 											let khrlSignature = khrl.signature;
 											delete khrl.signature;
-											if (await crypto.subtle.verify({
-												name: "ECDSA",
-												hash: {
-													name: "SHA-256"
-												}
-											}, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+											if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
 												khrlSignatures.push(...khrl.list);
 											}
 										}

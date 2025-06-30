@@ -1,11 +1,11 @@
 const fs = require("fs");
 const crypto = require("crypto");
 
-let keySigningKey = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
-let intermediateKey = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
-let appTrust = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
-let moduleTrust = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
-let serverTrust = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
+let keySigningKey = crypto.generateKeyPairSync("ed25519");
+let intermediateKey = crypto.generateKeyPairSync("ed25519");
+let appTrust = crypto.generateKeyPairSync("ed25519");
+let moduleTrust = crypto.generateKeyPairSync("ed25519");
+let serverTrust = crypto.generateKeyPairSync("ed25519");
 
 let intermediateKeyInfo = {
 	key: intermediateKey.publicKey.export({ format: "jwk" }),
@@ -31,22 +31,10 @@ let serverTrustInfo = {
 	}
 };
 
-let intermediateKeySignature = crypto.sign("sha256", JSON.stringify(intermediateKeyInfo), {
-	key: keySigningKey.privateKey,
-	dsaEncoding: "ieee-p1363"
-}).toString("hex");
-let appTrustSignature = crypto.sign("sha256", JSON.stringify(appTrustInfo), {
-	key: intermediateKey.privateKey,
-	dsaEncoding: "ieee-p1363"
-}).toString("hex");
-let moduleTrustSignature = crypto.sign("sha256", JSON.stringify(moduleTrustInfo), {
-	key: intermediateKey.privateKey,
-	dsaEncoding: "ieee-p1363"
-}).toString("hex");
-let serverTrustSignature = crypto.sign("sha256", JSON.stringify(serverTrustInfo), {
-	key: intermediateKey.privateKey,
-	dsaEncoding: "ieee-p1363"
-}).toString("hex");
+let intermediateKeySignature = crypto.sign(undefined, JSON.stringify(intermediateKeyInfo), keySigningKey.privateKey).toString("hex");
+let appTrustSignature = crypto.sign(undefined, JSON.stringify(appTrustInfo), intermediateKey.privateKey).toString("hex");
+let moduleTrustSignature = crypto.sign(undefined, JSON.stringify(moduleTrustInfo), intermediateKey.privateKey).toString("hex");
+let serverTrustSignature = crypto.sign(undefined, JSON.stringify(serverTrustInfo), intermediateKey.privateKey).toString("hex");
 
 let keypair = {
 	ksk: keySigningKey.publicKey.export({ format: "jwk" }),

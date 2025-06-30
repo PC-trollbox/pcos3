@@ -143,7 +143,7 @@ function loadFs() {
 				if (typeof files[basename] === "object") throw new Error("IS_A_DIR");
 				let id = files[basename] || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				await modules.core.idb.writePart(partitionId + "-" + id, value);
-				if (!files.hasOwnProperty(basename)) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
+				if (!files[basename]) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
 			},
 			rm: async function(key) {
 				key = String(key);
@@ -185,7 +185,7 @@ function loadFs() {
 					files = files[part];
 					if (!files) throw new Error("NO_SUCH_DIR");
 				}
-				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
+				if (files[directory.split("/").slice(-1)[0]]) throw new Error("DIR_EXISTS");
 				this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} });
 			},
 			permissions: async function(file) {
@@ -210,6 +210,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -228,6 +229,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -246,6 +248,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -402,7 +405,7 @@ function loadFs() {
 				newPart.set(newCT, newIV.length);
 				newPart = newPart.reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				await modules.core.idb.writePart(partitionId + "-" + id, newPart);
-				if (!files.hasOwnProperty(basename)) await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + key, { type: "write", value: id }));
+				if (!files[basename]) await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + key, { type: "write", value: id }));
 			},
 			rm: async function(key) {
 				key = String(key);
@@ -444,7 +447,7 @@ function loadFs() {
 					files = files[part];
 					if (!files) throw new Error("NO_SUCH_DIR");
 				}
-				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
+				if (files[directory.split("/").slice(-1)[0]]) throw new Error("DIR_EXISTS");
 				await this.setBackend(this._recursive_op(await this.getBackend(), "files/" + directory, { type: "write", value: {} }));
 			},
 			permissions: async function(file) {
@@ -469,6 +472,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = await this.getBackend();
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -487,6 +491,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = await this.getBackend();
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -505,6 +510,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = await this.getBackend();
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -605,7 +611,7 @@ function loadFs() {
 				if (typeof files[basename] === "object") throw new Error("IS_A_DIR");
 				let id = files[basename] || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				this.ramFiles.set(id, value);
-				if (!files.hasOwnProperty(basename)) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
+				if (!files[basename]) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
 			},
 			rm: async function(key) {
 				key = String(key);
@@ -647,7 +653,7 @@ function loadFs() {
 					files = files[part];
 					if (!files) throw new Error("NO_SUCH_DIR");
 				}
-				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
+				if (files[directory.split("/").slice(-1)[0]]) throw new Error("DIR_EXISTS");
 				this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} });
 			},
 			permissions: async function(file) {
@@ -672,6 +678,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -690,6 +697,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -708,6 +716,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -1115,7 +1124,7 @@ function loadFs() {
 				if (typeof files[basename] === "object") throw new Error("IS_A_DIR");
 				let id = files[basename] || crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				this.files[id] = value;
-				if (!files.hasOwnProperty(basename)) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
+				if (!files[basename]) this.backend = this._recursive_op(this.backend, "files/" + key, { type: "write", value: id });
 			},
 			rm: async function(key) {
 				key = String(key);
@@ -1157,7 +1166,7 @@ function loadFs() {
 					files = files[part];
 					if (!files) throw new Error("NO_SUCH_DIR");
 				}
-				if (Object.keys(files).includes(directory.split("/").slice(-1)[0])) throw new Error("DIR_EXISTS");
+				if (files[directory.split("/").slice(-1)[0]]) throw new Error("DIR_EXISTS");
 				this.backend = this._recursive_op(this.backend, "files/" + directory, { type: "write", value: {} });
 			},
 			permissions: async function(file) {
@@ -1182,6 +1191,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -1200,6 +1210,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {
@@ -1218,6 +1229,7 @@ function loadFs() {
 				if (properFile[0] == "") properFile = properFile.slice(1);
 				if (properFile[properFile.length - 1] == "") properFile = properFile.slice(0, -1);
 				properFile = properFile.join("/");
+				if (Object.prototype.hasOwnProperty(properFile)) throw new Error("TECHNICAL_LIMITATIONS");
 				let backend = this.backend;
 				let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 				let filePermissions = backend.permissions[properFile] || {

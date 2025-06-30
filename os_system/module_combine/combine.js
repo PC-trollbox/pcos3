@@ -121,10 +121,9 @@ function createModule(directory, permissionsPrefixed = "") {
 					fileContents = parsingLines.join("\n");
 					let signer = manifestStats.find(x => x.lineType == "signer")?.data;
 					if (signer) {
-						let signature = crypto.sign("sha256", fileContents, {
+						let signature = crypto.sign(undefined, fileContents, {
 							key: keypair[signer + "_private"],
-							format: "jwk",
-							dsaEncoding: "ieee-p1363"
+							format: "jwk"
 						}).toString("hex");
 						parsingLines.splice(parsingBoundEnd, 0, "// signature: " + signature);
 						fileContents = parsingLines.join("\n");
@@ -147,16 +146,15 @@ function createModule(directory, permissionsPrefixed = "") {
 					if (a.startsWith("sha256:")) return a.slice(7);
 					if (a.startsWith("jwk:")) {
 						a = JSON.parse(a.slice(4));
-						a = a.x + "|" + a.y;
+						a = a.x;
 					}
 					return crypto.createHash("sha256").update(a).digest("hex");
 				});
 				fileContents = JSON.stringify({
 					list: fileContents,
-					signature: crypto.sign("sha256", JSON.stringify(fileContents), {
+					signature: crypto.sign(undefined, JSON.stringify(fileContents), {
 						key: keypair.ksk_private,
-						format: "jwk",
-						dsaEncoding: "ieee-p1363"
+						format: "jwk"
 					}).toString("hex")
 				});
 			}
@@ -178,10 +176,9 @@ function createModule(directory, permissionsPrefixed = "") {
 			signingKey = keypair.ksk_private;
 			delete module.buildInfo.signer;
 		}
-		module.buildInfo.signature = crypto.sign("sha256", JSON.stringify(module), {
+		module.buildInfo.signature = crypto.sign(undefined, JSON.stringify(module), {
 			key: signingKey,
 			format: "jwk",
-			dsaEncoding: "ieee-p1363",
 		}).toString("hex");
 	}
 	return module;

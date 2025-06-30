@@ -1,7 +1,7 @@
-# List of the JWKs, their x and y coordinates in a form of 6363...|06bb... or
-# the hashes of the coordinates in the same form, that represent public keys
+# List of the JWKs, their x coordinate in a form of 6363... or the
+# hashes of the coordinate in the same form, that represent public keys
 # that should no longer be trusted.
 # Examples:
-# jwk:{"crv":"P-256","x":3,"y":7}
-# 3|7
-# sha256:c95255dc0d87c332988bf693b9d3dabb8552e23c331f01339527e393ce0aaa69
+# jwk:{"crv":"Ed25519","x":42}
+# 42
+# sha256:73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049

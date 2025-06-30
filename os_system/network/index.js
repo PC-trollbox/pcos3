@@ -13,9 +13,8 @@ let socketList = {};
 let sfspMountModule = require("./sfsp_mount");
 let globalMount = sfspMountModule({});
 let sessionTokens = {};
-let deltaUpdateConns = {};
 let serverPublicKey = require("../keypair.json").serverKey;
-let usableKey = crypto.subtle.importKey("jwk", require("../keypair.json").serverKey_private, {name: "ECDSA", namedCurve: "P-256"}, false, ["sign"]);
+let usableKey = crypto.subtle.importKey("jwk", require("../keypair.json").serverKey_private, {name: "Ed25519"}, false, ["sign"]);
 const fileNotFoundPage = "document.body.innerText = '404. File not found';";
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
@@ -36,10 +35,9 @@ app.use("/.git", function(req, res) {
 });
 app.use("/os_system/keypair.json", function(req, res) {
 	res.status(403).json({
-		kty: "EC",
-		x: "Look at the status code",
-		y: "You arent very amdin",
-		crv: "P-256",
+		kty: "OKP",
+		x: "You arnt very amdin",
+		crv: "Ed25519",
 		d: "no hablo unauthorized accesses"
 	});
 });
@@ -111,7 +109,7 @@ server.on("connection", function(socket, req) {
 		if (kverif_stage == 0) {
 			try {
 				publicKey = JSON.parse(message);
-				if (!publicKey.x && !publicKey.y) throw new Error("NotEllipticCurveKey");
+				if (!publicKey.x) throw new Error("NotEllipticCurveKey");
 				ipk = crypto.createPublicKey({
 					key: publicKey,
 					format: "jwk"
@@ -125,10 +123,7 @@ server.on("connection", function(socket, req) {
 			socket.send(JSON.stringify({ event: "SignatureRequest", signBytes: signBytes }));
 		} else if (kverif_stage == 1) {
 			try {
-				if (!crypto.verify('sha256', Buffer.from(signBytes, "hex"), {
-					key: ipk,
-					dsaEncoding: "ieee-p1363"
-				}, Buffer.from(message, "hex"))) throw new Error("SignatureInvalid");
+				if (!crypto.verify(undefined, Buffer.from(signBytes, "hex"), { key: ipk }, Buffer.from(message, "hex"))) throw new Error("SignatureInvalid");
 			} catch {
 				socket.send(JSON.stringify({ event: "SignatureInvalid" }));
 				return socket.terminate();
@@ -136,12 +131,11 @@ server.on("connection", function(socket, req) {
 			kverif_stage = 2;
 			ipk = null;
 
-			let xHash = crypto.createHash("sha256").update(Buffer.from(b64dec(publicKey.x), "hex")).digest().toString("hex").padStart(8, "0").slice(0, 8);
-			let yHash = crypto.createHash("sha256").update(Buffer.from(b64dec(publicKey.y), "hex")).digest().toString("hex").padStart(8, "0").slice(0, 8);
+			let xHash = crypto.createHash("sha256").update(Buffer.from(b64dec(publicKey.x), "hex")).digest().toString("hex").padStart(16, "0").slice(0, 16);
 			let forceSetting = publicKey.forceConnect;
 			hostname = (publicKey.hostname?.slice(0, 16)?.match(/[a-z0-9\-_]+/g)?.join("") || generateString(BigInt("0x" + crypto.randomBytes(8).toString("hex")), symbols)) + ".basic";
 			if (dnsTable[hostname]) hostname = generateString(BigInt("0x" + crypto.randomBytes(8).toString("hex")), symbols) + ".basic";
-			publicKey = xHash + yHash + (Math.floor(Math.abs(parseInt(publicKey.userCustomizable) || 0))).toString(16).padStart(8, "0").slice(0, 8);
+			publicKey = xHash + (Math.floor(Math.abs(parseInt(publicKey.userCustomizable) || 0))).toString(16).padStart(8, "0").slice(0, 8);
 			if (socketList.hasOwnProperty(ip + publicKey) && !forceSetting) {
 				socket.send(JSON.stringify({ event: "AddressConflict", address: ip + publicKey }));
 				return socket.terminate();
@@ -327,18 +321,16 @@ function ConnfulServer(gate, socket, address) {
 					if (!packetData.data.connectionID) return;
 					if (connections[packetData.data.connectionID]) return;
 					usableKey = await usableKey;
-					let ephemeralKey = await crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-256"}, true, ["deriveBits"]);
+					let ephemeralKey = await crypto.subtle.generateKey({name: "X25519"}, true, ["deriveBits"]);
 					let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
 					exported = {signedBy: "serverKey", usages: ["connfulSecureEphemeral"], key:exported};
 					let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({
-						name: "ECDSA",
-						hash: "SHA-256"
+						name: "Ed25519"
 					}, usableKey, new TextEncoder().encode(JSON.stringify(exported)))));
 					let theirUsableKey = await crypto.subtle.importKey("jwk", packetData.data.content.keyInfo.key, {
-						name: "ECDH",
-						namedCurve: "P-256"
+						name: "X25519"
 					}, true, []);
-					let joinedKeys = await crypto.subtle.deriveBits({ name: "ECDH", public: theirUsableKey }, ephemeralKey.privateKey, 256);
+					let joinedKeys = await crypto.subtle.deriveBits({ name: "X25519", public: theirUsableKey }, ephemeralKey.privateKey, 256);
 					let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {name: "AES-GCM"}, true, ["encrypt", "decrypt"]);
 					connections[packetData.data.connectionID] = {
 						ourKey: ephemeralKey,
@@ -367,13 +359,9 @@ function ConnfulServer(gate, socket, address) {
 						name: "AES-GCM",
 						iv: hexToU8A(packetData.data.content.iv),
 					}, connections[packetData.data.connectionID].aesUsableKey, hexToU8A(packetData.data.content.ct))));
-					let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {
-						name: "ECDSA",
-						namedCurve: "P-256"
-					}, true, ["verify"]);
+					let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, { name: "Ed25519" }, true, ["verify"]);
 					let verifyKeySignature = await crypto.subtle.verify({
-						name: "ECDSA",
-						hash: "SHA-256"
+						name: "Ed25519"
 					}, usableMainKey, hexToU8A(connections[packetData.data.connectionID].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packetData.data.connectionID].theirKeyRaw.keyInfo)));
 					if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + address)) {
 						delete connections[packetData.data.connectionID];

@@ -144,10 +144,7 @@ async function sysHaltedHook() {
 		}
 		tty_bios_api.print("\tWriting System ID...\t");
 		if (automatic_configuration.system_id == "register-new") {
-			let generatedKey = await crypto.subtle.generateKey({
-				name: "ECDSA",
-				namedCurve: "P-256"
-			}, true, ["sign", "verify"]);
+			let generatedKey = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
 			let exportedPrivateKey = await crypto.subtle.exportKey("jwk", generatedKey.privateKey);
 			let exportedPublicKey = await crypto.subtle.exportKey("jwk", generatedKey.publicKey);
 			coreExports.prefs.write("system_id", {

@@ -40,10 +40,7 @@ async function networkd() {
 		modules.network.updates = config.updates;
 		let stage = 0;
 		let pukey = (modules.core.prefs.read("system_id") || {}).public;
-		let importedKey = await crypto.subtle.importKey("jwk", (modules.core.prefs.read("system_id") || {}).private, {
-			name: "ECDSA",
-			namedCurve: "P-256"
-		}, true, ["sign"]);
+		let importedKey = await crypto.subtle.importKey("jwk", (modules.core.prefs.read("system_id") || {}).private, { name: "Ed25519" }, true, ["sign"]);
 		let ws = new WebSocket(config.url);
 		let handle = Array.from(crypto.getRandomValues(new Uint8Array(64))).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
 		modules.network.runOnClose = new Promise(a => modules.network._runOnClose = a);
@@ -75,12 +72,7 @@ async function networkd() {
 					delete modules.websocket._handles[handle];
 					return ws.close();
 				}
-				ws.send(u8aToHex(new Uint8Array(await crypto.subtle.sign({
-					name: "ECDSA",
-					hash: {
-						name: "SHA-256"
-					}
-				}, importedKey, hexToU8A(messageData.signBytes)))));
+				ws.send(u8aToHex(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, importedKey, hexToU8A(messageData.signBytes)))));
 				stage++;
 			} else if (stage == 2) {
 				if (messageData.event != "ConnectionEstablished") {
