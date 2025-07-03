@@ -46,5 +46,3 @@ modules.fs.write(".installer/etc/network.json", JSON.stringify({
 	ucBits: 1,
 	updates: "pcosserver.pc"
 }));
-// Installer modules
-// @auto-generated-installer-module-insertion

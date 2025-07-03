@@ -129,15 +129,6 @@ function createModule(directory, permissionsPrefixed = "") {
 						fileContents = parsingLines.join("\n");
 					}
 				}
-			} else if (file == "01-fsmodule-pre.js" && fileContents.includes("// @auto-generated-installer-module-insertion")) { // Inserting installer modules
-				fileContents += "\n";
-				let modulesToDo = [ ...installerModules ];
-				if (modulesToDo.includes("installer-modules"))
-					modulesToDo.splice(modulesToDo.indexOf("installer-modules"), 1);
-				for (let module of modulesToDo) {
-					fileContents += "// modules/" + getModuleOrder(module) + "-" + module + ".fs\n";
-					fileContents += "modules.fs.write(" + JSON.stringify(".installer/modules/" + getModuleOrder(module) + "-" + module + ".fs") + ", " + JSON.stringify(fs.readFileSync(__dirname + "/modules/" + getModuleOrder(module) + "-" + module + ".fs").toString()) + ");\n";
-				}
 			} else if (file == "00-pcosksk.js" && fileContents.includes("// Key signing key")) { // Inserting KSK
 				fileContents = fileContents.replace('{stub:"present"}', JSON.stringify(keypair.ksk));
 			} else if (file.endsWith(".khrl")) {
@@ -183,18 +174,8 @@ function createModule(directory, permissionsPrefixed = "") {
 	}
 	return module;
 }
-function getBootInModule(module) {
-	let moduleFiles = JSON.parse(fs.readFileSync(__dirname + "/modules/" + module).toString());
-	let boot = [];
-	if (!moduleFiles.backend.files.boot) return [];
-	for (let bootFile in moduleFiles.backend.files.boot)
-		boot.push([ bootFile, moduleFiles.files[moduleFiles.backend.files.boot[bootFile]] ]);
-	return boot;
-}
 
 let moduleFolders = fs.readdirSync(__dirname + "/modules").filter(a => a.endsWith(".wrk"));
-let installerModulesPresent = moduleFolders.includes("installer-modules.fs.wrk");
-if (installerModulesPresent) moduleFolders.splice(moduleFolders.indexOf("installer-modules.fs.wrk"), 1);
 for (let moduleFolder of moduleFolders)
 	fs.writeFileSync(__dirname + "/modules/" + getModuleOrder(moduleFolder.slice(0, -7)) + "-" + moduleFolder.slice(0, -4), JSON.stringify(createModule(__dirname + "/modules/" + moduleFolder)));
 fs.mkdirSync(__dirname + "/../history/build" + version, {
@@ -206,15 +187,26 @@ for (let archivedModule of archivedModules) {
 		__dirname + "/../history/build" + version + "/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs");
 }
 if (args.values["only-modules"]) return process.exit();
-if (installerModulesPresent)
-	fs.writeFileSync(__dirname + "/modules/" + getModuleOrder("installer-modules") + "-installer-modules.fs", JSON.stringify(createModule(__dirname + "/modules/installer-modules.fs.wrk")));
-let entireBoot = [];
-for (let installerModule of installerModules) entireBoot.push(...getBootInModule(getModuleOrder(installerModule) + "-" + installerModule + ".fs"));
+
 let installerCode = "// This is a generated file. Please modify the corresponding files, not this file directly.\n" +
 	"// (c) Copyright 2025 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
-entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]));
-entireBoot = entireBoot.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
-installerCode += entireBoot;
+let installerModuleBundle = JSON.stringify(Object.fromEntries(installerModules.map(a => getModuleOrder(a) + "-" + a + ".fs").map(a => [
+	a, JSON.parse(fs.readFileSync(__dirname + "/modules/" + a).toString())
+])));
+installerCode += "let installerModuleBundle = " + installerModuleBundle + ";\n";
+installerCode += `coreExports.tty_bios_api.println("Booting from module bundle");
+let entireBoot = [];
+const AsyncFunction = (async () => {}).constructor;
+for (let installerModule in installerModuleBundle) {
+	let reviewingModule = installerModuleBundle[installerModule];
+	if (reviewingModule.backend.files.boot) {
+		for (let bootFile in reviewingModule.backend.files.boot) {
+			entireBoot.push([ bootFile, reviewingModule.files[reviewingModule.backend.files.boot[bootFile]] ]);
+		}
+	}
+}
+entireBoot.push(["01-fsmodule-start.js", 'let installerModuleBundle = ' + JSON.stringify(installerModuleBundle) + '; for (let installerModule in installerModuleBundle) { await modules.fs.write(".installer/modules/" + installerModule, JSON.stringify(installerModuleBundle[installerModule])); }']);
+entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0])).map(a => a[1]).join("\\n");
+return new AsyncFunction(entireBoot)();`
 fs.writeFileSync(args.values.output, installerCode);
-fs.rmSync(__dirname + "/modules/50-installer-modules.fs");
 fs.copyFileSync(args.values.output, __dirname + "/../history/build" + version + "/installerImage.js");
