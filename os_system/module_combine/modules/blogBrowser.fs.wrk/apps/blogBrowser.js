@@ -89,12 +89,12 @@ function createREE(direction) {
 	});
 }
 function IPv6Decompressor(ip) {
-    let array = ip.split(":");
-    array = array.slice(0, 8);
-    let foundTwoOrMoreZeroes = array.indexOf("");
-    while (array.length != 8 && foundTwoOrMoreZeroes !== null) array.splice(foundTwoOrMoreZeroes, 0, "0000");
-    array = array.map(a => parseInt(a || "0", 16).toString(16).padStart(4, "0"));
-    return array.join(":");
+	let array = ip.split(":");
+	array = array.slice(0, 8);
+	let foundTwoOrMoreZeroes = array.indexOf("");
+	while (array.length != 8 && foundTwoOrMoreZeroes !== null) array.splice(foundTwoOrMoreZeroes, 0, "0000");
+	array = array.map(a => parseInt(a || "0", 16).toString(16).padStart(4, "0"));
+	return array.join(":");
 }
 (async function() {
 	let pargs = {};
@@ -116,44 +116,44 @@ function IPv6Decompressor(ip) {
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	document.body.innerText = "";
-    document.documentElement.style.height = "100%";
+	document.documentElement.style.height = "100%";
 	document.documentElement.style.width = "100%";
 	document.body.style.height = "100%";
 	document.body.style.width = "100%";
 	document.body.style.margin = "0";
-    let browserContainer = document.createElement("div");
-    let urlBar = document.createElement("form");
-    let urlInput = document.createElement("input");
-    let urlButton = document.createElement("button");
-    let theWebsite = document.createElement("div");
-    browserContainer.style.display = "flex";
-    browserContainer.style.flexDirection = "column";
-    browserContainer.style.width = "100%";
-    browserContainer.style.height = "100%";
-    urlBar.style.display = "flex";
-    urlBar.style.flexDirection = "row";
-    urlBar.style.width = "100%";
-    urlInput.style.flexGrow = "1";
-    theWebsite.style.flexGrow = "1";
-    urlBar.appendChild(urlInput);
-    urlBar.appendChild(urlButton);
-    urlButton.innerText = "->";
-    browserContainer.appendChild(urlBar);
-    browserContainer.appendChild(theWebsite);
-    document.body.appendChild(browserContainer);
-    let ree;
-    urlButton.onclick = async function() {
-        urlInput.disabled = true;
-        urlButton.disabled = true;
-        if (ree) ree.closeDown();
-        ree = null;
-        theWebsite.hidden = false;
-        theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING");
-        try {
-            let url = new URL(urlInput.value);
+	let browserContainer = document.createElement("div");
+	let urlBar = document.createElement("form");
+	let urlInput = document.createElement("input");
+	let urlButton = document.createElement("button");
+	let theWebsite = document.createElement("div");
+	browserContainer.style.display = "flex";
+	browserContainer.style.flexDirection = "column";
+	browserContainer.style.width = "100%";
+	browserContainer.style.height = "100%";
+	urlBar.style.display = "flex";
+	urlBar.style.flexDirection = "row";
+	urlBar.style.width = "100%";
+	urlInput.style.flexGrow = "1";
+	theWebsite.style.flexGrow = "1";
+	urlBar.appendChild(urlInput);
+	urlBar.appendChild(urlButton);
+	urlButton.innerText = "->";
+	browserContainer.appendChild(urlBar);
+	browserContainer.appendChild(theWebsite);
+	document.body.appendChild(browserContainer);
+	let ree;
+	urlButton.onclick = async function() {
+		urlInput.disabled = true;
+		urlButton.disabled = true;
+		if (ree) ree.closeDown();
+		ree = null;
+		theWebsite.hidden = false;
+		theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING");
+		try {
+			let url = new URL(urlInput.value);
 			urlInput.value = url.href;
-            if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
-            if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
+			if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
+			if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
 			if (pargs["no-verification"]) 
 				await new Promise(async function(ok, ab) {
 					let allowNoVerify = document.createElement("button");
@@ -184,16 +184,16 @@ function IPv6Decompressor(ip) {
 					theWebsite.appendChild(allowNoVerify);
 					theWebsite.appendChild(abort);
 				});
-            let hostname = url.hostname, address;
-            if (url.hostname.includes("[")) {
-                hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");
-                address = hostname;
-            } else address = await availableAPIs.resolve(hostname);
-            if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
-            let connection = await availableAPIs.connfulConnect({
-                gate: url.username || "blog",
-                address,
-                verifyByDomain: hostname,
+			let hostname = url.hostname, address;
+			if (url.hostname.includes("[")) {
+				hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");
+				address = hostname;
+			} else address = await availableAPIs.resolve(hostname);
+			if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
+			let connection = await availableAPIs.connfulConnect({
+				gate: url.username || "blog",
+				address,
+				verifyByDomain: hostname,
 				key: pargs.key ? JSON.parse(await availableAPIs.fs_read({
 					path: pargs.key
 				})).key : undefined,
@@ -201,15 +201,15 @@ function IPv6Decompressor(ip) {
 					path: pargs.key
 				})).private : undefined,
 				doNotVerifyServer: pargs["no-verification"]
-            });
-            await availableAPIs.connfulConnectionSettled(connection);
-            await availableAPIs.connfulWrite({
-                connectionID: connection,
-                data: url.pathname + url.search,
+			});
+			await availableAPIs.connfulConnectionSettled(connection);
+			await availableAPIs.connfulWrite({
+				connectionID: connection,
+				data: url.pathname + url.search,
 				host: hostname
-            });
-            let data = await availableAPIs.connfulRead(connection);
-            data = JSON.parse(data);
+			});
+			let data = await availableAPIs.connfulRead(connection);
+			data = JSON.parse(data);
 			let chunks = [];
 			theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", "0").replace("%s", data.length);
 			while (chunks.length != data.length) {
@@ -218,15 +218,15 @@ function IPv6Decompressor(ip) {
 				chunks[newData.ctr] = newData.chunk;
 				theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", chunks.length).replace("%s", data.length);
 			}
-            try {
-                await availableAPIs.connfulClose(connection);
-            } catch {}
+			try {
+				await availableAPIs.connfulClose(connection);
+			} catch {}
 			data.content = chunks.join("");
-            if (data.type == "script") {
-                theWebsite.innerText = "";
-                ree = await createREE(browserContainer);
-                ree.iframe.style = "flex-grow: 1; border: none; overflow: auto;";
-                theWebsite.hidden = true;
+			if (data.type == "script") {
+				theWebsite.innerText = "";
+				ree = await createREE(browserContainer);
+				ree.iframe.style = "flex-grow: 1; border: none; overflow: auto;";
+				theWebsite.hidden = true;
 				let passthroughAPIs = [
 					// UI class
 					"isDarkThemed", "locale", "osLocale", "lookupLocale", "installedLocales",
@@ -237,39 +237,39 @@ function IPv6Decompressor(ip) {
 				];
 				if (pargs["no-sandbox"]) passthroughAPIs = Object.keys(availableAPIs);
 				for (let api of passthroughAPIs) await ree.exportAPI(api, e => availableAPIs[api](e.arg));
-                await ree.exportAPI("terminate", _ => ree.closeDown());
-                await ree.exportAPI("navigate", function(newUrl) {
-                    urlInput.value = new URL(newUrl.arg, urlInput.value).href;
-                    urlButton.click();
-                    ree.closeDown();
-                });
-                await ree.exportAPI("currentLocation", _ => urlInput.value);
-                ree.beforeCloseDown(async function() {
-                    theWebsite.hidden = false;
-                    theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_POSTCLOSE");
-                });
-                await ree.eval(data.content);
-            } else if (data.type == "file") {
-                theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_FILEPOST");
-                let ipcPipe = await availableAPIs.createPipe();
-                await availableAPIs.windowVisibility(false);
-                await availableAPIs.startTask({ file: (await availableAPIs.getSystemMount()) + "/apps/filePicker.js", argPassed: [ipcPipe, "save", data.filename || urlBar.value.split("/").slice(-1)[0]] });
-                let result = await availableAPIs.listenToPipe(ipcPipe);
-                await availableAPIs.closePipe(ipcPipe);
-                await availableAPIs.windowVisibility(true);
-                if (result.success) {
-                    await availableAPIs.fs_write({ path: result.selected, data: data.content });
-                    theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_DLFILEPOST");
-                }
-            }
-        } catch (e) {
+				await ree.exportAPI("terminate", _ => ree.closeDown());
+				await ree.exportAPI("navigate", function(newUrl) {
+					urlInput.value = new URL(newUrl.arg, urlInput.value).href;
+					urlButton.click();
+					ree.closeDown();
+				});
+				await ree.exportAPI("currentLocation", _ => urlInput.value);
+				ree.beforeCloseDown(async function() {
+					theWebsite.hidden = false;
+					theWebsite.innerText = await availableAPIs.lookupLocale("BLOG_BROWSER_POSTCLOSE");
+				});
+				await ree.eval(data.content);
+			} else if (data.type == "file") {
+				theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_FILEPOST");
+				let ipcPipe = await availableAPIs.createPipe();
+				await availableAPIs.windowVisibility(false);
+				await availableAPIs.startTask({ file: (await availableAPIs.getSystemMount()) + "/apps/filePicker.js", argPassed: [ipcPipe, "save", data.filename || urlBar.value.split("/").slice(-1)[0]] });
+				let result = await availableAPIs.listenToPipe(ipcPipe);
+				await availableAPIs.closePipe(ipcPipe);
+				await availableAPIs.windowVisibility(true);
+				if (result.success) {
+					await availableAPIs.fs_write({ path: result.selected, data: data.content });
+					theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_DLFILEPOST");
+				}
+			}
+		} catch (e) {
 			if (ree) ree.closeDown();
 			theWebsite.hidden = false;
-            theWebsite.innerText = await availableAPIs.lookupLocale(e.message);
-        }
-        urlInput.disabled = false;
-        urlButton.disabled = false;
-    }
+			theWebsite.innerText = await availableAPIs.lookupLocale(e.message);
+		}
+		urlInput.disabled = false;
+		urlButton.disabled = false;
+	}
 	if (ppos[0]) {
 		urlInput.value = ppos[0];
 		urlButton.click();

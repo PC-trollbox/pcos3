@@ -7,7 +7,7 @@
 	await availableAPIs.attachCLI();
 	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("batteryinfo: Locale permission denied\r\n");
 		return await availableAPIs.terminate();	}
-    
+	
 	try {
 		let batteryStatus = await availableAPIs.batteryStatus();
 		if (exec_args[0] == "--robot") await availableAPIs.toMyCLI(JSON.stringify(batteryStatus, null, "\t").replaceAll("\n", "\r\n") + "\r\n");

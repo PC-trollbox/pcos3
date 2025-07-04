@@ -7,12 +7,8 @@ const http = require("http").createServer(app);
 const path = require("path/posix");
 const fs = require("fs");
 const server = new ws.Server({ server: http });
-const worker_threads = require("worker_threads");
 const events = require("events");
 let socketList = {};
-let sfspMountModule = require("./sfsp_mount");
-let globalMount = sfspMountModule({});
-let sessionTokens = {};
 let serverPublicKey = require("../keypair.json").serverKey;
 let usableKey = crypto.subtle.importKey("jwk", require("../keypair.json").serverKey_private, {name: "Ed25519"}, false, ["sign"]);
 const fileNotFoundPage = "document.body.innerText = '404. File not found';";
@@ -43,49 +39,6 @@ app.use("/os_system/keypair.json", function(req, res) {
 });
 app.use("/os_system/managed/managedDB.json", function(req, res) {
 	res.status(403).send("no hablo unauthorized accesses");
-});
-
-app.post("/sfsp/file_operation", express.json(), async function(req, res) {
-	if (sessionTokens.hasOwnProperty(req.body.sessionToken)) {
-		if (req.body.operation == "unmount") {
-			delete sessionTokens[req.body.sessionToken];
-			return res.json(true);
-		}
-		try {
-			return res.json(await sessionTokens[req.body.sessionToken][req.body.operation](...req.body.parameters) || null);
-		} catch (e) {
-			return res.status(500).json({ name: e.name, message: e.message });
-		}
-	}
-	res.sendStatus(401);
-});
-
-app.post("/sfsp/properties", express.json(), async function(req, res) {
-	if (sessionTokens.hasOwnProperty(req.body.sessionToken)) {
-		if (req.body.globalMount) sessionTokens[req.body.sessionToken] = globalMount;
-		else if (req.body.collabSetup && !sessionTokens.hasOwnProperty(req.body.collabSetup))
-			sessionTokens[req.body.collabSetup] = sessionTokens[req.body.sessionToken];
-		else if (req.body.collabLoad && sessionTokens.hasOwnProperty(req.body.collabLoad))
-			sessionTokens[req.body.sessionToken] = sessionTokens[req.body.collabLoad];
-
-		return res.json({
-			directory_supported: !!sessionTokens[req.body.sessionToken].directory_supported,
-			read_only: !!sessionTokens[req.body.sessionToken].read_only,
-			filesystem: sessionTokens[req.body.sessionToken].filesystem || "SFSP",
-			permissions_supported: !!sessionTokens[req.body.sessionToken].permissions_supported
-		});
-	}
-	res.sendStatus(401);
-});
-
-app.get("/sfsp/session", function(req, res) {
-	let session = crypto.randomBytes(64).toString("hex");
-	sessionTokens[session] = sfspMountModule({});
-	res.json(session);
-});
-
-app.use("/sfsp", function(req, res) {
-	res.sendStatus(400);
 });
 
 app.use(function(req, res, next) {
@@ -151,18 +104,6 @@ server.on("connection", function(socket, req) {
 				hostname
 			}));
 			socketList[ip + publicKey] = socket;
-			let {connectedEvent} = ConnfulServer("deltaUpdate", socket, ip + publicKey);
-			connectedEvent.on("connected", function(a) {
-				let {messageReceiveEvent, messageSendEvent} = a;
-				messageReceiveEvent.once("message", function(d) {
-					let worker = new worker_threads.Worker(__dirname + "/worker_connful.js", {
-						workerData: JSON.parse(d)
-					});
-					worker.addListener("message", function(message) {
-						messageSendEvent.emit("message", message);
-					})
-				})
-			});
 			let {connectedEvent:connectedEvent2} = ConnfulServer("blog", socket, ip + publicKey);
 			connectedEvent2.on("connected", function(a) {
 				let {messageReceiveEvent, messageSendEvent} = a;
@@ -259,18 +200,6 @@ server.on("connection", function(socket, req) {
 							},
 							packetID: crypto.randomBytes(32).toString("hex")
 						}));
-					}
-				}
-				if (packetData.data?.type == "connectionless" && packetData.data?.gate == "deltaUpdate") {
-					if (typeof packetData.data.content.from === "string" && typeof packetData.data.content.reply === "string") {
-						try {
-							let worker = new worker_threads.Worker(__dirname + "/worker.js", {
-								workerData: { packetData, serverAddress }
-							});
-							worker.addListener("message", function(message) {
-								socket.send(message);
-							})
-						} catch {}
 					}
 				}
 				if (packetData.data?.type == "ping") {

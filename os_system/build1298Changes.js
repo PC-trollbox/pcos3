@@ -20,13 +20,13 @@ let moduleTrustInfo = {
 };
 
 let intermediateKeySignature = crypto.sign("sha256", JSON.stringify(intermediateKeyInfo), {
-    key: keypair.ksk_private,
-    format: "jwk",
-    dsaEncoding: "ieee-p1363"
+	key: keypair.ksk_private,
+	format: "jwk",
+	dsaEncoding: "ieee-p1363"
 }).toString("hex");
 let moduleTrustSignature = crypto.sign("sha256", JSON.stringify(moduleTrustInfo), {
-    key: intermediateKey.privateKey,
-    dsaEncoding: "ieee-p1363"
+	key: intermediateKey.privateKey,
+	dsaEncoding: "ieee-p1363"
 }).toString("hex");
 
 keypair.intermediateKey = { keyInfo: intermediateKeyInfo, signature: intermediateKeySignature };
@@ -38,12 +38,12 @@ keypair.automaticSigner.keyInfo.signedBy = "pcosIntermediate";
 keypair.serverKey.keyInfo.signedBy = "pcosIntermediate";
 keypair.serverKey.keyInfo.dates = { since: Date.now(), until: Date.now() + 90 * 86400000 };
 keypair.automaticSigner.signature = crypto.sign("sha256", JSON.stringify(keypair.automaticSigner.keyInfo), {
-    key: intermediateKey.privateKey,
-    dsaEncoding: "ieee-p1363"
+	key: intermediateKey.privateKey,
+	dsaEncoding: "ieee-p1363"
 }).toString("hex");
 keypair.serverKey.signature = crypto.sign("sha256", JSON.stringify(keypair.serverKey.keyInfo), {
-    key: intermediateKey.privateKey,
-    dsaEncoding: "ieee-p1363"
+	key: intermediateKey.privateKey,
+	dsaEncoding: "ieee-p1363"
 }).toString("hex");
 
 fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/pcosIntermediate", JSON.stringify(keypair.intermediateKey));

@@ -18,17 +18,17 @@
 		await availableAPIs.toMyCLI("patch: " + await availableAPIs.lookupLocale("ARGUMENT_COUNT_MISMATCH") + "\r\n");
 		return await availableAPIs.terminate();
 	}
-    try {
-        await availableAPIs.fs_write({
-            path: exec_args[2],
-            data: (await availableAPIs.patchDiff({
-                operation: "applyPatch",
-                args: [ await availableAPIs.fs_read({ path: exec_args[0] }), JSON.parse(await availableAPIs.fs_read({ path: exec_args[1] })) ]
-            })).join("")
-        })
-    } catch (e) {
+	try {
+		await availableAPIs.fs_write({
+			path: exec_args[2],
+			data: (await availableAPIs.patchDiff({
+				operation: "applyPatch",
+				args: [ await availableAPIs.fs_read({ path: exec_args[0] }), JSON.parse(await availableAPIs.fs_read({ path: exec_args[1] })) ]
+			})).join("")
+		})
+	} catch (e) {
 		await availableAPIs.toMyCLI("patch: " + await availableAPIs.lookupLocale(e.message) + "\r\n");
-    }
+	}
 	await availableAPIs.terminate();
 })();
 

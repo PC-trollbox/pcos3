@@ -17,12 +17,12 @@ modules.fs.write(".installer/etc/appHarden", JSON.stringify({
 	requireAllowlist: true
 }));
 modules.fs.write(".installer/etc/security/users", JSON.stringify({
-    root: {
-        securityChecks: [ { type: "timeout", timeout: 0 } ],
+	root: {
+		securityChecks: [ { type: "timeout", timeout: 0 } ],
 		groups: ["root"],
 		homeDirectory: "system/root"
-    },
-    authui: {
+	},
+	authui: {
 		securityChecks: [],
 		groups: ["authui"],
 		homeDirectory: "system",

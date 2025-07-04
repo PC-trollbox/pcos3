@@ -1,5 +1,5 @@
 modules.locales.en = {
-    "UNTITLED_APP": "Untitled program",
+	"UNTITLED_APP": "Untitled program",
 	"PERMISSION_DENIED": "Permission denied",
 	"MORE_PERMISSION_DENIED": "There are not enough permissions to run this program.",
 	"COMPATIBILITY_ISSUE_TITLE": "Compatibility issue",

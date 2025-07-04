@@ -7,7 +7,7 @@
 	await availableAPIs.attachCLI();
 	if (!(await availableAPIs.getPrivileges()).includes("GET_LOCALE")) { await availableAPIs.toMyCLI("netinfo: Locale permission denied\r\n");
 		return await availableAPIs.terminate();	}
-    
+	
 	try {
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("NETWORK_ADDRESS_FIELD")).replace("%s", (await availableAPIs.getNetworkAddress())?.match(/.{1,4}/g)?.join(":") || await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER")) + "\r\n");
 		await availableAPIs.toMyCLI((await availableAPIs.lookupLocale("NETWORK_AUTOHOST_FIELD")).replace("%s", (await availableAPIs.getHostname() || await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER"))) + "\r\n");
