@@ -84,7 +84,7 @@ let onClose = () => availableAPIs.terminate();
 		}
 		document.body.appendChild(localeSelect);
 	});
-	onClose = async function() {
+	if (exec_args[0]) onClose = async function() {
 		mainInstallerContent.hidden = true;
 		closeContent.hidden = false;
 		await availableAPIs.closeability(false);
@@ -150,7 +150,7 @@ Used libraries:
 	mainInstallerContent.appendChild(content);
 	mainInstallerContent.appendChild(button);
 	mainInstallerContent.appendChild(document.createElement("br"));
-	mainInstallerContent.appendChild(liveButton);
+	if (exec_args[0]) mainInstallerContent.appendChild(liveButton);
 
 	closeContent.appendChild(confirmDescription);
 	closeContent.appendChild(buttonYes);
