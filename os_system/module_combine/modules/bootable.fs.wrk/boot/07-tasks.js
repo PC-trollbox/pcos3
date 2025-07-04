@@ -105,6 +105,8 @@ function loadTasks() {
 
 			async function recursiveKeyVerify(key, khrl) {
 				if (!key) throw new Error("NO_KEY");
+				if (key.keyInfo.dates?.since > Date.now()) throw new Error("KEY_NOT_IN_TIME");
+				if (Date.now() > key.keyInfo.dates?.until) throw new Error("KEY_NOT_IN_TIME");
 				let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 				let hash = u8aToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode((key.keyInfo.key).x))));
 				let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));

@@ -80,7 +80,7 @@ version = version + args.values.branch;
 pcosHeader[1] = "const pcos_version = " + JSON.stringify(version) + ";";
 pcosHeader[2] = "const build_time = " + Date.now() + ";";
 pcosHeader = pcosHeader.join("\n");
-if (!args.values["no-increment"] && !args.values["only-modules"]) fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
+fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
 function createModule(directory, permissionsPrefixed = "") {
 	let listing = fs.readdirSync(directory);
 	let module = { backend: { files: {}, permissions: {} }, files: {} };
@@ -156,11 +156,14 @@ function createModule(directory, permissionsPrefixed = "") {
 	}
 	module.backend.permissions[permissionsPrefixed] = { world: "rx" };
 	if (permissionsPrefixed == "") {
+		let moduleBasename = path.basename(directory.slice(0, -7));
 		module.buildInfo = {
 			for: version,
+			version,
 			when: Date.now(),
 			signer: "moduleSigner",
-			critical: criticalModules.includes(path.basename(directory.slice(0, -7)))
+			critical: criticalModules.includes(moduleBasename),
+			bootOrder: getModuleOrder(moduleBasename)
 		};
 		let signingKey = keypair.moduleTrust_private;
 		if (path.basename(directory) == "keys.fs.wrk") {
