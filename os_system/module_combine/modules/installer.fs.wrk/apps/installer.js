@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE, GET_SERVER_URL, SET_USER_INFO, SET_DEFAULT_SYSTEM
+// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE, GET_SERVER_URL, SET_USER_INFO, SET_DEFAULT_SYSTEM, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET
 // =====END MANIFEST=====
 let onClose = () => availableAPIs.terminate();
 (async function() {
@@ -52,6 +52,7 @@ let onClose = () => availableAPIs.terminate();
 		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs", "50-blogBrowser.fs",
 		"50-calculator.fs", "50-crypto-tools.fs", "50-multimedia.fs"
 	];
+	let downloadFromBdpOnMissing = "bdp://pcosserver.pc";
 	await availableAPIs.closeability(false);
 	await new Promise(async function(resolve) {
 		let locales = await availableAPIs.installedLocales();
@@ -342,13 +343,25 @@ Used libraries:
 						} catch {}
 						let modules = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/modules" });
 						for (let module of installed_modules) {
-							if (!modules.includes(module)) throw new Error("Module required (" + module + ")");
-							await availableAPIs.fs_write({
-								path: "target/modules/" + module,
-								data: await availableAPIs.fs_read({
-									path: (await availableAPIs.getSystemMount()) + "/modules/" + module
-								})
-							});
+							if (!modules.includes(module)) {
+								if (downloadFromBdpOnMissing) try {
+									let fetchModule = await bdpGet(new URL("/module_repository/" + module, downloadFromBdpOnMissing));
+									if (fetchModule.error) throw new Error(fetchModule.error);
+									await availableAPIs.fs_write({ path: "target/modules/" + module, data: fetchModule.content });
+									modules.push(module);
+								} catch (e) {
+									console.error("Failed to fetch module", module, ":", e);
+									throw new Error("Module required (" + module + ")");
+								}
+								else throw new Error("Module required (" + module + ")");
+							} else {
+								await availableAPIs.fs_write({
+									path: "target/modules/" + module,
+									data: await availableAPIs.fs_read({
+										path: (await availableAPIs.getSystemMount()) + "/modules/" + module
+									})
+								});
+							}
 						}
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_DIRECTORY_STRUCTURE"));
 						try {
@@ -669,6 +682,41 @@ async function recursiveRemove(target) {
 		if (await availableAPIs.fs_isDirectory({ path: targetFile })) await recursiveRemove(targetFile);
 		await availableAPIs.fs_rm({ path: targetFile });
 	}
+}
+
+async function bdpGet(path) {
+	let url = new URL(path);
+	if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
+	if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
+	let hostname = url.hostname, address;
+	if (url.hostname.includes("[")) {
+		hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");
+		address = hostname;
+	} else address = await availableAPIs.resolve(hostname);
+	if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
+	let connection = await availableAPIs.connfulConnect({
+		gate: url.username || "blog",
+		address,
+		verifyByDomain: hostname
+	});
+	await availableAPIs.connfulConnectionSettled(connection);
+	await availableAPIs.connfulWrite({
+		connectionID: connection,
+		data: url.pathname + url.search,
+		host: hostname
+	});
+	let data = await availableAPIs.connfulRead(connection);
+	data = JSON.parse(data);
+	let chunks = [];
+	while (chunks.length != data.length) {
+		let newData = await availableAPIs.connfulRead(connection);
+		newData = JSON.parse(newData);
+		chunks[newData.ctr] = newData.chunk;
+	}
+	try {
+		await availableAPIs.connfulClose(connection);
+	} catch {}
+	return { ...data, content: chunks.join("") };
 }
 
 addEventListener("signal", async function(e) {

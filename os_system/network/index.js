@@ -118,14 +118,15 @@ server.on("connection", function(socket, req) {
 						return messageSendEvent.emit("message", JSON.stringify({ ctr: 0, chunk: "document.body.innerText = 'You cannot do that!';" }));
 					}
 					if (!path.extname(pathname)) pathname = path.join(pathname, "index.js");
-					let file = fileNotFoundPage;
+					let file = fileNotFoundPage, fileFound = false;
 					try {
 						file = fs.readFileSync(pathname).toString();
+						fileFound = true;
 					} catch {}
 					messageSendEvent.emit("message", JSON.stringify({
 						type: path.extname(pathname) == ".js" ? "script" : "file",
 						length: Math.ceil(file.length / 65536),
-						error: fileNotFoundPage.length == file.length ? ((file == fileNotFoundPage) ? "NO_SUCH_FILE" : null) : null,
+						error: fileFound ? null : "NO_SUCH_FILE",
 						filename: path.basename(pathname)
 					}));
 					for (let i = 0; i != Math.ceil(file.length / 65536); i++) {
