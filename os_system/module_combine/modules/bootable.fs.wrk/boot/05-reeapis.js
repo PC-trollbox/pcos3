@@ -36,7 +36,8 @@ function reeAPIs() {
 			try {
 				fsPermissions = await modules.fs.permissions(path);
 			} catch (e) {
-				throw new Error("PERMISSION_CHECKING_FAILED");
+				if (e.name == "Error") throw e;
+				throw new Error("FS_ACTION_FAILED");
 			}
 			if (!privilegeCheck(fsPermissions)) throw new Error("PERMISSION_DENIED");
 			try {

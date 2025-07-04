@@ -253,7 +253,7 @@ function IPv6Decompressor(ip) {
                 theWebsite.innerHTML = await availableAPIs.lookupLocale("BLOG_BROWSER_FILEPOST");
                 let ipcPipe = await availableAPIs.createPipe();
                 await availableAPIs.windowVisibility(false);
-                await availableAPIs.startTask({ file: (await availableAPIs.getSystemMount()) + "/apps/filePicker.js", argPassed: [ipcPipe, "save"] });
+                await availableAPIs.startTask({ file: (await availableAPIs.getSystemMount()) + "/apps/filePicker.js", argPassed: [ipcPipe, "save", data.filename || urlBar.value.split("/").slice(-1)[0]] });
                 let result = await availableAPIs.listenToPipe(ipcPipe);
                 await availableAPIs.closePipe(ipcPipe);
                 await availableAPIs.windowVisibility(true);

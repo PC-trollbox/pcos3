@@ -2,6 +2,7 @@
     if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
     let links = {
         "Breakout": "/breakout.js",
+        "Breakout (module)": "/module_repository/50-arcadeBreakout.fs",
         "Latest OS image": "/os_installer.jsdl",
         "Mini OS, based on build 999": "/minios.jsdl",
         "Sandbox escape (dangerous!!!)": "/sandbox_escape.js"
@@ -13,7 +14,7 @@
     let linksDiv = document.createElement("div");
     let linksDescription = document.createElement("p");
     header.innerText = "Hello, world!";
-    description.innerText = "This is the PCOS 3 blog server.";
+    description.innerText = "This is the PCOS 3 blog server. It hosts modules as well!";
     linksDescription.innerText = "Here are some links:";
     headingDiv.appendChild(header);
     headingDiv.appendChild(description);

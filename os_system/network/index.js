@@ -184,7 +184,8 @@ server.on("connection", function(socket, req) {
 					messageSendEvent.emit("message", JSON.stringify({
 						type: path.extname(pathname) == ".js" ? "script" : "file",
 						length: Math.ceil(file.length / 65536),
-						error: fileNotFoundPage.length == file.length ? ((file == fileNotFoundPage) ? "NO_SUCH_FILE" : null) : null
+						error: fileNotFoundPage.length == file.length ? ((file == fileNotFoundPage) ? "NO_SUCH_FILE" : null) : null,
+						filename: path.basename(pathname)
 					}));
 					for (let i = 0; i != Math.ceil(file.length / 65536); i++) {
 						messageSendEvent.emit("message", JSON.stringify({

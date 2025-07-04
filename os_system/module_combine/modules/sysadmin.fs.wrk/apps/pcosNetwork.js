@@ -123,17 +123,9 @@ async function updatePrediction(elementInterface) {
 			algorithm: "SHA-256",
 			data: hexToU8A(generateString(findInputNumberString(publicSystemID.x, base64Charset), hexCharset))
 		}
-	}))).padStart(8, "0").slice(0, 8);
-	let sysIDy = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
-		cspProvider: "basic",
-		operation: "digest",
-		cspArgument: {
-			algorithm: "SHA-256",
-			data: hexToU8A(generateString(findInputNumberString(publicSystemID.y, base64Charset), hexCharset))
-		}
-	}))).padStart(8, "0").slice(0, 8);
+	}))).padStart(16, "0").slice(0, 16);
 	let ucPredict = Math.round(Math.abs(Number(elementInterface.ucBits.value))).toString(16).padStart(8, "0").slice(0, 8);
-	return elementInterface.addressPrediction.innerText = ("xxxxxxxx" + sysIDx + sysIDy + ucPredict).match(/.{1,4}/g).join(":");
+	return elementInterface.addressPrediction.innerText = ("xxxxxxxx" + sysIDx + ucPredict).match(/.{1,4}/g).join(":");
 }
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
