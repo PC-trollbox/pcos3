@@ -1,7 +1,7 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
 // link: lrn:BLOG_BROWSER_NAME
-// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET, GET_USER_INFO
+// allow: GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, START_TASK, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET, GET_USER_INFO, CSP_OPERATIONS
 // =====END MANIFEST=====
 function createREE(direction) {
 	let ownIframeID = undefined;
@@ -231,7 +231,7 @@ function IPv6Decompressor(ip) {
 					// UI class
 					"isDarkThemed", "locale", "osLocale", "lookupLocale", "installedLocales",
 					// cryptographic class
-					"cspOperations", "availableCsps",
+					"cspOperation", "availableCsps",
 					// connful connections class
 					"connfulConnect", "connfulConnectionSettled", "connfulDisconnect", "connfulForceDisconnect", "connfulWrite", "connfulRead", "connfulAddressGet", "connfulIdentityGet"
 				];

@@ -48,7 +48,7 @@ function loadBasicCSP() {
 		wrapKey: async function(arg, groupBy) {
 			arg.key = cryptoKeys[groupBy][arg.key.keyID];
 			arg.wrappingKey = cryptoKeys[groupBy][arg.wrappingKey.keyID];
-			return crypto.subtle.wrapKey(arg.format, arg.key, arg.wrappingKey, arg.wrapAlgo);
+			return crypto.subtle.wrapKey(arg.format, arg.key, arg.wrappingKey, arg.wrapAlgorithm);
 		},
 		digest: async function(arg) {
 			return crypto.subtle.digest(arg.algorithm, arg.data);
@@ -67,7 +67,7 @@ function loadBasicCSP() {
 		},
 		unwrapKey: async function(arg, groupBy) {
 			arg.unwrappingKey = cryptoKeys[groupBy][arg.unwrappingKey.keyID];
-			return cryptoKeyIntoKeyObject(await crypto.subtle.unwrapKey(arg.format, arg.keyData, arg.unwrappingKey, arg.unwrapAlgo, arg.unwrappedKeyAlgo, arg.extractable, arg.keyUsages), groupBy);
+			return cryptoKeyIntoKeyObject(await crypto.subtle.unwrapKey(arg.format, arg.keyData, arg.unwrappingKey, arg.unwrapAlgorithm, arg.unwrappedKeyAlgorithm, arg.extractable, arg.keyUsages), groupBy);
 		},
 		decrypt: async function(arg, groupBy) {
 			arg.key = cryptoKeys[groupBy][arg.key.keyID];
