@@ -5,6 +5,7 @@
 // =====END MANIFEST=====
 let globalToken;
 let cachedIcons = {};
+let cachedAssocs = {};
 (async function() {
 	// @pcos-app-mode isolatable
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("FILE_EXPLORER"));
@@ -76,9 +77,9 @@ let cachedIcons = {};
 	mainComponent.appendChild(pathInputForm);
 	mainComponent.appendChild(displayResult);
 	document.body.appendChild(mainComponent);
-	let availableIcons = [];
+	let availableAssocs = [];
 	try {
-		availableIcons = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/etc/icons" });
+		availableAssocs = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/apps/associations" });
 	} catch {}
 	displayResult.oncontextmenu = async function(e) {
 		e.stopImmediatePropagation();
@@ -350,10 +351,13 @@ let cachedIcons = {};
 					let isDir = await isDirectory(path + "/" + file);
 					try {
 						let wantedIcon;
-						if (isDir == "directory") wantedIcon = "foldericon.pic";
-						else if (availableIcons.includes(fileType + ".pic")) wantedIcon = fileType + ".pic";
-						else wantedIcon = "fileicon.pic";
-						if (!cachedIcons.hasOwnProperty(wantedIcon)) cachedIcons[wantedIcon] = await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/etc/icons/" + wantedIcon });
+						if (isDir == "directory") wantedIcon = await availableAPIs.getSystemMount() + "/etc/icons/foldericon.pic";
+						else wantedIcon = await availableAPIs.getSystemMount() + "/etc/icons/fileicon.pic";
+						if (availableAssocs.includes(fileType)) {
+							if (!cachedAssocs[fileType]) cachedAssocs[fileType] = JSON.parse(await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/apps/associations/" + fileType }));
+							wantedIcon = cachedAssocs[fileType].icon;
+						}
+						if (!cachedIcons[wantedIcon]) cachedIcons[wantedIcon] = await availableAPIs.fs_read({ path: wantedIcon });
 						fileIcon.src = cachedIcons[wantedIcon];
 					} catch {}
 					openButton.innerText = file;
@@ -514,9 +518,8 @@ let cachedIcons = {};
 						hasError = true;
 					}
 				} else {
-					let lookUpAssociation = await availableAPIs.fs_ls({ path: await availableAPIs.getSystemMount() + "/apps/associations" });
 					let fileType = path.split(".").slice(-1)[0];
-					if (!lookUpAssociation.includes(fileType)) return displayResult.innerText = await availableAPIs.lookupLocale("UNKNOWN_FILE_TYPE");
+					if (!availableAssocs.includes(fileType)) return displayResult.innerText = await availableAPIs.lookupLocale("UNKNOWN_FILE_TYPE");
 					let file = await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/apps/associations/" + fileType });
 					let fileLink = JSON.parse(file);
 					if (privileges.includes("START_TASK") && privileges.includes("ELEVATE_PRIVILEGES") && privileges.includes("MANAGE_TOKENS")) {

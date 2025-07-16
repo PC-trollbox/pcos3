@@ -19,7 +19,8 @@ let onClose = () => availableAPIs.terminate();
 			autoInitNewInstalls: true
 		},
 		autoRestart: "kexec",
-		defaultLocale: "en", */
+		defaultLocale: "en",
+		extraModules: [ "50-arcadeBreakout.fs" ], */
 		secondstage: {
 			createAccount: {
 				/*password: "password",
@@ -42,6 +43,9 @@ let onClose = () => availableAPIs.terminate();
 			}
 		}
 	};
+	try {
+		automatic_configuration = JSON.parse(await availableAPIs.fs_read({ path: (await availableAPIs.getSystemMount()) + "/etc/unattended.json" }));
+	} catch {}
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
@@ -53,7 +57,9 @@ let onClose = () => availableAPIs.terminate();
 		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs", "50-blogBrowser.fs",
 		"50-calculator.fs", "50-crypto-tools.fs", "50-multimedia.fs"
 	];
-	let downloadFromBdpOnMissing = "bdp://pcosserver.pc";
+	if (automatic_configuration.extraModules) installed_modules.push(...automatic_configuration.extraModules);
+	let downloadFromBdpOnMissing = new URL("bdp://localhost");
+	downloadFromBdpOnMissing.hostname = automatic_configuration.secondstage.network.updates;
 	await availableAPIs.closeability(false);
 	await new Promise(async function(resolve) {
 		let locales = await availableAPIs.installedLocales();

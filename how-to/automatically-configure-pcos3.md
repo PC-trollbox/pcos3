@@ -13,10 +13,9 @@
      - value `register-new`: Create a new System ID.
      - value of a jwk keypair object: Specify an existing System ID
      - no value: Don't create a System ID automatically.
-4. Run `./combine`.
-5. Go to `os_system/module_combine/modules/installer.fs.wrk/apps/installer.js` for installer configuration.
-6. Uncomment the partial example of `automatic_configuration`.
-7. Set `automatic_configuration`:
+4. Run `combine_into_init/combine`.
+5. Copy `os_system/module_combine/modules/installer.fs.wrk/etc/unattend.json.example` to `unattend.json` in the same place.
+6. Set automatic configuration:
    - `startInstall`: Automatically start the installation.
    - `acceptEULA`: Accept the license automatically.
    - `partitioning`: Set partitioning:
@@ -26,6 +25,7 @@
      - `autoInitNewInstalls`: Automatically initiate the disk for new installations.
    - `autoRestart`: Automatically restart the system after installation. Set to `"kexec"` to use faster reboots.
    - `defaultLocale`: Set the locale automatically to the following value.
+   - `extraModules`: Extra modules to download and install.
    - `secondstage`: Setup-like control post-modularization.
     - `createAccount`: Set user account details:
       - `password`: Set the user password.
@@ -39,7 +39,7 @@
       - `url`: Set the WebSocket proxy URL.
       - `ucBits`: Set the user-customizable part of the network address.
       - `hostname`: Set the automatic hostname.
-      - `updates`: Set the update server.
-8. Run `os_system/keypair.js` to generate the OS PKI.
-9. Run `os_system/module_combine/combine.js -b<YOUR_BRANCH_NAME_HERE>`.
-10. Perform self-hosting steps to see the changes. (see readme.md)
+      - `updates`: Set the update server. This will be the place missing modules are loaded from!
+7. Run `os_system/keypair.js` to generate the OS PKI.
+8. Run `os_system/module_combine/combine.js -b<YOUR_BRANCH_NAME_HERE>`.
+9. Perform self-hosting steps to see the changes. (see readme.md)

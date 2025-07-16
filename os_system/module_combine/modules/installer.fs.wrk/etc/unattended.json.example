@@ -1,0 +1,34 @@
+{
+	"startInstall": true,
+	"acceptEULA": true,
+	"partitioning": {
+		"data": "data",
+		"boot": "boot",
+		"format": true,
+		"autoInitNewInstalls": true
+	},
+	"autoRestart": "kexec",
+	"defaultLocale": "en",
+    "extraModules": [ "50-arcadeBreakout.fs" ],
+	"secondstage": {
+		"createAccount": {
+			"password": "password",
+			"darkMode": true,
+			"create": true,
+			"defaultLocale": "en",
+			"username": "root",
+			"lockUsername": true,
+			"onlyOnNewInstall": true
+		},
+		"appHarden": {
+			"requireSignature": true,
+			"requireAllowlist": true
+		},
+		"network": {
+			"url": "wss://pcos3.pcprojects.tk",
+			"ucBits": 1,
+			"hostname": "installedsys",
+			"updates": "pcosserver.pc"
+		}
+	}
+}

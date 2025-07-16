@@ -258,7 +258,6 @@ async function requireLogon() {
 							} catch {}
 						} else {
 							let ext = linkName.split(".").slice(-1)[0];
-							appLink.icon = modules.defaultSystem + "/etc/icons/" + ext + ".pic";
 							let assocsPermissions = await modules.fs.permissions(modules.defaultSystem + "/apps/associations", resolvedLogon.token);
 							if (assocsPermissions.owner != userInfo.user && !userInfo.groups.includes(assocsPermissions.group) && !(assocsPermissions.world.includes("r") && assocsPermissions.world.includes("x")) && !userInfo.privileges.includes("FS_BYPASS_PERMISSIONS")) {
 								throw new Error("Permission denied reading associations");
