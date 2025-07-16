@@ -25,8 +25,7 @@ let onClose = () => availableAPIs.terminate();
 			createAccount: {
 				/*password: "password",
 				darkMode: true,
-				create: true,
-				defaultLocale: "en",*/
+				create: true,*/
 				username: "root",
 				lockUsername: true,
 				onlyOnNewInstall: true

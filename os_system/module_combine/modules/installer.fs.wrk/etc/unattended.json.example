@@ -9,13 +9,12 @@
 	},
 	"autoRestart": "kexec",
 	"defaultLocale": "en",
-    "extraModules": [ "50-arcadeBreakout.fs" ],
+	"extraModules": [ "50-arcadeBreakout.fs" ],
 	"secondstage": {
 		"createAccount": {
 			"password": "password",
 			"darkMode": true,
 			"create": true,
-			"defaultLocale": "en",
 			"username": "root",
 			"lockUsername": true,
 			"onlyOnNewInstall": true
