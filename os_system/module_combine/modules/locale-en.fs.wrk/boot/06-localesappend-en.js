@@ -527,5 +527,7 @@ modules.locales.en = {
 	"WORK_IN_PROGRESS_AFTER_MODULAR": "This function is a work-in-progress after modularization.",
 	"REGENERATE_KERNEL": "Regenerate system kernel",
 	"REGENERATING_KERNEL_FAILED": "Failed to regenerate system kernel",
-	"TECHNICAL_LIMITATIONS": "This file can't be created due to technical limitations."
+	"TECHNICAL_LIMITATIONS": "This file can't be created due to technical limitations.",
+	"REVIEWING_MIGRATION": "Reviewing migration paths",
+	"MIGRATING_USER_PROFILES": "Migrating user profiles"
 };

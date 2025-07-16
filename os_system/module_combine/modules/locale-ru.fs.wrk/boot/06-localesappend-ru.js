@@ -526,5 +526,7 @@ modules.locales.ru = {
 	"GENERATING_KERNEL": "Создание ядра системы",
 	"WORK_IN_PROGRESS_AFTER_MODULAR": "Эта функция находится в работе после модуляризации.",
 	"REGENERATE_KERNEL": "Повторно создать ядро системы",
-	"TECHNICAL_LIMITATIONS": "Этот файл нельзя создать из-за технических ограничений."
+	"TECHNICAL_LIMITATIONS": "Этот файл нельзя создать из-за технических ограничений.",
+	"REVIEWING_MIGRATION": "Обзор путей миграции",
+	"MIGRATING_USER_PROFILES": "Мигрируем профили пользователей"
 };

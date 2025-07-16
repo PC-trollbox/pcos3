@@ -33,6 +33,7 @@
       - `create`: Create the new user automatically.
       - `username`: Set the username.
       - `lockUsername`: Prevent the user from changing the username.
+      - `onlyOnNewInstall`: Only create a new user on a new installation.
     - `appHarden`: The appHarden file (see How to secure the system, step 3)
     - `network`: The network.json file
       - `url`: Set the WebSocket proxy URL.

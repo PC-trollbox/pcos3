@@ -26,7 +26,7 @@ Not all modules are shown in the list below, to avoid redundancy.
 ## Build the OS
 **Node.JS required as well**
 1. If you haven't generated a key yet, go to `os_system` in a command line and run `node keypair.js`.
-2. Go to `os_system/module_combine` in a command line, run `node combine`. To use a branch, use the `-b` parameter, for example `-bmy-cool-feature` (the build will have the branch as a suffix, like `1234my-cool-feature`). To prevent incrementation of the build number, use the `-i` parameter.
+2. Go to `os_system/module_combine` in a command line, run `node combine`. To use a branch, use the `-b` parameter, for example `-bmy-cool-feature` (the build will have the branch as a suffix, like `1234my-cool-feature`).
 3. Run a self-host server to test your changes.
 
 ## Officially recognized servers

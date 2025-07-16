@@ -27,7 +27,8 @@ let onClose = () => availableAPIs.terminate();
 				create: true,
 				defaultLocale: "en",*/
 				username: "root",
-				lockUsername: true
+				lockUsername: true,
+				onlyOnNewInstall: true
 			},
 			appHarden: {
 				requireSignature: true,
@@ -189,104 +190,154 @@ Used libraries:
 		button.onclick = async function() {
 			content.innerHTML = "";
 			content.style.height = "";
-			description.innerText = await availableAPIs.lookupLocale("LET_CREATE_ACCOUNT");
-			button.innerText = await availableAPIs.lookupLocale("CREATE");
-			let useraccountname = document.createElement("input");
-			let useraccountpassword = document.createElement("input");
-			let darkmode = document.createElement("input");
-			let darkmode_lb = document.createElement("label");
-			useraccountname.placeholder = await availableAPIs.lookupLocale("USERNAME");
-			useraccountpassword.placeholder = await availableAPIs.lookupLocale("PASSWORD");
-			useraccountpassword.type = "password";
-			darkmode.type = "checkbox";
-			darkmode.id = "darkmode";
-			darkmode_lb.innerText = await availableAPIs.lookupLocale("DARK_MODE");
-			darkmode_lb.htmlFor = "darkmode";
-			content.appendChild(useraccountname);
+			description.innerText = await availableAPIs.lookupLocale("INSTALLER_PARTITIONING");
+			button.innerText = await availableAPIs.lookupLocale("PARTITIONING_USE");
+			let partitionDataInput = document.createElement("input");
+			let partitionDataFormat = document.createElement("button");
+			let partitionBootInput = document.createElement("input");
+			partitionDataInput.placeholder = await availableAPIs.lookupLocale("PARTITION_DATA");
+			partitionDataFormat.innerText = await availableAPIs.lookupLocale("FORMAT_DATA");
+			partitionBootInput.placeholder = await availableAPIs.lookupLocale("PARTITION_BOOT");
+			partitionDataInput.value = "data";
+			partitionBootInput.value = "boot";
+			content.appendChild(partitionDataInput);
+			content.insertAdjacentText("beforeend", " ");
+			content.appendChild(partitionDataFormat);
 			content.appendChild(document.createElement("br"));
-			content.appendChild(useraccountpassword);
-			content.appendChild(document.createElement("br"));
-			content.appendChild(darkmode);
-			content.appendChild(darkmode_lb);
-			button.onclick = async function() {
-				let username = useraccountname.value;
-				let password = useraccountpassword.value;
-				if (!username) return;
-				if (username.includes("/")) return;
-				if (!password) return;
-				let homedir = username == "root" ? ("target/root") : ("target/home/" + username);
-				let darkModeChecked = darkmode.checked;
-				content.innerHTML = "";
-				description.innerText = await availableAPIs.lookupLocale("INSTALLER_PARTITIONING");
-				button.innerText = await availableAPIs.lookupLocale("PARTITIONING_USE");
-				let partitionDataInput = document.createElement("input");
-				let partitionDataFormat = document.createElement("button");
-				let partitionBootInput = document.createElement("input");
-				partitionDataInput.placeholder = await availableAPIs.lookupLocale("PARTITION_DATA");
-				partitionDataFormat.innerText = await availableAPIs.lookupLocale("FORMAT_DATA");
-				partitionBootInput.placeholder = await availableAPIs.lookupLocale("PARTITION_BOOT");
-				partitionDataInput.value = "data";
-				partitionBootInput.value = "boot";
-				content.appendChild(partitionDataInput);
-				content.insertAdjacentText("beforeend", " ");
-				content.appendChild(partitionDataFormat);
-				content.appendChild(document.createElement("br"));
-				content.appendChild(partitionBootInput);
-				let initSyncEnd;
-				let initSync = new Promise(_ => initSyncEnd = _);
-				partitionDataFormat.onclick = async function() {
-					if (!partitionDataInput.value) return await htmlAlert(await availableAPIs.lookupLocale("DATA_INPUT_ALERT"));
-					let newInstall = false;
+			content.appendChild(partitionBootInput);
+			let initSyncEnd;
+			let initSync = new Promise(_ => initSyncEnd = _);
+			partitionDataFormat.onclick = async function() {
+				if (!partitionDataInput.value) return await htmlAlert(await availableAPIs.lookupLocale("DATA_INPUT_ALERT"));
+				let newInstall = false;
+				try {
+					await availableAPIs.lldaList();
+				} catch {
+					newInstall = true;
+					if (!automatic_configuration?.partitioning?.autoInitNewInstalls) 
+						if (!(await htmlConfirm(await availableAPIs.lookupLocale("PROMPT_PARTITION_TABLE")))) return;
+					await availableAPIs.lldaInitPartitions();
+				}
+				let confirmErasePart = true;
+				if (!automatic_configuration?.partitioning?.format && !(automatic_configuration?.partitioning?.autoInitNewInstalls && newInstall))
+					confirmErasePart = await htmlConfirm(await availableAPIs.lookupLocale("CONFIRM_PARTITION_ERASE"));
+				if (confirmErasePart) {
+					let partData = await availableAPIs.lldaRead({ partition: partitionDataInput.value });
+					let partId;
 					try {
-						await availableAPIs.lldaList();
-					} catch {
-						newInstall = true;
-						if (!automatic_configuration?.partitioning?.autoInitNewInstalls) 
-							if (!(await htmlConfirm(await availableAPIs.lookupLocale("PROMPT_PARTITION_TABLE")))) return;
-						await availableAPIs.lldaInitPartitions();
+						partId = partData.id;
+					} catch {}
+					if (!partId) partId = (await availableAPIs.cspOperation({
+						cspProvider: "basic",
+						operation: "random",
+						cspArgument: new Uint8Array(64)
+					})).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")
+					await availableAPIs.lldaWrite({
+						partition: partitionDataInput.value,
+						data: {
+							files: {},
+							permissions: {},
+							id: partId
+						}
+					});
+				}
+				initSyncEnd();
+				return;
+			}
+			button.onclick = async function() {
+				let diskDataPartition = partitionDataInput.value;
+				let diskBootPartition = partitionBootInput.value;
+				if (!diskDataPartition) return await htmlAlert(await availableAPIs.lookupLocale("DATA_INPUT_ALERT"));
+				if (!diskBootPartition) return await htmlAlert(await availableAPIs.lookupLocale("BOOT_INPUT_ALERT"));
+				try {
+					if (!(await availableAPIs.lldaList()).includes(diskDataPartition)) throw new Error();
+				} catch {
+					return await htmlAlert(await availableAPIs.lookupLocale("CANNOT_FIND_PARTITION"));
+				}
+
+				let tempCopy = Object.keys((await availableAPIs.lldaRead({ partition: diskDataPartition })) || {});
+				if (!tempCopy.includes("files") || !tempCopy.includes("permissions"))
+					if (!(await htmlConfirm(await availableAPIs.lookupLocale("PCFS_DETECTION_ERROR")))) return;
+
+				tempCopy = null;
+				content.innerHTML = "";
+				button.hidden = true;
+				let isMigrated = false;
+				try {
+					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("MOUNTING_DATA_PARTITION"));
+					await availableAPIs.fs_mount({
+						mountpoint: "target",
+						filesystem: "PCFSiDBMount",
+						filesystemOptions: {
+							partition: diskDataPartition
+						}
+					});
+					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("REVIEWING_MIGRATION"));
+					let targetListing = await availableAPIs.fs_ls({ path: "target" });
+					if (targetListing.includes("apps")) {
+						let targetListing = await availableAPIs.fs_ls({ path: "target/apps" });
+						if (targetListing.includes("authui.js")) {
+							await recursiveRemove("target/apps");
+							await recursiveRemove("target/boot");
+							await recursiveRemove("target/etc/wallpapers");
+							await recursiveRemove("target/etc/icons");
+							await recursiveRemove("target/etc/sounds");
+							await recursiveRemove("target/etc/keys");
+							await availableAPIs.fs_write({ path: "target/.migration", data: "This file is for migration purposes" });
+							isMigrated = true;
+						}
 					}
-					let confirmErasePart = true;
-					if (!automatic_configuration?.partitioning?.format && !(automatic_configuration?.partitioning?.autoInitNewInstalls && newInstall))
-						confirmErasePart = await htmlConfirm(await availableAPIs.lookupLocale("CONFIRM_PARTITION_ERASE"));
-					if (confirmErasePart) {
-						let partData = await availableAPIs.lldaRead({ partition: partitionDataInput.value });
-						let partId;
-						try {
-							partId = partData.id;
-						} catch {}
-						if (!partId) partId = (await availableAPIs.cspOperation({
-							cspProvider: "basic",
-							operation: "random",
-							cspArgument: new Uint8Array(64)
-						})).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")
-						await availableAPIs.lldaWrite({
-							partition: partitionDataInput.value,
-							data: {
-								files: {},
-								permissions: {},
-								id: partId
-							}
+				} catch (e) {
+					console.error(e);
+					description.innerHTML = await availableAPIs.lookupLocale("INSTALLATION_FAILED");
+					await availableAPIs.closeability(true);
+					onClose = function() {
+						onClose = () => availableAPIs.terminate();
+						availableAPIs.shutdown({
+							isReboot: true
 						});
 					}
-					initSyncEnd();
-					return;
+					throw e;
 				}
+				button.hidden = false;
+				let newInstall = true;
+				try {
+					await availableAPIs.fs_read({ path: "target/etc/security/users" });
+					newInstall = false;
+				} catch {}
+				try {
+					await availableAPIs.fs_read({ path: "target/.migration" });
+					isMigrated = true;
+				} catch {}
+				let canSkip = (!newInstall) && automatic_configuration.secondstage.createAccount.onlyOnNewInstall;
+				content.innerHTML = "";
+				description.innerText = await availableAPIs.lookupLocale("LET_CREATE_ACCOUNT");
+				button.innerText = await availableAPIs.lookupLocale("CREATE");
+				let useraccountname = document.createElement("input");
+				let useraccountpassword = document.createElement("input");
+				let darkmode = document.createElement("input");
+				let darkmode_lb = document.createElement("label");
+				useraccountname.placeholder = await availableAPIs.lookupLocale("USERNAME");
+				useraccountpassword.placeholder = await availableAPIs.lookupLocale("PASSWORD");
+				useraccountpassword.type = "password";
+				darkmode.type = "checkbox";
+				darkmode.id = "darkmode";
+				darkmode_lb.innerText = await availableAPIs.lookupLocale("DARK_MODE");
+				darkmode_lb.htmlFor = "darkmode";
+				content.appendChild(useraccountname);
+				content.appendChild(document.createElement("br"));
+				content.appendChild(useraccountpassword);
+				content.appendChild(document.createElement("br"));
+				content.appendChild(darkmode);
+				content.appendChild(darkmode_lb);
 				button.onclick = async function() {
-					let diskDataPartition = partitionDataInput.value;
-					let diskBootPartition = partitionBootInput.value;
-					if (!diskDataPartition) return await htmlAlert(await availableAPIs.lookupLocale("DATA_INPUT_ALERT"));
-					if (!diskBootPartition) return await htmlAlert(await availableAPIs.lookupLocale("BOOT_INPUT_ALERT"));
-					try {
-						if (!(await availableAPIs.lldaList()).includes(diskDataPartition)) throw new Error();
-					} catch {
-						return await htmlAlert(await availableAPIs.lookupLocale("CANNOT_FIND_PARTITION"));
-					}
-
-					let tempCopy = Object.keys((await availableAPIs.lldaRead({ partition: diskDataPartition })) || {});
-					if (!tempCopy.includes("files") || !tempCopy.includes("permissions"))
-						if (!(await htmlConfirm(await availableAPIs.lookupLocale("PCFS_DETECTION_ERROR")))) return;
-
-					tempCopy = null;
+					let username = useraccountname.value;
+					let password = useraccountpassword.value;
+					if (!username && !canSkip) return;
+					if (username.includes("/")) return;
+					if (!password && !canSkip) return;
+					let homedir = username == "root" ? ("target/root") : ("target/home/" + username);
+					let darkModeChecked = darkmode.checked;
 					content.innerHTML = "";
 					button.hidden = true;
 					description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PLEASE_WAIT"));
@@ -324,14 +375,6 @@ Used libraries:
 					}
 					`});
 					try {
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("MOUNTING_DATA_PARTITION"));
-						await availableAPIs.fs_mount({
-							mountpoint: "target",
-							filesystem: "PCFSiDBMount",
-							filesystemOptions: {
-								partition: diskDataPartition
-							}
-						});
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CHANGING_ROOT_PERMISSIONS"));
 						await availableAPIs.fs_chmod({ path: "target", newPermissions: "rx" });
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("COPYING_FOLDERS"));
@@ -374,6 +417,7 @@ Used libraries:
 							await availableAPIs.fs_mkdir({ path: "target/etc/icons" });
 							await availableAPIs.fs_mkdir({ path: "target/etc/sounds" });
 							await availableAPIs.fs_mkdir({ path: "target/etc/keys" });
+							await availableAPIs.fs_mkdir({ path: "target/etc/keys/khrl" });
 							await availableAPIs.fs_mkdir({ path: "target/etc/security" });
 							await availableAPIs.fs_chmod({
 								path: "target/etc/security",
@@ -422,112 +466,130 @@ Used libraries:
 							path: "target/etc/network.json",
 							data: JSON.stringify(automatic_configuration.secondstage.network)
 						});
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
-						let salt = await availableAPIs.cspOperation({
-							cspProvider: "basic",
-							operation: "random",
-							cspArgument: new Uint8Array(64)
-						});
-						let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-						let key = await availableAPIs.cspOperation({
-							cspProvider: "basic",
-							operation: "importKey",
-							cspArgument: {
-								format: "raw",
-								keyData: new TextEncoder().encode(password),
-								algorithm: { name: "PBKDF2" },
-								extractable: false,
-								keyUsages: ["deriveBits", "deriveKey"]
-							}
-						});
-						let derived = new Uint8Array(await availableAPIs.cspOperation({
-							cspProvider: "basic",
-							operation: "deriveBits",
-							cspArgument: {
-								algorithm: {
-									name: "PBKDF2",
-									salt: salt,
-									iterations: 100000,
-									hash: "SHA-256"
-								},
-								baseKey: key,
-								length: 256
-							}
-						}));
-						await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: key });
-						let currentMount = await availableAPIs.getSystemMount();
-						await availableAPIs.setSystemMount("target");
-						await availableAPIs.fs_write({
-							path: "target/etc/security/users",
-							data: JSON.stringify({authui: {
-								securityChecks: [],
-								groups: ["authui"],
-								homeDirectory: "system",
-								blankPrivileges: true,
-								additionalPrivilegeSet: [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "FS_READ", "FS_LIST_PARTITIONS", "CSP_OPERATIONS" ]
-							}})
-						});
-						await availableAPIs.fs_chmod({ path: "target/etc/security/users", newPermissions: "" });
-						await availableAPIs.setUserInfo({
-							desiredUser: username,
-							info: {
-								securityChecks: [
-									{
-										type: "pbkdf2",
-										hash: u8aToHex(derived),
-										salt: u8aToHex(salt)
-									}
-								],
-								groups: [ username, "users" ],
-								homeDirectory: "system" + homedir.slice(6),
-								blankPrivileges: false
-							}
-						});
-						await availableAPIs.setSystemMount(currentMount);
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER_HOME"));
-						try {
-							await availableAPIs.fs_mkdir({ path: homedir });
-							await availableAPIs.fs_chown({ path: homedir, newUser: username });
-							await availableAPIs.fs_chgrp({ path: homedir, newGrp: username });
-							await availableAPIs.fs_chmod({ path: homedir, newPermissions: "rx" });
-						} catch {}
-						try {
-							await availableAPIs.fs_mkdir({ path: homedir + "/desktop" });
-							await availableAPIs.fs_chown({ path: homedir + "/desktop", newUser: username });
-							await availableAPIs.fs_chgrp({ path: homedir + "/desktop", newGrp: username });
-							await availableAPIs.fs_chmod({ path: homedir + "/desktop", newPermissions: "rx" });
-						} catch {}
+						if (!canSkip) {
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
+							let salt = await availableAPIs.cspOperation({
+								cspProvider: "basic",
+								operation: "random",
+								cspArgument: new Uint8Array(64)
+							});
+							let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+							let key = await availableAPIs.cspOperation({
+								cspProvider: "basic",
+								operation: "importKey",
+								cspArgument: {
+									format: "raw",
+									keyData: new TextEncoder().encode(password),
+									algorithm: { name: "PBKDF2" },
+									extractable: false,
+									keyUsages: ["deriveBits", "deriveKey"]
+								}
+							});
+							let derived = new Uint8Array(await availableAPIs.cspOperation({
+								cspProvider: "basic",
+								operation: "deriveBits",
+								cspArgument: {
+									algorithm: {
+										name: "PBKDF2",
+										salt: salt,
+										iterations: 100000,
+										hash: "SHA-256"
+									},
+									baseKey: key,
+									length: 256
+								}
+							}));
+							await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: key });
+							let currentMount = await availableAPIs.getSystemMount();
+							await availableAPIs.setSystemMount("target");
+							await availableAPIs.fs_write({
+								path: "target/etc/security/users",
+								data: JSON.stringify({authui: {
+									securityChecks: [],
+									groups: ["authui"],
+									homeDirectory: "system",
+									blankPrivileges: true,
+									additionalPrivilegeSet: [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "FS_READ", "FS_LIST_PARTITIONS", "CSP_OPERATIONS" ]
+								}})
+							});
+							await availableAPIs.fs_chmod({ path: "target/etc/security/users", newPermissions: "" });
+							await availableAPIs.setUserInfo({
+								desiredUser: username,
+								info: {
+									securityChecks: [
+										{
+											type: "pbkdf2",
+											hash: u8aToHex(derived),
+											salt: u8aToHex(salt)
+										}
+									],
+									groups: [ username, "users" ],
+									homeDirectory: "system" + homedir.slice(6),
+									blankPrivileges: false
+								}
+							});
+							await availableAPIs.setSystemMount(currentMount);
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER_HOME"));
+							try {
+								await availableAPIs.fs_mkdir({ path: homedir });
+								await availableAPIs.fs_chown({ path: homedir, newUser: username });
+								await availableAPIs.fs_chgrp({ path: homedir, newGrp: username });
+								await availableAPIs.fs_chmod({ path: homedir, newPermissions: "rx" });
+							} catch {}
+							try {
+								await availableAPIs.fs_mkdir({ path: homedir + "/desktop" });
+								await availableAPIs.fs_chown({ path: homedir + "/desktop", newUser: username });
+								await availableAPIs.fs_chgrp({ path: homedir + "/desktop", newGrp: username });
+								await availableAPIs.fs_chmod({ path: homedir + "/desktop", newPermissions: "rx" });
+							} catch {}
+						}
+						if (isMigrated) {
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("MIGRATING_USER_PROFILES"));
+							let users = JSON.parse(await availableAPIs.fs_read({ path: "target/etc/security/users" }));
+							for (let user in users) 
+								if (users[user].homeDirectory.startsWith("storage"))
+									users[user].homeDirectory = "system" + users[user].homeDirectory.slice(7);
+							await availableAPIs.fs_write({
+								path: "target/etc/security/users",
+								data: JSON.stringify(users)
+							});
+							await availableAPIs.fs_rm({ path: "target/.migration" });
+						}
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2U"));
 						let wallpaperModule;
 						try {
 							wallpaperModule = JSON.parse(await availableAPIs.fs_read({ path: "target/modules/50-pcos-wallpapers.fs" }));
 						} catch {}
 						if (wallpaperModule) {
+							if (!canSkip) {
+								try {
+									await availableAPIs.fs_write({
+										path: homedir + "/.wallpaper",
+										data: wallpaperModule.files[wallpaperModule.backend.files.etc.wallpapers["pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"]]
+									});
+									await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
+									await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
+									await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
+								} catch {}
+							}
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
 							try {
 								await availableAPIs.fs_write({
-									path: homedir + "/.wallpaper",
-									data: wallpaperModule.files[wallpaperModule.backend.files.etc.wallpapers["pcos" + (darkModeChecked ? "-dark" : "") + "-beta.pic"]]
+									path: "target/etc/wallpapers/lockscreen.pic",
+									data: wallpaperModule.files[wallpaperModule.backend.files.etc.wallpapers["pcos-lock-beta.pic"]]
 								});
-								await availableAPIs.fs_chown({ path: homedir + "/.wallpaper", newUser: username });
-								await availableAPIs.fs_chgrp({ path: homedir + "/.wallpaper", newGrp: username });
-								await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
 							} catch {}
 						}
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
-						try {
+						if (!canSkip) {
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE"));
 							await availableAPIs.fs_write({
-								path: "target/etc/wallpapers/lockscreen.pic",
-								data: wallpaperModule.files[wallpaperModule.backend.files.etc.wallpapers["pcos-lock-beta.pic"]]
+								path: homedir + "/.darkmode",
+								data: darkModeChecked.toString()
 							});
-						} catch {}
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE"));
-						await availableAPIs.fs_write({
-							path: homedir + "/.darkmode",
-							data: darkModeChecked.toString()
-						});
-						await availableAPIs.fs_chown({ path: homedir + "/.darkmode", newUser: username });
-						await availableAPIs.fs_chgrp({ path: homedir + "/.darkmode", newGrp: username });
-						await availableAPIs.fs_chmod({ path: homedir + "/.darkmode", newPermissions: "rx" });
+							await availableAPIs.fs_chown({ path: homedir + "/.darkmode", newUser: username });
+							await availableAPIs.fs_chgrp({ path: homedir + "/.darkmode", newGrp: username });
+							await availableAPIs.fs_chmod({ path: homedir + "/.darkmode", newPermissions: "rx" });
+						}
 						description.innerHTML = await availableAPIs.lookupLocale("INSTALLATION_SUCCESSFUL");
 						if (!automatic_configuration.autoRestart) await availableAPIs.closeability(true);
 						onClose = function() {
@@ -551,24 +613,24 @@ Used libraries:
 						throw e;
 					}
 				}
-				if (automatic_configuration.partitioning) {
-					partitionDataInput.value = automatic_configuration.partitioning.data || "data";
-					partitionBootInput.value = automatic_configuration.partitioning.boot || "boot";
-					let newInstall = false;
-					try { await availableAPIs.lldaList(); } catch { newInstall = true; }
-					if (automatic_configuration.partitioning.format || (newInstall && automatic_configuration.partitioning.autoInitNewInstalls)) {
-						partitionDataFormat.click();
-						await initSync;
-					}
-					button.click();
-				}
+				useraccountname.value = automatic_configuration.secondstage.createAccount.username || useraccountname.value;
+				useraccountpassword.value = automatic_configuration.secondstage.createAccount.password || "";
+				darkmode.checked = automatic_configuration.secondstage.createAccount.darkMode || darkmode.checked;
+				useraccountname.disabled = automatic_configuration.secondstage.createAccount.lockUsername;
+				if (automatic_configuration.secondstage.createAccount.lockUsername) useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
+				if (automatic_configuration.secondstage.createAccount.create || canSkip) button.click();
 			}
-			useraccountname.value = automatic_configuration.secondstage.createAccount.username || useraccountname.value;
-			useraccountpassword.value = automatic_configuration.secondstage.createAccount.password || "";
-			darkmode.checked = automatic_configuration.secondstage.createAccount.darkMode || darkmode.checked;
-			useraccountname.disabled = automatic_configuration.secondstage.createAccount.lockUsername;
-			if (automatic_configuration.secondstage.createAccount.lockUsername) useraccountname.title = await availableAPIs.lookupLocale("PROVISIONED_PREFERENCE");
-			if (automatic_configuration.secondstage.createAccount.create) button.click();
+			if (automatic_configuration.partitioning) {
+				partitionDataInput.value = automatic_configuration.partitioning.data || "data";
+				partitionBootInput.value = automatic_configuration.partitioning.boot || "boot";
+				let newInstall = false;
+				try { await availableAPIs.lldaList(); } catch { newInstall = true; }
+				if (automatic_configuration.partitioning.format || (newInstall && automatic_configuration.partitioning.autoInitNewInstalls)) {
+					partitionDataFormat.click();
+					await initSync;
+				}
+				button.click();
+			}
 		}
 		if (automatic_configuration.acceptEULA) button.click();
 	}
