@@ -104,8 +104,8 @@ server.on("connection", function(socket, req) {
 				hostname
 			}));
 			socketList[ip + publicKey] = socket;
-			let {connectedEvent:connectedEvent2} = ConnfulServer("blog", socket, ip + publicKey);
-			connectedEvent2.on("connected", function(a) {
+			let {connectedEvent: connectedEventBDP} = ConnfulServer("blog", socket, ip + publicKey);
+			connectedEventBDP.on("connected", function(a) {
 				let {messageReceiveEvent, messageSendEvent} = a;
 				messageReceiveEvent.once("message", function(d) {
 					let pathname = path.join(__dirname, "js_files", d);
@@ -137,8 +137,8 @@ server.on("connection", function(socket, req) {
 					}
 				})
 			});
-			let {connectedEvent:connectedEvent3} = ConnfulServer("netfs", socket, ip + publicKey);
-			connectedEvent3.on("connected", function(a) {
+			let {connectedEvent: connectedEventNetFS} = ConnfulServer("netfs", socket, ip + publicKey);
+			connectedEventNetFS.on("connected", function(a) {
 				let {messageReceiveEvent, messageSendEvent} = a;
 				messageReceiveEvent.on("message", function(d) {
 					try {
@@ -166,6 +166,13 @@ server.on("connection", function(socket, req) {
 						else messageSendEvent.emit("message", JSON.stringify({ error: "FS_ACTION_FAILED" }));
 					} catch {}
 				})
+			});
+			let {connectedEvent: connectedEventResolve} = ConnfulServer("resolve", socket, ip + publicKey);
+			connectedEventResolve.on("connected", function(a) {
+				let {messageReceiveEvent, messageSendEvent} = a;
+				messageReceiveEvent.on("message", function(d) {
+					messageSendEvent.emit("message", JSON.stringify(dnsTable[d] || null));
+				});
 			});
 		} else {
 			let packetData;

@@ -67,6 +67,243 @@ function reeAPIs() {
 			return true;
 		}
 
+		async function connfulConnect(connOpts) {
+			let {address, gate, key, private: privateKey, doNotVerifyServer, verifyByDomain} = connOpts;
+			let websocketHandle = modules.network.ws;
+			if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
+			let websocket = modules.websocket._handles[websocketHandle].ws;
+			if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
+			let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
+			let connID = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+			let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
+			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+			let newKeyKA, exportedKA;
+			if (!key && !privateKey) {
+				newKeyKA = await crypto.subtle.generateKey({name: "Ed25519", namedCurve: "P-256"}, true, ["sign", "verify"]);
+				exportedKA = await crypto.subtle.exportKey("jwk", newKeyKA.publicKey);
+				exportedKA = { keyInfo: { usages: ["connfulSecureClient:" + modules.network.address], key: exportedKA }, signature: null };
+				newKeyKA = newKeyKA.privateKey;
+			} else {
+				newKeyKA = await crypto.subtle.importKey("jwk", privateKey, {name: "Ed25519"}, true, ["sign"]);
+				exportedKA = key;
+			}
+			let ephemeralKey = await crypto.subtle.generateKey({name: "X25519"}, true, ["deriveBits"]);
+			let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
+			exported = { signedBy: "clientKey", usages: ["connfulSecureEphemeral"], key: exported };
+			let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, newKeyKA, new TextEncoder().encode(JSON.stringify(exported)))));
+			let _dataBufferPromise = null;
+			let _rejectDataPromise = null;
+			let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
+			let _settlePromise = null;
+			let _rejectPromise = null;
+			let settlePromise = new Promise((r, e) => [_settlePromise, _rejectPromise] = [r, e]);
+			let packetID = crypto.getRandomValues(new Uint8Array(32)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+			connections[connID + ":client"] = {
+				ourKey: ephemeralKey,
+				from: address,
+				theirMainKeyReceived: false,
+				theirKeyRaw: null,
+				aesUsableKey: null,
+				networkListenID,
+				dataBuffer: [],
+				dataBufferPromise,
+				settlePromise,
+				gateIfNeeded: gate
+			}
+			async function eventListener(e) {
+				try {
+					let packet = JSON.parse(e.data);
+					if (!packet.from) {
+						if (packet.event == "AddressUnreachable" && packet.packetID == packetID)
+							_rejectPromise(new Error("ADDRESS_UNREACHABLE"));
+						return;
+					}
+					if (packet.data.gate) return;
+					if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "start") {
+						if (connections[connID + ":client"].aesUsableKey) return;
+						let theirUsableKey = await crypto.subtle.importKey("jwk", packet.data.content.keyInfo.key, { name: "X25519" }, true, []);
+						let joinedKeys = await crypto.subtle.deriveBits({ name: "X25519", public: theirUsableKey }, ephemeralKey.privateKey, 256);
+						let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {
+							name: "AES-GCM"
+						}, true, ["encrypt", "decrypt"]);
+						connections[connID + ":client"].aesUsableKey = aesUsableKey;
+						connections[connID + ":client"].theirKeyRaw = packet.data.content;
+						let iv = crypto.getRandomValues(new Uint8Array(16));
+						websocket.send(JSON.stringify({
+							receiver: address,
+							data: {
+								type: "connectionful",
+								action: "xchange",
+								connectionID: connID,
+								content: {
+									iv: u8aToHex(iv),
+									ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
+										name: "AES-GCM",
+										iv
+									}, aesUsableKey, new TextEncoder().encode(JSON.stringify(exportedKA)))))
+								},
+								gate
+							}
+						}));
+					} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "xchange") {
+						if (connections[connID + ":client"].theirMainKeyReceived) return;
+						let theirMainKeyDecrypt = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
+							name: "AES-GCM",
+							iv: hexToU8A(packet.data.content.iv)
+						}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
+						let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {name: "Ed25519"}, true, ["verify"]);
+						let verifyKeySignature = await crypto.subtle.verify({ name: "Ed25519" }, usableMainKey, hexToU8A(connections[connID + ":client"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[connID + ":client"].theirKeyRaw.keyInfo)));
+						if (!doNotVerifyServer && verifyKeySignature) {
+							try {
+								let khrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/khrl", processToken);
+								let khrlSignatures = [];
+								for (let khrlFile of khrlFiles) {
+									let khrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, processToken));
+									let khrlSignature = khrl.signature;
+									delete khrl.signature;
+									if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+										khrlSignatures.push(...khrl.list);
+									}
+								}
+								verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, khrlSignatures);
+							} catch {
+								verifyKeySignature = false;
+							}
+						}
+						if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address) &&
+								!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain))) {
+							_rejectPromise(new Error("SERVER_SIGNATURE_VERIFICATION_FAILED"));
+							websocket.removeEventListener("message", eventListener);
+							delete connections[connID + ":client"];
+							delete networkListens[networkListenID];
+							return websocket.send(JSON.stringify({
+								receiver: address,
+								data: {
+									type: "connectionful",
+									action: "drop",
+									connectionID: connID,
+									gate
+								}
+							}));
+						}
+						connections[connID + ":client"].theirMainKeyReceived = theirMainKeyDecrypt;
+						websocket.send(JSON.stringify({
+							receiver: address,
+							data: {
+								type: "connectionful",
+								action: "nice2meetu",
+								connectionID: connID,
+								gate
+							}
+						}));
+						_settlePromise();
+					} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "drop") {
+						if (connections[connID + ":client"].dying) return;
+						_rejectPromise(new Error("CONNECTION_DROPPED"));
+						if (_rejectDataPromise) _rejectDataPromise(new Error("CONNECTION_DROPPED"));
+						websocket.send(JSON.stringify({
+							receiver: address,
+							data: {
+								type: "connectionful",
+								action: "drop",
+								connectionID: connID,
+								gate
+							}
+						}));
+						connections[connID + ":client"].dying = true;
+						websocket.removeEventListener("message", eventListener);
+						delete networkListens[networkListenID];
+						if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
+					} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "data") {
+						if (!connections[connID + ":client"].aesUsableKey) return;
+						if (!connections[connID + ":client"].theirMainKeyReceived) return;
+						if (connections[connID + ":client"].writingLock) await connections[connID + ":client"].writingLock;
+						let writingLockRelease;
+						let writingLock = new Promise(r => writingLockRelease = r);
+						connections[connID + ":client"].writingLock = writingLock;
+						connections[connID + ":client"].dataBuffer.push(new TextDecoder().decode(await crypto.subtle.decrypt({
+							name: "AES-GCM",
+							iv: hexToU8A(packet.data.content.iv)
+						}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
+						if (!(connections[connID + ":client"].dataBuffer.length - 1)) {
+							_dataBufferPromise();
+							dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
+							connections[packet.data.connectionID + ":client"].dataBufferPromise = dataBufferPromise;
+						}
+						writingLockRelease();
+					}
+				} catch {}
+			};
+			networkListens[networkListenID] = { ws: websocket, gate: gate, fn: eventListener };
+			websocket.addEventListener("message", eventListener);
+			websocket.send(JSON.stringify({
+				receiver: address,
+				data: {
+					type: "connectionful",
+					action: "start",
+					gate,
+					connectionID: connID,
+					content: { keyInfo: exported, signature }
+				},
+				id: packetID
+			}));
+			modules.network.runOnClose.then(function() {
+				if (connections.hasOwnProperty(connID + ":client")) {
+					connections[connID + ":client"].dying = true;
+					if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
+				}
+				delete networkListens[networkListenID];
+				_rejectPromise(new Error("NETWORK_CLOSED"));
+				_rejectDataPromise(new Error("NETWORK_CLOSED"));
+			});
+			return connID + ":client";
+		}
+
+		async function connfulWrite(sendOpts) {
+			if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
+			if (connections[sendOpts.connectionID].dying) throw new Error("CONNECTION_DROPPED");
+			let iv = crypto.getRandomValues(new Uint8Array(16));
+			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+			networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({
+				receiver: connections[sendOpts.connectionID].from,
+				data: {
+					type: "connectionful",
+					action: "data",
+					content: {
+						iv: u8aToHex(iv),
+						ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
+							name: "AES-GCM",
+							iv
+						}, connections[sendOpts.connectionID].aesUsableKey, new TextEncoder().encode(sendOpts.data))))
+					},
+					connectionID: sendOpts.connectionID.slice(0, -7),
+					gate: connections[sendOpts.connectionID].gateIfNeeded
+				}
+			}));
+		}
+
+		async function connfulRead(connectionID) {
+			if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
+			if (!connections[connectionID].dataBuffer.length) await connections[connectionID].dataBufferPromise;
+			let data = connections[connectionID].dataBuffer.shift();
+			if (connections[connectionID].dying && connections[connectionID].dataBuffer.length == 0) delete connections[connectionID]; 
+			return data;
+		}
+
+		function connfulDisconnect(connectionID) {
+			if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
+			if (connections[connectionID].dying) return;
+			networkListens[connections[connectionID].networkListenID].ws.send(JSON.stringify({
+				receiver: connections[connectionID].from,
+				data: {
+					type: "connectionful",
+					action: "drop",
+					connectionID: connectionID.slice(0, -7),
+					gate: connections[connectionID].gateIfNeeded
+				}
+			}));
+		}
+
 		ree.beforeCloseDown(async function() {
 			for (let processPipe of processPipes) delete modules.ipc._ipc[processPipe];
 			for (let connection in connections) try { networkListens[connections[connection].networkListenID].ws.send(JSON.stringify({
@@ -1189,195 +1426,7 @@ function reeAPIs() {
 				},
 				connfulConnect: async function(connOpts) {
 					if (!privileges.includes("CONNFUL_CONNECT")) throw new Error("UNAUTHORIZED_ACTION");
-					let {address, gate, key, private: privateKey, doNotVerifyServer, verifyByDomain} = connOpts;
-					let websocketHandle = modules.network.ws;
-					if (!websocketHandle) throw new Error("NETWORK_UNREACHABLE");
-					let websocket = modules.websocket._handles[websocketHandle].ws;
-					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
-					let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
-					let connID = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-					let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
-					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-					let newKeyKA, exportedKA;
-					if (!key && !privateKey) {
-						newKeyKA = await crypto.subtle.generateKey({name: "Ed25519", namedCurve: "P-256"}, true, ["sign", "verify"]);
-						exportedKA = await crypto.subtle.exportKey("jwk", newKeyKA.publicKey);
-						exportedKA = { keyInfo: { usages: ["connfulSecureClient:" + modules.network.address], key: exportedKA }, signature: null };
-						newKeyKA = newKeyKA.privateKey;
-					} else {
-						newKeyKA = await crypto.subtle.importKey("jwk", privateKey, {name: "Ed25519"}, true, ["sign"]);
-						exportedKA = key;
-					}
-					let ephemeralKey = await crypto.subtle.generateKey({name: "X25519"}, true, ["deriveBits"]);
-					let exported = await crypto.subtle.exportKey("jwk", ephemeralKey.publicKey);
-					exported = { signedBy: "clientKey", usages: ["connfulSecureEphemeral"], key: exported };
-					let signature = u8aToHex(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, newKeyKA, new TextEncoder().encode(JSON.stringify(exported)))));
-					let _dataBufferPromise = null;
-					let _rejectDataPromise = null;
-					let dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
-					let _settlePromise = null;
-					let _rejectPromise = null;
-					let settlePromise = new Promise((r, e) => [_settlePromise, _rejectPromise] = [r, e]);
-					let packetID = crypto.getRandomValues(new Uint8Array(32)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-					connections[connID + ":client"] = {
-						ourKey: ephemeralKey,
-						from: address,
-						theirMainKeyReceived: false,
-						theirKeyRaw: null,
-						aesUsableKey: null,
-						networkListenID,
-						dataBuffer: [],
-						dataBufferPromise,
-						settlePromise,
-						gateIfNeeded: gate
-					}
-					async function eventListener(e) {
-						try {
-							let packet = JSON.parse(e.data);
-							if (!packet.from) {
-								if (packet.event == "AddressUnreachable" && packet.packetID == packetID)
-									_rejectPromise(new Error("ADDRESS_UNREACHABLE"));
-								return;
-							}
-							if (packet.data.gate) return;
-							if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "start") {
-								if (connections[connID + ":client"].aesUsableKey) return;
-								let theirUsableKey = await crypto.subtle.importKey("jwk", packet.data.content.keyInfo.key, { name: "X25519" }, true, []);
-								let joinedKeys = await crypto.subtle.deriveBits({ name: "X25519", public: theirUsableKey }, ephemeralKey.privateKey, 256);
-								let aesUsableKey = await crypto.subtle.importKey("raw", joinedKeys, {
-									name: "AES-GCM"
-								}, true, ["encrypt", "decrypt"]);
-								connections[connID + ":client"].aesUsableKey = aesUsableKey;
-								connections[connID + ":client"].theirKeyRaw = packet.data.content;
-								let iv = crypto.getRandomValues(new Uint8Array(16));
-								websocket.send(JSON.stringify({
-									receiver: address,
-									data: {
-										type: "connectionful",
-										action: "xchange",
-										connectionID: connID,
-										content: {
-											iv: u8aToHex(iv),
-											ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
-												name: "AES-GCM",
-												iv
-											}, aesUsableKey, new TextEncoder().encode(JSON.stringify(exportedKA)))))
-										},
-										gate
-									}
-								}));
-							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "xchange") {
-								if (connections[connID + ":client"].theirMainKeyReceived) return;
-								let theirMainKeyDecrypt = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
-									name: "AES-GCM",
-									iv: hexToU8A(packet.data.content.iv)
-								}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
-								let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, {name: "Ed25519"}, true, ["verify"]);
-								let verifyKeySignature = await crypto.subtle.verify({ name: "Ed25519" }, usableMainKey, hexToU8A(connections[connID + ":client"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[connID + ":client"].theirKeyRaw.keyInfo)));
-								if (!doNotVerifyServer && verifyKeySignature) {
-									try {
-										let khrlFiles = await modules.fs.ls(modules.defaultSystem + "/etc/keys/khrl", processToken);
-										let khrlSignatures = [];
-										for (let khrlFile of khrlFiles) {
-											let khrl = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/keys/khrl/" + khrlFile, processToken));
-											let khrlSignature = khrl.signature;
-											delete khrl.signature;
-											if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
-												khrlSignatures.push(...khrl.list);
-											}
-										}
-										verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, khrlSignatures);
-									} catch {
-										verifyKeySignature = false;
-									}
-								}
-								if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address) &&
-										!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain))) {
-									_rejectPromise(new Error("SERVER_SIGNATURE_VERIFICATION_FAILED"));
-									websocket.removeEventListener("message", eventListener);
-									delete connections[connID + ":client"];
-									delete networkListens[networkListenID];
-									return websocket.send(JSON.stringify({
-										receiver: address,
-										data: {
-											type: "connectionful",
-											action: "drop",
-											connectionID: connID,
-											gate
-										}
-									}));
-								}
-								connections[connID + ":client"].theirMainKeyReceived = theirMainKeyDecrypt;
-								websocket.send(JSON.stringify({
-									receiver: address,
-									data: {
-										type: "connectionful",
-										action: "nice2meetu",
-										connectionID: connID,
-										gate
-									}
-								}));
-								_settlePromise();
-							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "drop") {
-								if (connections[connID + ":client"].dying) return;
-								_rejectPromise(new Error("CONNECTION_DROPPED"));
-								if (_rejectDataPromise) _rejectDataPromise(new Error("CONNECTION_DROPPED"));
-								websocket.send(JSON.stringify({
-									receiver: address,
-									data: {
-										type: "connectionful",
-										action: "drop",
-										connectionID: connID,
-										gate
-									}
-								}));
-								connections[connID + ":client"].dying = true;
-								websocket.removeEventListener("message", eventListener);
-								delete networkListens[networkListenID];
-								if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
-							} else if (packet.data.type == "connectionful" && packet.data.connectionID == connID && packet.data.action == "data") {
-								if (!connections[connID + ":client"].aesUsableKey) return;
-								if (!connections[connID + ":client"].theirMainKeyReceived) return;
-								if (connections[connID + ":client"].writingLock) await connections[connID + ":client"].writingLock;
-								let writingLockRelease;
-								let writingLock = new Promise(r => writingLockRelease = r);
-								connections[connID + ":client"].writingLock = writingLock;
-								connections[connID + ":client"].dataBuffer.push(new TextDecoder().decode(await crypto.subtle.decrypt({
-									name: "AES-GCM",
-									iv: hexToU8A(packet.data.content.iv)
-								}, connections[connID + ":client"].aesUsableKey, hexToU8A(packet.data.content.ct))));
-								if (!(connections[connID + ":client"].dataBuffer.length - 1)) {
-									_dataBufferPromise();
-									dataBufferPromise = new Promise((r, e) => [_dataBufferPromise, _rejectDataPromise] = [r, e]);
-									connections[packet.data.connectionID + ":client"].dataBufferPromise = dataBufferPromise;
-								}
-								writingLockRelease();
-							}
-						} catch {}
-					};
-					networkListens[networkListenID] = { ws: websocket, gate: gate, fn: eventListener };
-					websocket.addEventListener("message", eventListener);
-					websocket.send(JSON.stringify({
-						receiver: address,
-						data: {
-							type: "connectionful",
-							action: "start",
-							gate,
-							connectionID: connID,
-							content: { keyInfo: exported, signature }
-						},
-						id: packetID
-					}));
-					modules.network.runOnClose.then(function() {
-						if (connections.hasOwnProperty(connID + ":client")) {
-							connections[connID + ":client"].dying = true;
-							if (!connections[connID + ":client"].dataBuffer.length) delete connections[connID + ":client"];
-						}
-						delete networkListens[networkListenID];
-						_rejectPromise(new Error("NETWORK_CLOSED"));
-						_rejectDataPromise(new Error("NETWORK_CLOSED"));
-					});
-					return connID + ":client";
+					return connfulConnect(connOpts);
 				},
 				connfulConnectionSettled: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_CONNECT")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1386,17 +1435,7 @@ function reeAPIs() {
 				},
 				connfulDisconnect: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_DISCONNECT")) throw new Error("UNAUTHORIZED_ACTION");
-					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
-					if (connections[connectionID].dying) return;
-					networkListens[connections[connectionID].networkListenID].ws.send(JSON.stringify({
-						receiver: connections[connectionID].from,
-						data: {
-							type: "connectionful",
-							action: "drop",
-							connectionID: connectionID.slice(0, -7),
-							gate: connections[connectionID].gateIfNeeded
-						}
-					}));
+					return connfulDisconnect(connectionID);
 				},
 				connfulForceDisconnect: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_DISCONNECT")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1404,34 +1443,11 @@ function reeAPIs() {
 				},
 				connfulWrite: async function(sendOpts) {
 					if (!privileges.includes("CONNFUL_WRITE")) throw new Error("UNAUTHORIZED_ACTION");
-					if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
-					if (connections[sendOpts.connectionID].dying) throw new Error("CONNECTION_DROPPED");
-					let iv = crypto.getRandomValues(new Uint8Array(16));
-					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-					networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({
-						receiver: connections[sendOpts.connectionID].from,
-						data: {
-							type: "connectionful",
-							action: "data",
-							content: {
-								iv: u8aToHex(iv),
-								ct: u8aToHex(new Uint8Array(await crypto.subtle.encrypt({
-									name: "AES-GCM",
-									iv
-								}, connections[sendOpts.connectionID].aesUsableKey, new TextEncoder().encode(sendOpts.data))))
-							},
-							connectionID: sendOpts.connectionID.slice(0, -7),
-							gate: connections[sendOpts.connectionID].gateIfNeeded
-						}
-					}));
+					return connfulWrite(sendOpts);
 				},
 				connfulRead: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_READ")) throw new Error("UNAUTHORIZED_ACTION");
-					if (!connections.hasOwnProperty(connectionID)) throw new Error("NO_SUCH_CONNECTION");
-					if (!connections[connectionID].dataBuffer.length) await connections[connectionID].dataBufferPromise;
-					let data = connections[connectionID].dataBuffer.shift();
-					if (connections[connectionID].dying && connections[connectionID].dataBuffer.length == 0) delete connections[connectionID]; 
-					return data;
+					return connfulRead(connectionID);
 				},
 				connfulAddressGet: async function(connectionID) {
 					if (!privileges.includes("CONNFUL_ADDRESS_GET")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1477,36 +1493,18 @@ function reeAPIs() {
 					let websocket = modules.websocket._handles[websocketHandle].ws;
 					if (websocket.readyState != 1) throw new Error("NETWORK_UNREACHABLE");
 					let tlds = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/tlds.json"));
-					function resolveRecursive(name, address) {
+					async function resolveRecursive(name, address) {
 						if (tlds.hasOwnProperty(name)) return tlds[name];
 						if (address == null) return null;
-						return new Promise(function(resolve) {
-							let gate = "user_" + Array.from(crypto.getRandomValues(new Uint8Array(16))).map(a => a.toString(16).padStart(2, "0")).join("");
-							let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
-							function eventListener(e) {
-								try {
-									let packet = JSON.parse(e.data);
-									if (packet.data.type == "connectionless" && packet.data.gate == gate && packet.from == address) {
-										websocket.removeEventListener("message", eventListener);
-										delete networkListens[networkListenID];
-										resolve(packet.data.content);
-									}
-								} catch {}
-							}
-							networkListens[networkListenID] = { ws: websocket, fn: eventListener };
-							websocket.addEventListener("message", eventListener);
-							websocket.send(JSON.stringify({
-								receiver: address,
-								data: {
-									type: "connectionless",
-									gate: "resolve",
-									content: {
-										reply: gate,
-										query: name
-									}
-								}
-							}));
+						let connectionID = await connfulConnect({
+							address, gate: "resolve",
+							verifyByDomain: name.split(".").slice(1).join(".")
 						});
+						await connections[connectionID].settlePromise;
+						await connfulWrite({ connectionID, data: name });
+						let resultAddress = JSON.parse(await connfulRead(connectionID));
+						connfulDisconnect(connectionID);
+						return resultAddress;
 					}
 					let nameParts = name.split(".").reverse();
 					let currentResolve;
