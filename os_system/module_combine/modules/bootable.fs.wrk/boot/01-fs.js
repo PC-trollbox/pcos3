@@ -55,7 +55,7 @@ function loadFs() {
 			if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
 			if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
 			if (this.mounts[mount].read_only) throw new Error("READ_ONLY_DEV");
-			if (!this.mounts[mount].permissions_supported) throw new Error("NO_PERMIS_SUPPORT");
+			if (!this.mounts[mount].permissions_supported) return;
 			return await this.mounts[mount].chown(file.split("/").slice(1).join("/"), owner, sessionToken);
 		},
 		chgrp: async function(file, group, sessionToken) {
@@ -65,7 +65,7 @@ function loadFs() {
 			if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
 			if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
 			if (this.mounts[mount].read_only) throw new Error("READ_ONLY_DEV");
-			if (!this.mounts[mount].permissions_supported) throw new Error("NO_PERMIS_SUPPORT");
+			if (!this.mounts[mount].permissions_supported) return;
 			return await this.mounts[mount].chgrp(file.split("/").slice(1).join("/"), group, sessionToken);
 		},
 		chmod: async function(file, permissions, sessionToken) {
@@ -75,7 +75,7 @@ function loadFs() {
 			if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
 			if (modules.core.bootMode == "readonly") throw new Error("READ_ONLY_BMGR");
 			if (this.mounts[mount].read_only) throw new Error("READ_ONLY_DEV");
-			if (!this.mounts[mount].permissions_supported) throw new Error("NO_PERMIS_SUPPORT");
+			if (!this.mounts[mount].permissions_supported) return;
 			return await this.mounts[mount].chmod(file.split("/").slice(1).join("/"), permissions, sessionToken);
 		},
 		ls: async function(folder, sessionToken) {
@@ -1382,6 +1382,87 @@ function loadFs() {
 			permissions_supported: true
 		};
 	}
+
+	async function hostOSMount(options) {
+		let dirHandle;
+		try {
+			dirHandle = await window.showDirectoryPicker();
+		} catch {
+			throw new Error("PERMISSION_DENIED");
+		}
+		async function resolvePath(path) {
+			let parts = path.split("/").filter(p => p.length > 0);
+			let currentHandle = dirHandle;
+			for (let part of parts) {
+				try {
+					currentHandle = await currentHandle.getDirectoryHandle(part);
+				} catch {
+					try {
+						return await currentHandle.getFileHandle(part);
+					} catch {
+						throw new Error("NO_SUCH_FILE_DIR");
+					}
+				}
+			}
+			return currentHandle;
+		}
+
+		return {
+			read: async function(filePath) {
+				let handle = await resolvePath(filePath);
+				if (handle.kind == "directory") throw new Error("IS_A_DIR");
+				let file = await handle.getFile();
+				return await file.text();
+			},
+			write: async function(filePath, data) {
+				let parts = filePath.split("/").filter(p => p.length > 0);
+				let fileName = parts.pop();
+				let currentHandle = dirHandle;
+				for (let part of parts) currentHandle = await currentHandle.getDirectoryHandle(part);
+				let fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+				let writable = await fileHandle.createWritable();
+				await writable.write(data);
+				await writable.close();
+				return true;
+			},
+			rm: async function(path) {
+				let parts = path.split("/").filter(p => p.length > 0);
+				let targetName = parts.pop();
+				let currentHandle = dirHandle;
+				for (let part of parts) currentHandle = await currentHandle.getDirectoryHandle(part);
+				await currentHandle.removeEntry(targetName);
+				return true;
+			},
+			ls: async function(directory) {
+				let handle = await resolvePath(directory);
+				if (handle.kind != "directory") throw new Error("IS_A_FILE");
+				let entries = [];
+				for await (let entry of handle.values()) entries.push(entry.name);
+				return entries;
+			},
+			mkdir: async function(directory) {
+				let parts = directory.split("/").filter(p => p.length > 0);
+				let currentHandle = dirHandle;
+				for (let part of parts) try {
+					currentHandle = await currentHandle.getDirectoryHandle(part);
+				} catch {
+					currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+				}
+				return true;
+			},
+			isDirectory: async function(path) {
+				let handle = await resolvePath(path);
+				return handle.kind == "directory";
+			},
+			sync: () => true,
+			unmount: () => true,
+			directory_supported: true,
+			read_only: !!options.read_only,
+			filesystem: "HostOS",
+			permissions_supported: false,
+			_dirHandle: dirHandle
+		};
+	}
 	
 	fs.mounts["ram"] = ramMount({
 		type: "run"
@@ -1394,7 +1475,8 @@ function loadFs() {
 		SFSPMount,
 		IPCMount,
 		fileMount,
-		overlayMount
+		overlayMount,
+		hostOSMount
 	};
 	modules.fs = fs;
 	modules.defaultSystem = "ram";
