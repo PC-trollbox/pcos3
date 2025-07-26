@@ -36,7 +36,13 @@ function loadFs() {
 			let mount = folder.split("/")[0];
 			if (!this.mounts.hasOwnProperty(mount)) throw new Error("NO_SUCH_DEVICE");
 			let randomNames = crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-			if (!this.mounts[mount].permissions_supported) return { owner: randomNames, group: randomNames, world: "rwx" };
+			if (!this.mounts[mount].permissions_supported) {
+				try {
+					let userInfo = await modules.tokens.info(sessionToken);
+					return { owner: userInfo.user, group: userInfo.groups[0] || userInfo.user, world: "rwx" };
+				} catch {}
+				return { owner: randomNames, group: randomNames, world: "rwx" };
+			}
 			return await this.mounts[mount].permissions(folder.split("/").slice(1).join("/"), sessionToken);
 		},
 		lsmounts: function() {
