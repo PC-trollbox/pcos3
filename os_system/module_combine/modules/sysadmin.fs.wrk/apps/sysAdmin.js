@@ -141,7 +141,54 @@
 		}
 	});
 	updateSystemButton.addEventListener("click", async function() {
-		extraActivities.innerText = await availableAPIs.lookupLocale("WORK_IN_PROGRESS_AFTER_MODULAR");
+		let checklist = [ "FS_REMOVE", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "GET_UPDATE_SERVICE", "FS_WRITE", "FS_BYPASS_PERMISSIONS" ];
+		if (!checklist.every(p => privileges.includes(p))) {
+			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
+			return;
+		}
+		await availableAPIs.closeability(false);
+		container.hidden = true;
+		extraActivities.innerText = await availableAPIs.lookupLocale("UPDATING_MODCFG");
+		try {
+			let updateService = new URL("bdp://localhost");
+			updateService.hostname = await availableAPIs.getUpdateService();
+			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
+			}));
+			moduleConfig.remote = JSON.parse((await bdpGet(new URL("/module_repository/moduleConfig.json", updateService))).content);
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
+				data: JSON.stringify(moduleConfig)
+			});
+			extraActivities.innerText = await availableAPIs.lookupLocale("UPDATING_MODULES");
+			let forUpdate = [];
+			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
+				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
+					forUpdate.push(module);
+			for (let module of forUpdate) {
+				if (moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
+					await availableAPIs.fs_rm({
+						path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
+					});
+				await availableAPIs.fs_write({
+					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
+					data: (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content
+				});
+				moduleConfig.local[module] = moduleConfig.remote[module];
+			}
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
+				data: JSON.stringify(moduleConfig)
+			});
+			extraActivities.innerText = await availableAPIs.lookupLocale("RESTARTING");
+			if (forUpdate.length) await availableAPIs.shutdown({ isReboot: true, isKexec: true });
+			else extraActivities.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
+		} catch (e) {
+			console.error(e);
+			extraActivities.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
+		}
+		container.hidden = false;
+		await availableAPIs.closeability(true);
 	});
 	updateFirmwareButton.addEventListener("click", async function() {
 		let checklist = [ "FETCH_SEND", "SYSTEM_SHUTDOWN", "SET_FIRMWARE" ];
@@ -481,6 +528,40 @@ function imaging() {
 		}
 	}
 	mainPage();
+}
+async function bdpGet(path) {
+	let url = new URL(path);
+	if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
+	if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
+	let hostname = url.hostname, address;
+	if (url.hostname.includes("[")) {
+		hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");
+		address = hostname;
+	} else address = await availableAPIs.resolve(hostname);
+	if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
+	let connection = await availableAPIs.connfulConnect({
+		gate: url.username || "blog",
+		address,
+		verifyByDomain: hostname
+	});
+	await availableAPIs.connfulConnectionSettled(connection);
+	await availableAPIs.connfulWrite({
+		connectionID: connection,
+		data: url.pathname + url.search,
+		host: hostname
+	});
+	let data = await availableAPIs.connfulRead(connection);
+	data = JSON.parse(data);
+	let chunks = [];
+	while (chunks.length != data.length) {
+		let newData = await availableAPIs.connfulRead(connection);
+		newData = JSON.parse(newData);
+		chunks[newData.ctr] = newData.chunk;
+	}
+	try {
+		await availableAPIs.connfulClose(connection);
+	} catch {}
+	return { ...data, content: chunks.join("") };
 }
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) await window.availableAPIs.terminate();

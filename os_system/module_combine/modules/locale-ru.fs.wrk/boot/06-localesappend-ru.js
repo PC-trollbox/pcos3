@@ -151,11 +151,6 @@ modules.locales.ru = {
 	"REINSTALL_BUTTON": "Переустановить ОС",
 	"FSCK_BUTTON": "Восстановить потерянные файлы",
 	"SWIPE_BUTTON": "Безопасно удалить систему",
-	"REINSTALL_DOWNLOADING": "Скачивание местного os.js...",
-	"REINSTALL_DOWNLOAD_FAILED": "Не удалось скачать местный os.js.",
-	"REINSTALL_DECODING": "Обработка os.js как текст",
-	"REINSTALL_SETTING": "Задание os.js как загрузчика",
-	"REMOVING_INSTALLERS": "Удаление установщиков...",
 	"SETTING_FSCK_FLAG": "Создание файла .fsck...",
 	"SETTING_FSCK_FLAG_FAILED": "Не удалось создать файл .fsck.",
 	"WIPING_SYSTEM": "Безопасное удаление системы...",
@@ -461,9 +456,6 @@ modules.locales.ru = {
 	"DIFF_DESCRIPTION": "Вычисляет разность между двумя файлами.",
 	"PATCH_USAGE": "Использование: patch [оригинал] [разность] [новый]",
 	"PATCH_DESCRIPTION": "Вычисляет 'сумму' оригинального файла и разности.",
-	"CURRENT_OSFILE_VERSION": "Текущая версия файла: сборка %s",
-	"DOWNLOADING_OS_PATCH": "Скачивание разности сборок с сервера %s (адрес %s)",
-	"HANDOFF_UPDATE": "Перенаправление процесса обновления updateos.js",
 	"SYSTEM_UP_TO_DATE": "Обновления отсутствуют",
 	"POWER_USAGE": "Использование: power <параметры> <r|reboot|restart|k|kexec>",
 	"POWER_DESCRIPTION": "Выключает или перезагружает систему. Указывание ничего приводит к завершению работы.",
@@ -528,5 +520,8 @@ modules.locales.ru = {
 	"REGENERATE_KERNEL": "Повторно создать ядро системы",
 	"TECHNICAL_LIMITATIONS": "Этот файл нельзя создать из-за технических ограничений.",
 	"REVIEWING_MIGRATION": "Обзор путей миграции",
-	"MIGRATING_USER_PROFILES": "Мигрируем профили пользователей"
+	"MIGRATING_USER_PROFILES": "Мигрируем профили пользователей",
+	"UPDATING_MODCFG": "Получение конфигурации модулей",
+	"UPDATING_MODULES": "Обновление модулей",
+	"FAILED_TO_UPDATE": "Не удалось обновить модули"
 };

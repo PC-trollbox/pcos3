@@ -439,6 +439,7 @@ Used libraries:
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("GENERATING_KERNEL"));
 						let entireBoot = [];
 						let entireBootFiles = [];
+						let moduleConfig = { local: {} };
 						let bootFiles = await availableAPIs.fs_ls({ path: "target/boot" });
 						if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
 						if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
@@ -451,6 +452,7 @@ Used libraries:
 						modules = (await availableAPIs.fs_ls({ path: "target/modules" })).sort((a, b) => a.localeCompare(b));
 						for (let module of modules) {
 							let moduleFile = JSON.parse(await availableAPIs.fs_read({ path: "target/modules/" + module }));
+							moduleConfig.local[module.split("-").slice(1).join("-").split(".").slice(0, -1).join(".")] = moduleFile.buildInfo;
 							for (let bootFile in (moduleFile.backend.files.boot || [])) {
 								if (entireBootFiles.includes(bootFile)) continue;
 								entireBoot.push([ bootFile, moduleFile.files[moduleFile.backend.files.boot[bootFile]] ]);
@@ -461,6 +463,10 @@ Used libraries:
 							.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
 						await availableAPIs.fs_write({ path: "target/boot/00-compiled.js", data: entireBoot + "\nreturn;/*" });
 						await availableAPIs.fs_write({ path: "target/boot/99-zzpatchfinisher.js", data: "*/" });
+						await availableAPIs.fs_write({
+							path: "target/etc/moduleConfig.json",
+							data: JSON.stringify(moduleConfig)
+						});
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_SYSTEM_APPHARDEN"));
 						if (automatic_configuration.secondstage.appHarden) await availableAPIs.fs_write({
 							path: "target/etc/appHarden",

@@ -151,11 +151,6 @@ modules.locales.en = {
 	"REINSTALL_BUTTON": "Reinstall OS",
 	"FSCK_BUTTON": "Recover lost files",
 	"SWIPE_BUTTON": "Wipe system securely",
-	"REINSTALL_DOWNLOADING": "Downloading local os.js...",
-	"REINSTALL_DOWNLOAD_FAILED": "Failed to download local os.js.",
-	"REINSTALL_DECODING": "Parsing os.js as text",
-	"REINSTALL_SETTING": "Setting os.js as bootloader",
-	"REMOVING_INSTALLERS": "Removing installers...",
 	"SETTING_FSCK_FLAG": "Creating .fsck file",
 	"SETTING_FSCK_FLAG_FAILED": "Failed to create .fsck file.",
 	"WIPING_SYSTEM": "Securely wiping system...",
@@ -461,9 +456,6 @@ modules.locales.en = {
 	"DIFF_DESCRIPTION": "Calculates the difference between two files.",
 	"PATCH_USAGE": "Usage: patch [original] [difference] [new]",
 	"PATCH_DESCRIPTION": "Calculates the 'sum' of the original and the difference.",
-	"CURRENT_OSFILE_VERSION": "Current OS file version: build %s",
-	"DOWNLOADING_OS_PATCH": "Downloading OS file patch from %s (address %s)",
-	"HANDOFF_UPDATE": "Handing off the update process to updateos.js",
 	"SYSTEM_UP_TO_DATE": "The system is up to date",
 	"POWER_USAGE": "Usage: power <options> <r|reboot|restart|k|kexec>",
 	"POWER_DESCRIPTION": "Powers down or restarts the system. Supplying nothing to power makes a shutdown.",
@@ -529,5 +521,8 @@ modules.locales.en = {
 	"REGENERATING_KERNEL_FAILED": "Failed to regenerate system kernel",
 	"TECHNICAL_LIMITATIONS": "This file can't be created due to technical limitations.",
 	"REVIEWING_MIGRATION": "Reviewing migration paths",
-	"MIGRATING_USER_PROFILES": "Migrating user profiles"
+	"MIGRATING_USER_PROFILES": "Migrating user profiles",
+	"UPDATING_MODCFG": "Getting module configuration",
+	"UPDATING_MODULES": "Updating modules",
+	"FAILED_TO_UPDATE": "Failed to update modules"
 };

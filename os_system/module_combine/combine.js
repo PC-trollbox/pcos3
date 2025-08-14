@@ -81,6 +81,7 @@ pcosHeader[1] = "const pcos_version = " + JSON.stringify(version) + ";";
 pcosHeader[2] = "const build_time = " + Date.now() + ";";
 pcosHeader = pcosHeader.join("\n");
 fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
+let moduleConfig = {};
 function createModule(directory, permissionsPrefixed = "") {
 	let listing = fs.readdirSync(directory);
 	let module = { backend: { files: {}, permissions: {} }, files: {} };
@@ -159,7 +160,7 @@ function createModule(directory, permissionsPrefixed = "") {
 		let moduleBasename = path.basename(directory.slice(0, -7));
 		module.buildInfo = {
 			for: version,
-			version,
+			version: parseInt(version),
 			when: Date.now(),
 			signer: "moduleSigner",
 			critical: criticalModules.includes(moduleBasename),
@@ -174,6 +175,7 @@ function createModule(directory, permissionsPrefixed = "") {
 			key: signingKey,
 			format: "jwk",
 		}).toString("hex");
+		moduleConfig[moduleBasename] = module.buildInfo;
 	}
 	return module;
 }
@@ -212,4 +214,5 @@ entireBoot.push(["01-fsmodule-start.js", 'let installerModuleBundle = ' + JSON.s
 entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0])).map(a => a[1]).join("\\n");
 return new AsyncFunction(entireBoot)();`
 fs.writeFileSync(args.values.output, installerCode);
+fs.writeFileSync(__dirname + "/modules/moduleConfig.json", JSON.stringify(moduleConfig));
 fs.copyFileSync(args.values.output, __dirname + "/../history/build" + version + "/installerImage.js");
