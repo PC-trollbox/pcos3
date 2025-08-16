@@ -175,7 +175,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				discardChangesBtn.onclick = _ => reject();
 				applyChangesBtn.onclick = async function() {
 					try {
-						let modNum = 1;
+						let modNum = 0;
 						for (let module of toInstall) {
 							activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toInstall.length).replace("%s", (modNum / toInstall.length * 100).toFixed(2));
 							if (moduleConfig.local[module] && moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
