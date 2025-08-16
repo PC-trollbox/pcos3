@@ -1,5 +1,5 @@
 // =====BEGIN MANIFEST=====
-// allow: FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN
+// allow: FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN, MANAGE_TOKENS, ELEVATE_PRIVILEGES
 // signer: automaticSigner
 // =====END MANIFEST=====
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
@@ -9,7 +9,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let privileges = await availableAPIs.getPrivileges();
 	document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
-	let checklist = [ "FS_UNMOUNT", "FS_MOUNT", "CSP_OPERATIONS", "FS_REMOVE", "FS_READ", "FS_WRITE", "FS_LIST_PARTITIONS", "FS_BYPASS_PERMISSIONS", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "GET_UPDATE_SERVICE", "SYSTEM_SHUTDOWN" ];
+	let checklist = [ "FS_UNMOUNT", "FS_MOUNT", "CSP_OPERATIONS", "FS_REMOVE", "FS_READ", "FS_WRITE", "FS_LIST_PARTITIONS", "FS_BYPASS_PERMISSIONS", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "GET_UPDATE_SERVICE", "SYSTEM_SHUTDOWN", "MANAGE_TOKENS", "ELEVATE_PRIVILEGES" ];
 	if (!checklist.every(p => privileges.includes(p))) {
 		document.body.innerText = await availableAPIs.lookupLocale("MODMGR_PRIVFAIL");
 		let currentToken = await availableAPIs.getProcessToken();
@@ -148,6 +148,8 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				tableCellModVersion.innerText = moduleConfig.remote[module].version;
 				if (isInstalled && moduleConfig.remote[module].version > moduleConfig.local[module].version)
 					tableCellModVersion.innerText = moduleConfig.local[module].version + " -> " + tableCellModVersion.innerText;
+				else if (isInstalled && moduleConfig.remote[module].version < moduleConfig.local[module].version)
+					tableCellModVersion.innerText = moduleConfig.local[module].version + " <- " + tableCellModVersion.innerText;
 				tableCellTargeting.innerText = moduleConfig.remote[module].for;
 				if (isInstalled && moduleConfig.remote[module].for != moduleConfig.local[module].for)
 					tableCellTargeting.innerText = moduleConfig.local[module].version + " -> " + tableCellTargeting.innerText;
@@ -238,6 +240,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			applyChangesBtn.innerText = await availableAPIs.lookupLocale("APPLY_CHANGES");
 			discardChangesBtn.innerText = await availableAPIs.lookupLocale("DISCARD_CHANGES");
 			let toRemove = [];
+			let unremovable = [ "bootable", "core", "keys" ];
 			let isRegenNeeded = false;
 			let localModules = Object.keys(moduleConfig.local).sort((a, b) => a.localeCompare(b));
 			for (let module of localModules) {
@@ -249,6 +252,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				let checkboxInstalled = document.createElement("input");
 				checkboxInstalled.type = "checkbox";
 				checkboxInstalled.checked = true;
+				checkboxInstalled.disabled = unremovable.includes(module);
 
 				checkboxInstalled.onchange = function() {
 					if (toRemove.includes(module)) toRemove.splice(toRemove.indexOf(module), 1);
