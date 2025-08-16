@@ -2,7 +2,7 @@
 // link: lrn:SYSADMIN_TOOLS_TITLE
 // signer: automaticSigner
 // fnName: sysadminInstaller
-// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, CSP_OPERATIONS, GET_UPDATE_SERVICE, GET_USER_INFO
+// allow: SYSTEM_SHUTDOWN, FETCH_SEND, LLDISK_WRITE, RUN_KLVL_CODE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, GET_LOCALE, GET_THEME, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, FS_BYPASS_PERMISSIONS, LLDISK_READ, LLDISK_LIST_PARTITIONS, LLDISK_INIT_PARTITIONS, LLDISK_REMOVE, LLDISK_IDB_READ, LLDISK_IDB_WRITE, LLDISK_IDB_REMOVE, LLDISK_IDB_LIST, LLDISK_IDB_SYNC, IPC_SEND_PIPE, START_TASK, FS_REMOVE, FS_MOUNT, SET_FIRMWARE, GET_USER_INFO
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -12,27 +12,18 @@
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	let container = document.createElement("div");
 	let extraActivities = document.createElement("div");
-	let osReinstallButton = document.createElement("button");
 	let fsckOrderButton = document.createElement("button");
 	let fsckDiscardButton = document.createElement("button");
 	let wipeSystemButton = document.createElement("button");
-	let updateSystemButton = document.createElement("button");
 	let updateFirmwareButton = document.createElement("button");
 	let imagingButton = document.createElement("button");
 	let changeLocale = document.createElement("button");
-	let regenerateKernel = document.createElement("button");
-	osReinstallButton.innerText = await availableAPIs.lookupLocale("REINSTALL_BUTTON");
 	fsckOrderButton.innerText = await availableAPIs.lookupLocale("FSCK_BUTTON");
 	fsckDiscardButton.innerText = await availableAPIs.lookupLocale("DISCARD_BUTTON");
 	wipeSystemButton.innerText = await availableAPIs.lookupLocale("SWIPE_BUTTON");
-	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	updateFirmwareButton.innerText = await availableAPIs.lookupLocale("UPDATEFW_BUTTON");
 	imagingButton.innerText = await availableAPIs.lookupLocale("SYSTEM_IMAGING");
 	changeLocale.innerText = await availableAPIs.lookupLocale("CHANGE_LOCALE");
-	regenerateKernel.innerText = await availableAPIs.lookupLocale("REGENERATE_KERNEL");
-	osReinstallButton.addEventListener("click", async function() {
-		extraActivities.innerText = await availableAPIs.lookupLocale("WORK_IN_PROGRESS_AFTER_MODULAR");
-	});
 	fsckOrderButton.addEventListener("click", async function() {
 		let checklist = [ "SYSTEM_SHUTDOWN", "FS_WRITE", "FS_BYPASS_PERMISSIONS" ];
 		if (!checklist.every(p => privileges.includes(p))) {
@@ -140,56 +131,7 @@
 			return;
 		}
 	});
-	updateSystemButton.addEventListener("click", async function() {
-		let checklist = [ "FS_REMOVE", "RESOLVE_NAME", "CONNFUL_CONNECT", "CONNFUL_READ", "CONNFUL_WRITE", "CONNFUL_DISCONNECT", "GET_UPDATE_SERVICE", "FS_WRITE", "FS_BYPASS_PERMISSIONS" ];
-		if (!checklist.every(p => privileges.includes(p))) {
-			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
-			return;
-		}
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		extraActivities.innerText = await availableAPIs.lookupLocale("UPDATING_MODCFG");
-		try {
-			let updateService = new URL("bdp://localhost");
-			updateService.hostname = await availableAPIs.getUpdateService();
-			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
-			}));
-			moduleConfig.remote = JSON.parse((await bdpGet(new URL("/module_repository/moduleConfig.json", updateService))).content);
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-				data: JSON.stringify(moduleConfig)
-			});
-			extraActivities.innerText = await availableAPIs.lookupLocale("UPDATING_MODULES");
-			let forUpdate = [];
-			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
-				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
-					forUpdate.push(module);
-			for (let module of forUpdate) {
-				if (moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
-					await availableAPIs.fs_rm({
-						path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
-					});
-				await availableAPIs.fs_write({
-					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
-					data: (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content
-				});
-				moduleConfig.local[module] = moduleConfig.remote[module];
-			}
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-				data: JSON.stringify(moduleConfig)
-			});
-			extraActivities.innerText = await availableAPIs.lookupLocale("RESTARTING");
-			if (forUpdate.length) await availableAPIs.shutdown({ isReboot: true, isKexec: true });
-			else extraActivities.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
-		} catch (e) {
-			console.error(e);
-			extraActivities.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
-		}
-		container.hidden = false;
-		await availableAPIs.closeability(true);
-	});
+	
 	updateFirmwareButton.addEventListener("click", async function() {
 		let checklist = [ "FETCH_SEND", "SYSTEM_SHUTDOWN", "SET_FIRMWARE" ];
 		if (!checklist.every(p => privileges.includes(p))) {
@@ -261,58 +203,43 @@
 				path: (await availableAPIs.getSystemMount()) + "/boot/06-localeset.js", 
 				data: "modules.locales.defaultLocale = " + JSON.stringify(await availableAPIs.osLocale()) + ";\n"
 			});
+			try {
+				extraActivities.innerText = await availableAPIs.lookupLocale("GENERATING_KERNEL");
+				let entireBoot = [];
+				let bootFiles = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/boot" });
+				if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
+				if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
+				for (let bootFile of bootFiles) {
+					entireBoot.push([ bootFile, await availableAPIs.fs_read({
+						path: (await availableAPIs.getSystemMount()) + "/boot/" + bootFile
+					}) ]);
+				}
+				entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
+					.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
+				await availableAPIs.fs_write({
+					path: (await availableAPIs.getSystemMount()) + "/boot/00-compiled.js",
+					data: entireBoot + "\nreturn;/*"
+				});
+				await availableAPIs.fs_write({
+					path: (await availableAPIs.getSystemMount()) + "/boot/99-zzpatchfinisher.js",
+					data: "*/"
+				});
+			} catch (e) {
+				console.error(e);
+				extraActivities.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
+			}
 			localeSelect.remove();
 			container.hidden = false;
 			extraActivities.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 		});
 		extraActivities.appendChild(localeSelect);
 	});
-	regenerateKernel.addEventListener("click", async function() {
-		let checklist = [ "FS_READ", "FS_WRITE", "FS_LIST_PARTITIONS", "FS_BYPASS_PERMISSIONS" ];
-		if (!checklist.every(p => privileges.includes(p))) {
-			extraActivities.innerText = await availableAPIs.lookupLocale("SYSADMIN_TOOLS_PRIVFAIL");
-			return;
-		}
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		extraActivities.innerText = await availableAPIs.lookupLocale("GENERATING_KERNEL");
-		try {
-			let entireBoot = [];
-			let bootFiles = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/boot" });
-			if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
-			if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
-			for (let bootFile of bootFiles) {
-				entireBoot.push([ bootFile, await availableAPIs.fs_read({
-					path: (await availableAPIs.getSystemMount()) + "/boot/" + bootFile
-				}) ]);
-			}
-			entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
-				.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/boot/00-compiled.js",
-				data: entireBoot + "\nreturn;/*"
-			});
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/boot/99-zzpatchfinisher.js",
-				data: "*/"
-			});
-		} catch (e) {
-			console.error(e);
-			extraActivities.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-		}
-		await availableAPIs.closeability(true);
-		container.hidden = false;
-		extraActivities.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-	});
 	container.appendChild(fsckOrderButton);
 	container.appendChild(fsckDiscardButton);
-	container.appendChild(osReinstallButton);
 	container.appendChild(wipeSystemButton);
-	container.appendChild(updateSystemButton);
 	container.appendChild(updateFirmwareButton);
 	container.appendChild(imagingButton);
 	container.appendChild(changeLocale);
-	container.appendChild(regenerateKernel);
 	document.body.appendChild(container);
 	document.body.appendChild(extraActivities);
 })();
@@ -528,40 +455,6 @@ function imaging() {
 		}
 	}
 	mainPage();
-}
-async function bdpGet(path) {
-	let url = new URL(path);
-	if (url.protocol != "bdp:") throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_PROTO"));
-	if (url.port) throw new Error(await availableAPIs.lookupLocale("BLOG_BROWSER_GATESET"));
-	let hostname = url.hostname, address;
-	if (url.hostname.includes("[")) {
-		hostname = IPv6Decompressor(url.hostname.slice(1, -1)).replaceAll(":", "");
-		address = hostname;
-	} else address = await availableAPIs.resolve(hostname);
-	if (!address) throw new Error(await availableAPIs.lookupLocale("HOSTNAME_RESOLUTION_FAILED"));
-	let connection = await availableAPIs.connfulConnect({
-		gate: url.username || "blog",
-		address,
-		verifyByDomain: hostname
-	});
-	await availableAPIs.connfulConnectionSettled(connection);
-	await availableAPIs.connfulWrite({
-		connectionID: connection,
-		data: url.pathname + url.search,
-		host: hostname
-	});
-	let data = await availableAPIs.connfulRead(connection);
-	data = JSON.parse(data);
-	let chunks = [];
-	while (chunks.length != data.length) {
-		let newData = await availableAPIs.connfulRead(connection);
-		newData = JSON.parse(newData);
-		chunks[newData.ctr] = newData.chunk;
-	}
-	try {
-		await availableAPIs.connfulClose(connection);
-	} catch {}
-	return { ...data, content: chunks.join("") };
 }
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) await window.availableAPIs.terminate();

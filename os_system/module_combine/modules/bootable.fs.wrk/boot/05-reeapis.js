@@ -1542,6 +1542,10 @@ function reeAPIs() {
 				getUpdateService: async function() {
 					if (!privileges.includes("GET_UPDATE_SERVICE")) throw new Error("UNAUTHORIZED_ACTION");
 					return modules.network.updates;
+				},
+				getRootKey: function() {
+					if (!privileges.includes("GET_ROOT_KEY")) throw new Error("UNAUTHORIZED_ACTION");
+					return modules.ksk;
 				}
 			}
 		}

@@ -344,6 +344,7 @@ batteryStatus() -> {
 	dischargingTime: Number
 } // GET_BATTERY_STATUS
 getUpdateService() -> String // GET_UPDATE_SERVICE
+getRootKey() -> Object // GET_ROOT_KEY
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()
