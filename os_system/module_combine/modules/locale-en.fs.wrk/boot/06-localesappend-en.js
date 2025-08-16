@@ -531,12 +531,12 @@ modules.locales.en = {
 	"MODMGR_PRIVFAIL": "Not enough permissions were granted for module management.",
 	"MODMGR_TITLE": "Module Manager",
 	"MODMGR_INTENT": "Manage and maintain modules on this system",
-	"INSTALLING_MODULE": "Installing module: %s",
+	"INSTALLING_MODULE": "Installing module: %s (%s of %s, %s%)",
 	"MODNAME_CELL": "Module name",
 	"MODVER_CELL": "Module version",
 	"MODTGT_CELL": "Targeted build",
 	"APPLY_CHANGES": "Apply changes",
 	"DISCARD_CHANGES": "Discard changes",
-	"REMOVING_MODULE": "Removing module: %s",
+	"REMOVING_MODULE": "Removing module: %s (%s of %s, %s%)",
 	"RELOADING_MODULES": "Reloading system modules"
 };

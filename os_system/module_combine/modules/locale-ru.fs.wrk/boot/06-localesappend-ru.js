@@ -530,12 +530,12 @@ modules.locales.ru = {
 	"MODMGR_PRIVFAIL": "Было предоставлено недостаточно разрешений для управления модулями.",
 	"MODMGR_TITLE": "Управление модулями",
 	"MODMGR_INTENT": "Управлять и поддерживать модули на этой системе",
-	"INSTALLING_MODULE": "Установка модуля: %s",
+	"INSTALLING_MODULE": "Установка модуля: %s (%s из %s, %s%)",
 	"MODNAME_CELL": "Имя модуля",
 	"MODVER_CELL": "Версия модуля",
 	"MODTGT_CELL": "Целевая сборка",
 	"APPLY_CHANGES": "Применить изменения",
 	"DISCARD_CHANGES": "Отменить изменения",
-	"REMOVING_MODULE": "Удаление модуля: %s",
+	"REMOVING_MODULE": "Удаление модуля: %s (%s из %s, %s%)",
 	"RELOADING_MODULES": "Перезагрузка модулей системы"
 };

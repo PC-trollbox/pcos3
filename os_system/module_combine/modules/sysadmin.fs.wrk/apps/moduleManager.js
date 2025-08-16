@@ -175,8 +175,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				discardChangesBtn.onclick = _ => reject();
 				applyChangesBtn.onclick = async function() {
 					try {
+						let modNum = 1;
 						for (let module of toInstall) {
-							activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module);
+							activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toInstall.length).replace("%s", (modNum / toInstall.length * 100).toFixed(2));
 							if (moduleConfig.local[module] && moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
 								await availableAPIs.fs_rm({
 									path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
@@ -188,6 +189,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 							});
 							if (JSON.parse(moduleContent).backend?.files?.boot) isRegenNeeded = true;
 							moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
+							modNum++;
 						}
 						await availableAPIs.fs_write({
 							path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
@@ -284,8 +286,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				discardChangesBtn.onclick = _ => reject();
 				applyChangesBtn.onclick = async function() {
 					try {
+						let modNum = 0;
 						for (let module of toRemove) {
-							activityNote.innerText = (await availableAPIs.lookupLocale("REMOVING_MODULE")).replace("%s", module);
+							activityNote.innerText = (await availableAPIs.lookupLocale("REMOVING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRemove.length).replace("%s", (modNum / toRemove.length * 100).toFixed(2));
 							isRegenNeeded = isRegenNeeded || !!(JSON.parse(await availableAPIs.fs_read({
 								path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
 							})).backend?.files?.boot);
@@ -293,6 +296,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 								path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
 							});
 							delete moduleConfig.local[module];
+							modNum++;
 						}
 						await availableAPIs.fs_write({
 							path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
@@ -333,8 +337,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
 				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
 					forUpdate.push(module);
+			let modNum = 0;
 			for (let module of forUpdate) {
-				activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module);
+				activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", forUpdate.length).replace("%s", (modNum / forUpdate.length * 100).toFixed(2));
 				if (moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
 					await availableAPIs.fs_rm({
 						path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
@@ -345,6 +350,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					data: moduleContent
 				});
 				moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
+				modNum++;
 			}
 			await availableAPIs.fs_write({
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
