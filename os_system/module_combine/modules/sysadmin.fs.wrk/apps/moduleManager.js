@@ -1,5 +1,5 @@
 // =====BEGIN MANIFEST=====
-// allow: FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN, MANAGE_TOKENS, ELEVATE_PRIVILEGES
+// allow: GET_ROOT_KEY, FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN, MANAGE_TOKENS, ELEVATE_PRIVILEGES
 // signer: automaticSigner
 // =====END MANIFEST=====
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
@@ -420,30 +420,161 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
 })();
+async function recursiveKeyVerify(mnt, key, khrl) {
+	if (!key) throw new Error("NO_KEY");
+	if (key.keyInfo.dates?.since > Date.now()) throw new Error("KEY_NOT_IN_TIME");
+	if (Date.now() > key.keyInfo.dates?.until) throw new Error("KEY_NOT_IN_TIME");
+	let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+	let hash = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
+		cspProvider: "basic",
+		operation: "digest",
+		cspArgument: {
+			algorithm: "SHA-256",
+			data: new TextEncoder().encode((key.keyInfo.key).x)
+		}
+	})));
+	if (khrl.includes(hash)) throw new Error("KEY_REVOKED");
+	let signedByKey;
+	if (key.keyInfo.signedBy) {
+		signedByKey = JSON.parse(await availableAPIs.fs_read({ path: mnt + "/etc/keys/" + key.keyInfo.signedBy }));
+		if (!signedByKey.keyInfo.usages.includes("keyTrust")) throw new Error("NOT_KEY_AUTHORITY");
+		await recursiveKeyVerify(mnt, signedByKey, khrl);
+	} else signedByKey = { keyInfo: { key: await availableAPIs.getRootKey() } };
+	signedByKey = await availableAPIs.cspOperation({
+		cspProvider: "basic",
+		operation: "importKey",
+		cspArgument: {
+			format: "jwk",
+			keyData: signedByKey.keyInfo.key,
+			algorithm: { name: "Ed25519" },
+			extractable: false,
+			keyUsages: [ "verify" ]
+		}
+	});
+	let verify = await availableAPIs.cspOperation({
+		cspProvider: "basic",
+		operation: "verify",
+		cspArgument: {
+			algorithm: { name: "Ed25519" },
+			key: signedByKey,
+			signature: hexToU8A(key.signature),
+			data: new TextEncoder().encode(JSON.stringify(key.keyInfo))
+		}
+	});
+	await availableAPIs.cspOperation({
+		cspProvider: "basic",
+		operation: "unloadKey",
+		cspArgument: signedByKey
+	});
+	if (!verify) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
+	return true;
+}
 async function reloadModules(mnt) {
+	let khrlFiles = await availableAPIs.fs_ls({ path: mnt + "/etc/keys/khrl" });
+	let khrl = [];
+	let rootKeyImport = await availableAPIs.cspOperation({
+		cspProvider: "basic",
+		operation: "importKey",
+		cspArgument: {
+			format: "jwk",
+			keyData: await availableAPIs.getRootKey(),
+			algorithm: { name: "Ed25519" },
+			extractable: false,
+			keyUsages: [ "verify" ]
+		}
+	});
+	for (let file of khrlFiles) {
+		let khrlFile = JSON.parse(await availableAPIs.fs_read({ path: mnt + "/etc/keys/khrl/" + file }));
+		if (await availableAPIs.cspOperation({
+			cspProvider: "basic",
+			operation: "verify",
+			cspArgument: {
+				algorithm: { name: "Ed25519" },
+				key: rootKeyImport,
+				signature: hexToU8A(khrlFile.signature),
+				data: new TextEncoder().encode(JSON.stringify(khrlFile.list))
+			}
+		})) khrl.push(...khrlFile.list);
+	}
+	await availableAPIs.cspOperation({
+		cspProvider: "basic",
+		operation: "unloadKey",
+		cspArgument: rootKeyImport
+	});
 	let modSys = JSON.parse(await availableAPIs.fs_read({ path: "ram/run/moduleSystem.json" }));
 	let prevMnt = modSys[mnt][0];
+	let moduleFiles = await availableAPIs.fs_ls({ path: mnt + "/modules" });
+	let mntList = [];
+	for (let moduleName of moduleFiles) {
+		try {
+			let fullModuleFile = {};
+			try {
+				fullModuleFile = JSON.parse(await availableAPIs.fs_read({ path: mnt + "/modules/" + moduleName }));
+			} catch {}
+			if (!fullModuleFile.buildInfo) continue;
+			let fullModuleSignature = fullModuleFile.buildInfo.signature;
+			delete fullModuleFile.buildInfo.signature;
+			if (moduleName != "00-keys.fs") {
+				let critical = fullModuleFile.buildInfo.critical;
+				try {
+					let signingKey = JSON.parse(await availableAPIs.fs_read({ path: mnt + "/etc/keys/" + fullModuleFile.buildInfo.signer }));
+					if (!signingKey.keyInfo.usages.includes("moduleTrust")) throw new Error("NOT_MODULE_SIGNING_KEY");
+					await recursiveKeyVerify(mnt, signingKey, khrl);
+					let importSigningKey = await availableAPIs.cspOperation({
+						cspProvider: "basic",
+						operation: "importKey",
+						cspArgument: {
+							format: "jwk",
+							keyData: signingKey.keyInfo.key,
+							algorithm: { name: "Ed25519" },
+							extractable: false,
+							keyUsages: [ "verify" ]
+						}
+					});
+					fullModuleFile = JSON.stringify(fullModuleFile);
+					let verify = await availableAPIs.cspOperation({
+						cspProvider: "basic",
+						operation: "verify",
+						cspArgument: {
+							algorithm: { name: "Ed25519" },
+							key: importSigningKey,
+							signature: hexToU8A(fullModuleSignature),
+							data: new TextEncoder().encode(fullModuleFile)
+						}
+					});
+					await availableAPIs.cspOperation({
+						cspProvider: "basic",
+						operation: "unloadKey",
+						cspArgument: importSigningKey
+					});
+					if (!verify) throw new Error("MODULE_SIGNATURE_VERIFICATION_FAILED");
+				} catch (e) {
+					if (critical) throw e;
+				}
+			}
+			let randomMntName = "." + (await availableAPIs.cspOperation({
+				cspProvider: "basic",
+				operation: "random",
+				cspArgument: new Uint8Array(8)
+			})).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+			await availableAPIs.fs_mount({
+				mountpoint: randomMntName,
+				filesystem: "fileMount",
+				filesystemOptions: {
+					srcFile: mnt + "/modules/" + moduleName,
+					read_only: true
+				}
+			});
+			mntList.push(randomMntName);
+		} catch (e) {
+			for (let mount of mntList)
+				await availableAPIs.fs_unmount({ mount });
+			throw e;
+		}
+	}
 	await availableAPIs.fs_unmount({ mount: mnt });
 	for (let mount of modSys[mnt].slice(1))
 		await availableAPIs.fs_unmount({ mount });
-	let moduleFiles = await availableAPIs.fs_ls({ path: prevMnt + "/modules" });
-	let mntList = [];
-	for (let moduleName of moduleFiles) {
-		let randomMntName = "." + (await availableAPIs.cspOperation({
-			cspProvider: "basic",
-			operation: "random",
-			cspArgument: new Uint8Array(8)
-		})).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-		await availableAPIs.fs_mount({
-			mountpoint: randomMntName,
-			filesystem: "fileMount",
-			filesystemOptions: {
-				srcFile: prevMnt + "/modules/" + moduleName,
-				read_only: true
-			}
-		});
-		mntList.push(randomMntName);
-	}
 	modSys[mnt] = [ prevMnt, ...mntList ];
 	await availableAPIs.fs_mount({
 		mountpoint: mnt,

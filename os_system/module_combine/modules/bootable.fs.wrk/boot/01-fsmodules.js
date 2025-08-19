@@ -7,9 +7,7 @@ async function loadModules() {
 		let khrlFiles = await modules.fs.ls(module2point["00-keys.fs"] + "/etc/keys/khrl");
 		for (let khrlFile of khrlFiles) {
 			let khrl = JSON.parse(await modules.fs.read(module2point["00-keys.fs"] + "/etc/keys/khrl/" + khrlFile));
-			let khrlSignature = khrl.signature;
-			delete khrl.signature;
-			if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrlSignature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
+			if (await crypto.subtle.verify({ name: "Ed25519" }, modules.ksk_imported, hexToU8A(khrl.signature), new TextEncoder().encode(JSON.stringify(khrl.list)))) {
 				khrlSignatures.push(...khrl.list);
 			}
 		}
@@ -35,7 +33,11 @@ async function loadModules() {
 	try {
 		let moduleList = (await modules.fs.ls(modules.defaultSystem + "/modules")).sort((a, b) => a.localeCompare(b));
 		for (let moduleName of moduleList) {
-			let fullModuleFile = JSON.parse(await modules.fs.read(modules.defaultSystem + "/modules/" + moduleName));
+			let fullModuleFile = {};
+			try {
+				fullModuleFile = JSON.parse(await modules.fs.read(modules.defaultSystem + "/modules/" + moduleName));
+			} catch {}
+			if (!fullModuleFile.buildInfo) continue;
 			let fullModuleSignature = fullModuleFile.buildInfo.signature;
 			delete fullModuleFile.buildInfo.signature;
 			if (moduleName == "00-keys.fs") {
@@ -69,10 +71,7 @@ async function loadModules() {
 						params: [modules.defaultSystem],
 						underlyingJS: e
 					});
-					if (modules.core.bootMode != "disable-harden") {
-						moduleList.splice(moduleList.indexOf(moduleName), 1);
-						continue;
-					}
+					if (modules.core.bootMode != "disable-harden") continue;
 				}
 			}
 			let mountpoint = "." + crypto.getRandomValues(new Uint8Array(8)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
