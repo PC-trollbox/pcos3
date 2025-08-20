@@ -462,10 +462,8 @@ Used libraries:
 						}
 						entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
 							.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
-						if (!automatic_configuration.secondstage.noReconfiguring || newInstall) {
-							await availableAPIs.fs_write({ path: "target/boot/00-compiled.js", data: entireBoot + "\nreturn;/*" });
-							await availableAPIs.fs_write({ path: "target/boot/99-zzpatchfinisher.js", data: "*/" });
-						}
+						await availableAPIs.fs_write({ path: "target/boot/00-compiled.js", data: entireBoot + "\nreturn;/*" });
+						await availableAPIs.fs_write({ path: "target/boot/99-zzpatchfinisher.js", data: "*/" });
 						await availableAPIs.fs_write({
 							path: "target/etc/moduleConfig.json",
 							data: JSON.stringify(moduleConfig)
