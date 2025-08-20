@@ -542,5 +542,5 @@ modules.locales.ru = {
 	"REPAIR_OS": "Починить ОС",
 	"REPAIRING_SYSTEM": "Исправление неисправностей...",
 	"REPAIR_FAILED": "Восстановление системы не удалось!",
-	"REPAIRING_MODULE": "Восстановление модуля: %s (%s of %s, %s%)"
+	"REPAIRING_MODULE": "Восстановление модуля: %s (%s из %s, %s%)"
 };

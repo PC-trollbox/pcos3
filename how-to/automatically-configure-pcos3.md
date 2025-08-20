@@ -27,6 +27,7 @@
    - `defaultLocale`: Set the locale automatically to the following value.
    - `extraModules`: Extra modules to download and install.
    - `secondstage`: Setup-like control post-modularization.
+    - `noReconfiguring`: Skip reconfiguration of existing installations.
     - `createAccount`: Set user account details:
       - `password`: Set the user password.
       - `darkMode`: Set dark mode preference.

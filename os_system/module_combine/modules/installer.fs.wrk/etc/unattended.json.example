@@ -11,6 +11,7 @@
 	"defaultLocale": "en",
 	"extraModules": [ "50-arcadeBreakout.fs" ],
 	"secondstage": {
+		"noReconfiguring": true,
 		"createAccount": {
 			"password": "password",
 			"darkMode": true,

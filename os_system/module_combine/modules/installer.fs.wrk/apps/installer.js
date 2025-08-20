@@ -22,6 +22,7 @@ let onClose = () => availableAPIs.terminate();
 		defaultLocale: "en",
 		extraModules: [ "50-arcadeBreakout.fs" ], */
 		secondstage: {
+			noReconfiguring: true,
 			createAccount: {
 				/*password: "password",
 				darkMode: true,
@@ -461,22 +462,26 @@ Used libraries:
 						}
 						entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
 							.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
-						await availableAPIs.fs_write({ path: "target/boot/00-compiled.js", data: entireBoot + "\nreturn;/*" });
-						await availableAPIs.fs_write({ path: "target/boot/99-zzpatchfinisher.js", data: "*/" });
+						if (!automatic_configuration.secondstage.noReconfiguring || newInstall) {
+							await availableAPIs.fs_write({ path: "target/boot/00-compiled.js", data: entireBoot + "\nreturn;/*" });
+							await availableAPIs.fs_write({ path: "target/boot/99-zzpatchfinisher.js", data: "*/" });
+						}
 						await availableAPIs.fs_write({
 							path: "target/etc/moduleConfig.json",
 							data: JSON.stringify(moduleConfig)
 						});
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_SYSTEM_APPHARDEN"));
-						if (automatic_configuration.secondstage.appHarden) await availableAPIs.fs_write({
-							path: "target/etc/appHarden",
-							data: JSON.stringify(automatic_configuration.secondstage.appHarden)
-						});
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_NET_CONF"));
-						if (automatic_configuration.secondstage.network) await availableAPIs.fs_write({
-							path: "target/etc/network.json",
-							data: JSON.stringify(automatic_configuration.secondstage.network)
-						});
+						if (!automatic_configuration.secondstage.noReconfiguring || newInstall) {
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_SYSTEM_APPHARDEN"));
+							if (automatic_configuration.secondstage.appHarden) await availableAPIs.fs_write({
+								path: "target/etc/appHarden",
+								data: JSON.stringify(automatic_configuration.secondstage.appHarden)
+							});
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_NET_CONF"));
+							if (automatic_configuration.secondstage.network) await availableAPIs.fs_write({
+								path: "target/etc/network.json",
+								data: JSON.stringify(automatic_configuration.secondstage.network)
+							});
+						}
 						if (!canSkip) {
 							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
 							let salt = await availableAPIs.cspOperation({
@@ -583,13 +588,15 @@ Used libraries:
 									await availableAPIs.fs_chmod({ path: homedir + "/.wallpaper", newPermissions: "rx" });
 								} catch {}
 							}
-							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
-							try {
-								await availableAPIs.fs_write({
-									path: "target/etc/wallpapers/lockscreen.pic",
-									data: wallpaperModule.files[wallpaperModule.backend.files.etc.wallpapers["pcos-lock-beta.pic"]]
-								});
-							} catch {}
+							if (!automatic_configuration.secondstage.noReconfiguring || newInstall) {
+								description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
+								try {
+									await availableAPIs.fs_write({
+										path: "target/etc/wallpapers/lockscreen.pic",
+										data: wallpaperModule.files[wallpaperModule.backend.files.etc.wallpapers["pcos-lock-beta.pic"]]
+									});
+								} catch {}
+							}
 						}
 						if (!canSkip) {
 							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE"));
