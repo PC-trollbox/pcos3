@@ -36,12 +36,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let removeModuleBtn = document.createElement("button");
 	let updateSystemButton = document.createElement("button");
 	let regenerateKernelBtn = document.createElement("button");
+	let repairOSBtn = document.createElement("button");
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
 	installOnlineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_ONLINE_MODULE");
 	removeModuleBtn.innerText = await availableAPIs.lookupLocale("REMOVE_MODULES");
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	regenerateKernelBtn.innerText = await availableAPIs.lookupLocale("REGENERATE_KERNEL");
+	repairOSBtn.innerText = await availableAPIs.lookupLocale("REPAIR_OS");
 
 	updateModCfgBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
@@ -204,6 +206,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 							activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
 						}
 						activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+						if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
 						resolve();
 					} catch (e) { reject(e); }
 				}
@@ -311,6 +314,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 							activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
 						}
 						activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+						if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
 						resolve();
 					} catch (e) { reject(e); }
 				}
@@ -334,6 +338,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
 			let forUpdate = [];
+			let isRegenNeeded = false;
 			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
 				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
 					forUpdate.push(module);
@@ -349,6 +354,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
 					data: moduleContent
 				});
+				if (JSON.parse(moduleContent).backend?.files?.boot) isRegenNeeded = true;
 				moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
 				modNum++;
 			}
@@ -358,15 +364,17 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
 			await reloadModules(await availableAPIs.getSystemMount());
+			
 			try {
-				await regenerateKernel();
+				if (isRegenNeeded) await regenerateKernel();
 			} catch (e) {
 				console.error(e);
 				activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
 			}
-			activityNote.innerText = await availableAPIs.lookupLocale("RESTARTING");
-			if (forUpdate.length) await availableAPIs.shutdown({ isReboot: true, isKexec: true });
-			else activityNote.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
+			if (forUpdate.length) {
+				activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+				if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
+			} else if (!forUpdate.length) activityNote.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
 		} catch (e) {
 			console.error(e);
 			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
@@ -412,11 +420,58 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 	});
 
+	repairOSBtn.addEventListener("click", async function() {
+		await availableAPIs.closeability(false);
+		container.hidden = true;
+		activityNote.innerText = await availableAPIs.lookupLocale("REPAIRING_SYSTEM");
+		try {
+			let updateService = new URL("bdp://localhost");
+			updateService.hostname = await availableAPIs.getUpdateService();
+			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
+			}));
+			let toRepair = Object.keys(moduleConfig.local);
+			let modNum = 0;
+			for (let module of toRepair) {
+				activityNote.innerText = (await availableAPIs.lookupLocale("REPAIRING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRepair.length).replace("%s", (modNum / toRepair.length * 100).toFixed(2));
+				let moduleContent = (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content;
+				await availableAPIs.fs_rm({
+					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
+				});
+				await availableAPIs.fs_write({
+					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
+					data: moduleContent
+				});
+				moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
+				modNum++;
+			}
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
+				data: JSON.stringify(moduleConfig)
+			});
+			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
+			await reloadModules(await availableAPIs.getSystemMount());
+			try {
+				await regenerateKernel();
+			} catch (e) {
+				console.error(e);
+				activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
+			}
+			await availableAPIs.shutdown({ isReboot: true });
+		} catch (e) {
+			console.error(e);
+			activityNote.innerText = await availableAPIs.lookupLocale("REPAIR_FAILED");
+		}
+		container.hidden = false;
+		await availableAPIs.closeability(true);
+	});
+
 	container.appendChild(updateModCfgBtn);
 	container.appendChild(installOnlineModuleBtn);
 	container.appendChild(removeModuleBtn);
 	container.appendChild(updateSystemButton);
 	container.appendChild(regenerateKernelBtn);
+	container.appendChild(repairOSBtn);
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
 })();

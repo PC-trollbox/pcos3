@@ -538,5 +538,10 @@ modules.locales.en = {
 	"APPLY_CHANGES": "Apply changes",
 	"DISCARD_CHANGES": "Discard changes",
 	"REMOVING_MODULE": "Removing module: %s (%s of %s, %s%)",
-	"RELOADING_MODULES": "Reloading system modules"
+	"RELOADING_MODULES": "Reloading system modules",
+	"SUCCESSFUL_OP_REBOOT": "The process was successfully completed, but you might need to restart to apply some changes.",
+	"REPAIR_OS": "Repair OS",
+	"REPAIRING_SYSTEM": "Repairing the system...",
+	"REPAIR_FAILED": "System repair failed!",
+	"REPAIRING_MODULE": "Repairing module: %s (%s of %s, %s%)"
 };
