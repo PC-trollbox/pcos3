@@ -116,6 +116,13 @@ async function sysHaltedHook() {
 	tty_bios_api.println("\tTotal points " + ree_points + " out of 5");
 	if (Object.keys(coreExports.prefs.backend) == 0) {
 		tty_bios_api.println("Performing automatic configuration...");
+		try {
+			automatic_configuration = await (await fetch("https://pcos-autoconf.internal/runtime")).json();
+		} catch {
+			try {
+				automatic_configuration = await (await fetch("http://pcos-autoconf.internal/runtime")).json();
+			} catch {}
+		}
 		tty_bios_api.print("\tWriting preferences...\t");
 		coreExports.prefs.write("guard_passwords", automatic_configuration.guard_passwords);
 		coreExports.prefs.write("disallow_bad_ree", automatic_configuration.disallow_bad_ree);

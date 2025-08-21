@@ -210,6 +210,7 @@ for (let installerModule in installerModuleBundle) {
 		}
 	}
 }
+entireBoot.push(["01-fsmodule-pre.js", 'modules.fs.mounts[".installer"]=modules.mounts.ramMount({});modules.defaultSystem=".installer";modules.fs.mkdir(".installer/modules");modules.fs.mkdir(".installer/etc");let networkDefaultURL=new URL(location.origin);networkDefaultURL.protocol="ws"+(networkDefaultURL.protocol=="https:"?"s":"")+":";networkDefaultURL.pathname="";modules.fs.write(".installer/etc/network.json",JSON.stringify({url:networkDefaultURL.toString(),ucBits:1,updates:"pcosserver.pc"}));']);
 entireBoot.push(["01-fsmodule-start.js", 'let installerModuleBundle = ' + JSON.stringify(installerModuleBundle) + '; for (let installerModule in installerModuleBundle) { await modules.fs.write(".installer/modules/" + installerModule, JSON.stringify(installerModuleBundle[installerModule])); }; modules.fs.write(".installer/etc/moduleConfig.json", JSON.stringify({ local: Object.fromEntries(Object.entries(installerModuleBundle).map(a => [a[0].split("-").slice(1).join("-").split(".").slice(0, -1).join("."), a[1].buildInfo])) }));']);
 entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0])).map(a => a[1]).join("\\n");
 return new AsyncFunction(entireBoot)();`

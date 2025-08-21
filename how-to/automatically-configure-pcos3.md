@@ -41,6 +41,7 @@
       - `ucBits`: Set the user-customizable part of the network address.
       - `hostname`: Set the automatic hostname.
       - `updates`: Set the update server. This will be the place missing modules are loaded from!
+    - `reconnectToNetwork`: Reconnect to the Network or not. Use when the default host is not the one configured.
 7. Run `os_system/keypair.js` to generate the OS PKI.
 8. Run `os_system/module_combine/combine.js -b<YOUR_BRANCH_NAME_HERE>`.
 9. Perform self-hosting steps to see the changes. (see readme.md)

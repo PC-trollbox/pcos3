@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE, GET_SERVER_URL, SET_USER_INFO, SET_DEFAULT_SYSTEM, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET
+// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE, GET_SERVER_URL, SET_USER_INFO, SET_DEFAULT_SYSTEM, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET, RELOAD_NETWORK_CONFIG, FETCH_SEND
 // =====END MANIFEST=====
 let onClose = () => availableAPIs.terminate();
 (async function() {
@@ -40,7 +40,8 @@ let onClose = () => availableAPIs.terminate();
 				ucBits: 1,
 				hostname: new Array(16).fill(0).map(a => networkSymbols[Math.floor(Math.random() * networkSymbols.length)]).join(""),
 				updates: "pcosserver.pc"
-			}
+			},
+			reconnectToNetwork: false
 		}
 	};
 	try {
@@ -50,8 +51,30 @@ let onClose = () => availableAPIs.terminate();
 	if (await availableAPIs.isDarkThemed()) document.body.style.color = "white";
 	await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
 	let privileges = await availableAPIs.getPrivileges();
-	let checklist = [ "GET_BUILD", "RUN_KLVL_CODE", "LLDISK_WRITE", "LLDISK_READ", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_REMOVE", "FS_LIST_PARTITIONS", "SYSTEM_SHUTDOWN", "FS_CHANGE_PERMISSION", "LLDISK_LIST_PARTITIONS", "FS_MOUNT", "CSP_OPERATIONS", "LLDISK_INIT_PARTITIONS", "GET_SERVER_URL" ];
+	let checklist = [ "GET_BUILD", "RUN_KLVL_CODE", "LLDISK_WRITE", "LLDISK_READ", "FS_READ", "FS_WRITE", "FS_BYPASS_PERMISSIONS", "FS_REMOVE", "FS_LIST_PARTITIONS", "SYSTEM_SHUTDOWN", "FS_CHANGE_PERMISSION", "LLDISK_LIST_PARTITIONS", "FS_MOUNT", "CSP_OPERATIONS", "LLDISK_INIT_PARTITIONS", "GET_SERVER_URL", "RELOAD_NETWORK_CONFIG", "FETCH_SEND" ];
 	if (!checklist.every(p => privileges.includes(p))) return availableAPIs.terminate();
+	try {
+		automatic_configuration = JSON.parse(new TextDecoder().decode((await availableAPIs.fetchSend({
+			url: "https://pcos-autoconf.internal/installer",
+			init: {}
+		})).arrayBuffer));
+	} catch {
+		try {
+			automatic_configuration = JSON.parse(new TextDecoder().decode((await availableAPIs.fetchSend({
+				url: "http://pcos-autoconf.internal/installer",
+				init: {}
+			})).arrayBuffer));
+		} catch {}
+	}
+	try {
+		if (automatic_configuration.secondstage.network && automatic_configuration.secondstage.reconnectToNetwork) {
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/network.json",
+				data: JSON.stringify(automatic_configuration.secondstage.network)
+			});
+			await availableAPIs.reloadNetworkConfig();
+		}
+	} catch {}
 	let installed_modules = [
 		"50-bootable.fs", "50-core.fs", "50-diff.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-sysadmin.fs",
 		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs", "50-blogBrowser.fs",

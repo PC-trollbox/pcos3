@@ -1,0 +1,20 @@
+<svg width="1920" height="1080" version="1.1" xmlns="http://www.w3.org/2000/svg">
+	<defs>
+		<linearGradient id="BgGradient" x1="0" x2="0" y1="0" y2="1">
+			<stop offset="0%" stop-color="#00bfff" />
+			<stop offset="50%" stop-color="#a700ff" />
+			<stop offset="100%" stop-color="#000000" />
+		</linearGradient>
+	</defs>
+	<g>
+		<rect x="0" y="0" width="1920" height="1080" fill="url(#BgGradient)" />
+		<text x="800" y="200" class="segoefont" fill="#000000" font-size="72px" font-weight="bold">PCOS 3</text>
+		<text x="860" y="240" class="segoefont" fill="#404040" font-size="36px">locked</text>
+		<text x="1555" y="1050" class="segoefont" fill="#404040" font-size="72px" font-weight="bold">test build</text>
+	</g>
+	<style>
+		.segoefont {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		}
+	</style>
+</svg>
