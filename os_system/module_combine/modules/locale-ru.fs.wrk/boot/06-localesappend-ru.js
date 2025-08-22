@@ -542,5 +542,7 @@ modules.locales.ru = {
 	"REPAIR_OS": "Починить ОС",
 	"REPAIRING_SYSTEM": "Исправление неисправностей...",
 	"REPAIR_FAILED": "Восстановление системы не удалось!",
-	"REPAIRING_MODULE": "Восстановление модуля: %s (%s из %s, %s%)"
+	"REPAIRING_MODULE": "Восстановление модуля: %s (%s из %s, %s%)",
+	"MOUNT_OFFLINE_OS": "Монтровать автономную ОС",
+	"UMOUNT_OFFLINE_OS": "Размонтировать автономную ОС"
 };

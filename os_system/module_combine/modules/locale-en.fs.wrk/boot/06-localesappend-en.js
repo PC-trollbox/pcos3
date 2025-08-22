@@ -543,5 +543,7 @@ modules.locales.en = {
 	"REPAIR_OS": "Repair OS",
 	"REPAIRING_SYSTEM": "Repairing the system...",
 	"REPAIR_FAILED": "System repair failed!",
-	"REPAIRING_MODULE": "Repairing module: %s (%s of %s, %s%)"
+	"REPAIRING_MODULE": "Repairing module: %s (%s of %s, %s%)",
+	"MOUNT_OFFLINE_OS": "Mount offline OS",
+	"UMOUNT_OFFLINE_OS": "Unmount offline OS"
 };
