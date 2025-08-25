@@ -39,6 +39,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let repairOSBtn = document.createElement("button");
 	let mountOfflineBtn = document.createElement("button");
 	let umountOfflineBtn = document.createElement("button");
+	let swapToSystemBtn = document.createElement("button");
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
 	installOnlineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_ONLINE_MODULE");
@@ -48,6 +49,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	repairOSBtn.innerText = await availableAPIs.lookupLocale("REPAIR_OS");
 	mountOfflineBtn.innerText = await availableAPIs.lookupLocale("MOUNT_OFFLINE_OS");
 	umountOfflineBtn.innerText = await availableAPIs.lookupLocale("UMOUNT_OFFLINE_OS");
+	swapToSystemBtn.innerText = await availableAPIs.lookupLocale("SWAP_OFFLINE_OS");
 
 	updateModCfgBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
@@ -551,6 +553,68 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		await availableAPIs.closeability(true);
 	});
 
+	swapToSystemBtn.addEventListener("click", async function() {
+		await availableAPIs.closeability(false);
+		container.hidden = true;
+		activityNote.innerText = "";
+		try {
+			let modSys = JSON.parse(await availableAPIs.fs_read({ path: "ram/run/moduleSystem.json" }));
+			let systemMount = await availableAPIs.getSystemMount();
+			await new Promise(async function(resolve, reject) {
+				let discardChangesBtn = document.createElement("button");
+				discardChangesBtn.onclick = _ => reject();
+				discardChangesBtn.innerText = await availableAPIs.lookupLocale("DISCARD_CHANGES");
+				activityNote.appendChild(discardChangesBtn);
+				let mountpoints = (await availableAPIs.fs_mounts()).filter(a => modSys.hasOwnProperty(a) && a != systemMount);
+				for (let mountpoint of mountpoints) {
+					let mountBtn = document.createElement("button");
+					mountBtn.innerText = mountpoint;
+					mountBtn.onclick = async function() {
+						try {
+							activityNote.innerText = await availableAPIs.lookupLocale("SWAPPING_SYSTEMS");
+							let oldSysName = await availableAPIs.getSystemMount();
+							let newOldSysName = await availableAPIs.getSystemMount();
+							while (modSys[newOldSysName]) newOldSysName = newOldSysName + "~";
+							modSys[newOldSysName] = modSys[oldSysName];
+							modSys[oldSysName] = modSys[mountpoint];
+							delete modSys[mountpoint];
+							await availableAPIs.fs_unmount({ mount: oldSysName });
+							await availableAPIs.fs_mount({
+								mountpoint: newOldSysName,
+								filesystem: "overlayMount",
+								filesystemOptions: {
+									mounts: modSys[newOldSysName]
+								}
+							});
+							await availableAPIs.fs_unmount({ mount: mountpoint });
+							await availableAPIs.fs_mount({
+								mountpoint: oldSysName,
+								filesystem: "overlayMount",
+								filesystemOptions: {
+									mounts: modSys[oldSysName]
+								}
+							});
+							await availableAPIs.fs_write({
+								path: "ram/run/moduleSystem.json",
+								data: JSON.stringify(modSys)
+							});
+							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+							resolve();
+						} catch (e) {
+							reject(e);
+						}
+					};
+					activityNote.appendChild(mountBtn);
+				}
+			});
+		} catch (e) {
+			console.error(e);
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+		}
+		container.hidden = false;
+		await availableAPIs.closeability(true);
+	});
+
 	container.appendChild(updateModCfgBtn);
 	container.appendChild(installOnlineModuleBtn);
 	container.appendChild(removeModuleBtn);
@@ -559,6 +623,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	container.appendChild(repairOSBtn);
 	container.appendChild(mountOfflineBtn);
 	container.appendChild(umountOfflineBtn);
+	container.appendChild(swapToSystemBtn);
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
 })();

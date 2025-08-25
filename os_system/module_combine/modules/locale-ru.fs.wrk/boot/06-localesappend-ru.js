@@ -544,5 +544,7 @@ modules.locales.ru = {
 	"REPAIR_FAILED": "Восстановление системы не удалось!",
 	"REPAIRING_MODULE": "Восстановление модуля: %s (%s из %s, %s%)",
 	"MOUNT_OFFLINE_OS": "Монтровать автономную ОС",
-	"UMOUNT_OFFLINE_OS": "Размонтировать автономную ОС"
+	"UMOUNT_OFFLINE_OS": "Размонтировать автономную ОС",
+	"SWAP_OFFLINE_OS": "Переключиться на автономную ОС",
+	"SWAPPING_SYSTEMS": "Переключение на систему..."
 };
