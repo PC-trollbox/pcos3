@@ -353,7 +353,9 @@ let cachedAssocs = {};
 						let wantedIcon;
 						if (isDir == "directory") wantedIcon = await availableAPIs.getSystemMount() + "/etc/icons/foldericon.pic";
 						else wantedIcon = await availableAPIs.getSystemMount() + "/etc/icons/fileicon.pic";
-						if (availableAssocs.includes(fileType)) {
+						if (fileType == "js") wantedIcon = await availableAPIs.getSystemMount() + "/etc/icons/js.pic";
+						else if (fileType == "lnk") wantedIcon = await availableAPIs.getSystemMount() + "/etc/icons/lnk.pic";
+						else if (availableAssocs.includes(fileType)) {
 							if (!cachedAssocs[fileType]) cachedAssocs[fileType] = JSON.parse(await availableAPIs.fs_read({ path: await availableAPIs.getSystemMount() + "/apps/associations/" + fileType }));
 							wantedIcon = cachedAssocs[fileType].icon;
 						}

@@ -256,6 +256,10 @@ async function requireLogon() {
 								appLink = { placed: lastIconPlacement, icon: modules.defaultSystem + "/etc/icons/lnk.pic", ...(JSON.parse(await modules.fs.read(iconPath, resolvedLogon.token))) };
 								appLink._isRealLink = true;
 							} catch {}
+						} else if (linkName.endsWith(".js")) {
+							try {
+								appLink = { path: iconPath, args: [], name: linkName, placed: lastIconPlacement, icon: modules.defaultSystem + "/etc/icons/js.pic" };
+							} catch {}
 						} else {
 							let ext = linkName.split(".").slice(-1)[0];
 							let assocsPermissions = await modules.fs.permissions(modules.defaultSystem + "/apps/associations", resolvedLogon.token);
