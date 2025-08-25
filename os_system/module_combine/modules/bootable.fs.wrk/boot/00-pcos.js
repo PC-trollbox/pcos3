@@ -1,6 +1,6 @@
 // @pcos-app-mode native
-const pcos_version = "1423";
-const build_time = 1756146084564;
+const pcos_version = "1424";
+const build_time = 1756146836787;
  
 let modules = {
 	core: coreExports,
@@ -21,7 +21,7 @@ async function panic(code, component) {
 		"PROBLEMATIC_JS": "Problematic JavaScript: %s: %s",
 		"PANIC_LINE3": "If you have seen this error message the first time, attempt rebooting.",
 		"PANIC_LINE4": "If you see this error message once more, there is something wrong with the system.",
-		"PANIC_LINE5": "You can try repairing the filesystem by placing a .fsck file on the system root mountpoint, with the value \"recover\" in it.",
+		"PANIC_LINE5": "You can try repairing the system by using the installer to repair install or clean install PCOS 3.",
 		"PANIC_LINE6": "Proper shutdown procedure follows now:",
 		"PANIC_TASK_KILLED": "task:%s: killed",
 		"PANIC_MOUNT_UNMOUNTED": "mount:%s: unmounted",
