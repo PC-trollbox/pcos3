@@ -164,7 +164,8 @@ function createModule(directory, permissionsPrefixed = "") {
 			when: Date.now(),
 			signer: "moduleSigner",
 			critical: criticalModules.includes(moduleBasename),
-			bootOrder: getModuleOrder(moduleBasename)
+			bootOrder: getModuleOrder(moduleBasename),
+			commonName: moduleBasename
 		};
 		let signingKey = keypair.moduleTrust_private;
 		if (path.basename(directory) == "keys.fs.wrk") {

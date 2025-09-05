@@ -1,5 +1,5 @@
 // =====BEGIN MANIFEST=====
-// allow: GET_ROOT_KEY, FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN, MANAGE_TOKENS, ELEVATE_PRIVILEGES
+// allow: GET_ROOT_KEY, FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN, MANAGE_TOKENS, ELEVATE_PRIVILEGES, IPC_SEND_PIPE, GET_USER_INFO, START_TASK, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, GET_BOOT_MODE
 // signer: automaticSigner
 // =====END MANIFEST=====
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
@@ -33,6 +33,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let activityNote = document.createElement("div");
 	let updateModCfgBtn = document.createElement("button");
 	let installOnlineModuleBtn = document.createElement("button");
+	let installOfflineModuleBtn = document.createElement("button");
 	let removeModuleBtn = document.createElement("button");
 	let updateSystemButton = document.createElement("button");
 	let regenerateKernelBtn = document.createElement("button");
@@ -43,6 +44,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
 	installOnlineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_ONLINE_MODULE");
+	installOfflineModuleBtn.innerText = "Install offline module";
 	removeModuleBtn.innerText = await availableAPIs.lookupLocale("REMOVE_MODULES");
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	regenerateKernelBtn.innerText = await availableAPIs.lookupLocale("REGENERATE_KERNEL");
@@ -217,6 +219,60 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					} catch (e) { reject(e); }
 				}
 			});
+		} catch (e) {
+			console.error(e);
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+		}
+		container.hidden = false;
+		await availableAPIs.closeability(true);
+	});
+
+	installOfflineModuleBtn.addEventListener("click", async function() {
+		container.hidden = true;
+		await availableAPIs.closeability(false);
+		activityNote.innerText = "";
+		try {
+			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
+			}));
+			let result = {};
+			try {
+				let ipcPipe = await availableAPIs.createPipe();
+				await availableAPIs.windowVisibility(false);
+				await availableAPIs.startTask({ file: (await availableAPIs.getSystemMount()) + "/apps/filePicker.js", argPassed: [ipcPipe, "load"] });
+				result = await availableAPIs.listenToPipe(ipcPipe);
+				await availableAPIs.closePipe(ipcPipe);
+				await availableAPIs.windowVisibility(true);
+			} catch (e) {
+				await availableAPIs.windowVisibility(true);
+				throw e;
+			}
+			let moduleContent = JSON.parse(await availableAPIs.fs_read({ path: result.selected }));
+			activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", moduleContent.commonName).replace("%s", "1").replace("%s", "1").replace("%s", "0.00");
+			if (moduleConfig.local[moduleContent.commonName] && moduleContent.buildInfo.bootOrder != moduleConfig.local[moduleContent.commonName].bootOrder)
+				await availableAPIs.fs_rm({
+					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + moduleContent.buildInfo.commonName + ".fs"
+				});
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleContent.buildInfo.bootOrder + "-" + moduleContent.buildInfo.commonName + ".fs",
+				data: JSON.stringify(moduleContent)
+			});
+			if (moduleContent.backend.files.boot) isRegenNeeded = true;
+			moduleConfig.local[moduleContent.buildInfo.commonName] = moduleContent.buildInfo;
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
+				data: JSON.stringify(moduleConfig)
+			});
+			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
+			await reloadModules(await availableAPIs.getSystemMount());
+			try {
+				if (isRegenNeeded) await regenerateKernel();
+			} catch (e) {
+				console.error(e);
+				activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
+			}
+			activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+			if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
 		} catch (e) {
 			console.error(e);
 			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
@@ -617,6 +673,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 
 	container.appendChild(updateModCfgBtn);
 	container.appendChild(installOnlineModuleBtn);
+	container.appendChild(installOfflineModuleBtn);
 	container.appendChild(removeModuleBtn);
 	container.appendChild(updateSystemButton);
 	container.appendChild(regenerateKernelBtn);
@@ -722,12 +779,17 @@ async function reloadModules(mnt, getKeysFrom, newName) {
 			if (!fullModuleFile.buildInfo) continue;
 			let fullModuleSignature = fullModuleFile.buildInfo.signature;
 			delete fullModuleFile.buildInfo.signature;
-			if (moduleName != "00-keys.fs") {
-				let critical = fullModuleFile.buildInfo.critical;
+			if (await availableAPIs.checkBootMode() != "disable-harden") {
+				let critical = moduleName != "00-keys.fs" || fullModuleFile.buildInfo.critical;
 				try {
-					let signingKey = JSON.parse(await availableAPIs.fs_read({ path: (getKeysFrom || mnt) + "/etc/keys/" + fullModuleFile.buildInfo.signer }));
-					if (!signingKey.keyInfo.usages.includes("moduleTrust")) throw new Error("NOT_MODULE_SIGNING_KEY");
-					await recursiveKeyVerify(getKeysFrom || mnt, signingKey, khrl);
+					let signingKey;
+					if (moduleName != "00-keys.fs") {
+						signingKey = JSON.parse(await availableAPIs.fs_read({ path: (getKeysFrom || mnt) + "/etc/keys/" + fullModuleFile.buildInfo.signer }));
+						if (!signingKey.keyInfo.usages.includes("moduleTrust")) throw new Error("NOT_MODULE_SIGNING_KEY");
+						await recursiveKeyVerify(getKeysFrom || mnt, signingKey, khrl);
+					} else {
+						signingKey = { keyInfo: { key: await availableAPIs.getRootKey() } };
+					}
 					let importSigningKey = await availableAPIs.cspOperation({
 						cspProvider: "basic",
 						operation: "importKey",
