@@ -44,7 +44,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
 	installOnlineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_ONLINE_MODULE");
-	installOfflineModuleBtn.innerText = "Install offline module";
+	installOfflineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_OFFLINE_MODULE");
 	removeModuleBtn.innerText = await availableAPIs.lookupLocale("REMOVE_MODULES");
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	regenerateKernelBtn.innerText = await availableAPIs.lookupLocale("REGENERATE_KERNEL");
@@ -768,7 +768,7 @@ async function reloadModules(mnt, getKeysFrom, newName) {
 	let modSys = JSON.parse(await availableAPIs.fs_read({ path: "ram/run/moduleSystem.json" }));
 	let prevMnt = modSys[mnt];
 	if (prevMnt) prevMnt = prevMnt[0];
-	let moduleFiles = await availableAPIs.fs_ls({ path: mnt + "/modules" });
+	let moduleFiles = (await availableAPIs.fs_ls({ path: mnt + "/modules" })).sort((a, b) => a.localeCompare(b));
 	let mntList = [];
 	for (let moduleName of moduleFiles) {
 		try {

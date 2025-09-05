@@ -546,5 +546,6 @@ modules.locales.ru = {
 	"MOUNT_OFFLINE_OS": "Монтровать автономную ОС",
 	"UMOUNT_OFFLINE_OS": "Размонтировать автономную ОС",
 	"SWAP_OFFLINE_OS": "Переключиться на автономную ОС",
-	"SWAPPING_SYSTEMS": "Переключение на систему..."
+	"SWAPPING_SYSTEMS": "Переключение на систему...",
+	"INSTALL_OFFLINE_MODULE": "Установить модуль офлайн"
 };

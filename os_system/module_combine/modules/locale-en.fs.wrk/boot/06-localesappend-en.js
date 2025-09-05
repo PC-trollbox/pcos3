@@ -547,5 +547,6 @@ modules.locales.en = {
 	"MOUNT_OFFLINE_OS": "Mount offline OS",
 	"UMOUNT_OFFLINE_OS": "Unmount offline OS",
 	"SWAP_OFFLINE_OS": "Swap to offline OS",
-	"SWAPPING_SYSTEMS": "Swapping to the system..."
+	"SWAPPING_SYSTEMS": "Swapping to the system...",
+	"INSTALL_OFFLINE_MODULE": "Install offline module"
 };
