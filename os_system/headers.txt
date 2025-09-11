@@ -11,10 +11,11 @@ shutdown({
 	force: Boolean,
 	token: String
 }) -> true // SYSTEM_SHUTDOWN
+// FS APIs may require also FS_BYPASS_PERMISSIONS
 fs_read({
 	path: String,
 	token: String
-}) -> String // FS_READ (may require also FS_BYPASS_PERMISSIONS)
+}) -> String // FS_READ
 fs_ls({
 	path: String,
 	token: String
@@ -154,7 +155,7 @@ ufInfoUnits([ Number bytes, Boolean majorUnitsOnly ]) -> String // GET_LOCALE
 isDarkThemed() -> Boolean // GET_THEME
 fetchSend({
 	url: String,
-	init: Object /* mdn fetch() init + non-standard Boolean noArrayBuffer */
+	init: Object /* fetch() init + non-standard Boolean noArrayBuffer */
 }) -> {
 	status: Number,
 	statusText: String,
@@ -360,5 +361,6 @@ windowSize() -> {
 }
 windowRelocate([ Number x, Number y ]) // GRAB_ATTENTION
 windowFullscreen(Boolean fullscreen) // GRAB_ATTENTION
+windowFocus() // GRAB_ATTENTION
 closeability(Boolean closeable)
 critical(Boolean critical) // SYSTEM_STABILITY
