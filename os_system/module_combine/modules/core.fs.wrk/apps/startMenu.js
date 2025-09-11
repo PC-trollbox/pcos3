@@ -128,6 +128,7 @@ async function shapeshift() {
 	let screenInfo = await availableAPIs.getScreenInfo();
 	let winSize = await availableAPIs.windowSize();
 	await availableAPIs.windowRelocate([ screenInfo.height - (winSize.height / 2) - 35 - 8, winSize.width / 2 + 8 ]);
+	await availableAPIs.windowFocus();
 }
 
 addEventListener("signal", async function(e) {

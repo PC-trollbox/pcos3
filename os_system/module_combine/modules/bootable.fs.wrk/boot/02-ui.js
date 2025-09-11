@@ -213,7 +213,15 @@ function loadUi() {
 		content.className = 'content';
 		windowDiv.appendChild(content);
 		session.tracker[sessionId].html.appendChild(windowDiv);
-		if (!fullscreen) makeDraggable(windowDiv, titleBar, reportMovement);
+		if (!asIconWindow) {
+			let openWins = session.attrib(sessionId, "openWins") || [];
+			openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
+			openWins.map((a, i) => a.style.zIndex = i);
+			windowDiv.style.zIndex = openWins.length;
+			openWins.push(windowDiv);
+			session.attrib(sessionId, "openWins", openWins);
+		} else windowDiv.style.zIndex = "-1";
+		if (!fullscreen) makeDraggable(windowDiv, titleBar, reportMovement, asIconWindow ? false : sessionId);
 		return {
 			windowDiv,
 			title,
@@ -223,7 +231,7 @@ function loadUi() {
 		};
 	}
 
-	function makeDraggable(windowDiv, titleBar, reportMovement) {
+	function makeDraggable(windowDiv, titleBar, reportMovement, sessionId) {
 		let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
 		titleBar.onmousedown = dragMouseDown;
@@ -234,6 +242,14 @@ function loadUi() {
 			if (e.type == "touchstart") e = e.touches[0];
 			pos3 = e.clientX;
 			pos4 = e.clientY;
+
+			if (sessionId) {
+				let openWins = session.attrib(sessionId, "openWins") || [];
+				windowDiv.style.zIndex = openWins.length;
+				openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
+				openWins.map((a, i) => a.style.zIndex = i);
+				session.attrib(sessionId, "openWins", openWins);
+			}
 
 			document.onmouseup = closeDragElement;
 			document.ontouchend = closeDragElement;

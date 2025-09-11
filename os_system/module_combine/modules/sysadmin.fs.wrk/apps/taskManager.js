@@ -2,7 +2,7 @@
 // link: lrn:TASK_MANAGER
 // signer: automaticSigner
 // fnName: taskMgrInstaller
-// allow: LIST_TASKS, SIGNAL_TASK, GET_LOCALE, GET_THEME, TASK_BYPASS_PERMISSIONS
+// allow: LIST_TASKS, SIGNAL_TASK, GET_LOCALE, GET_THEME, TASK_BYPASS_PERMISSIONS, GRAB_ATTENTION
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -88,6 +88,9 @@
 		table.appendChild(newtb);
 		prevtb.remove();
 		tbody = newtb;
+		try {
+			await availableAPIs.windowFocus();
+		} catch {}
 		setTimeout(refresh, 1000);
 	}
 	await refresh();

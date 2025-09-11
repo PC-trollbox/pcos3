@@ -277,8 +277,16 @@ function loadTasks() {
 					}
 				});
 				ree.exportAPI("windowFullscreen", function(apiArg) {
-					if (reeAPIInstance.public.getPrivileges().includes("GRAB_ATTENTION")) {
+					if (reeAPIInstance.public.getPrivileges().includes("GRAB_ATTENTION"))
 						windowObject.windowDiv.classList.toggle("fullscreen", apiArg.arg);
+				});
+				ree.exportAPI("windowFocus", function() {
+					if (reeAPIInstance.public.getPrivileges().includes("GRAB_ATTENTION")) {
+						let openWins = modules.session.attrib(windowObject.sessionId, "openWins") || [];
+						windowObject.windowDiv.style.zIndex = openWins.length;
+						openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
+						openWins.map((a, i) => a.style.zIndex = i);
+						modules.session.attrib(windowObject.sessionId, "openWins", openWins);
 					}
 				});
 				ree.exportAPI("closeability", (apiArg) => windowObject.closeButton.classList.toggle("hidden", !apiArg.arg));
