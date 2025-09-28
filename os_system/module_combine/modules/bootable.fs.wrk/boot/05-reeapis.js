@@ -128,7 +128,7 @@ function reeAPIs() {
 						}, true, ["encrypt", "decrypt"]);
 						connections[connID + ":client"].aesUsableKey = aesUsableKey;
 						connections[connID + ":client"].theirKeyRaw = packet.data.content;
-						let iv = crypto.getRandomValues(new Uint8Array(16));
+						let iv = crypto.getRandomValues(new Uint8Array(12));
 						websocket.send(JSON.stringify({
 							receiver: address,
 							data: {
@@ -262,7 +262,7 @@ function reeAPIs() {
 		async function connfulWrite(sendOpts) {
 			if (!connections.hasOwnProperty(sendOpts.connectionID)) throw new Error("NO_SUCH_CONNECTION");
 			if (connections[sendOpts.connectionID].dying) throw new Error("CONNECTION_DROPPED");
-			let iv = crypto.getRandomValues(new Uint8Array(16));
+			let iv = crypto.getRandomValues(new Uint8Array(12));
 			let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 			networkListens[connections[sendOpts.connectionID].networkListenID].ws.send(JSON.stringify({
 				receiver: connections[sendOpts.connectionID].from,
@@ -1328,7 +1328,7 @@ function reeAPIs() {
 									return;
 								}
 								connections[packet.data.connectionID + ":server"].theirMainKeyReceived = theirMainKeyDecrypt;
-								let iv = crypto.getRandomValues(new Uint8Array(16));
+								let iv = crypto.getRandomValues(new Uint8Array(12));
 								websocket.send(JSON.stringify({
 									receiver: packet.from,
 									data: {

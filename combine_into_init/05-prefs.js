@@ -472,7 +472,7 @@ async function diskProtection() {
 					let data;
 					if (part == "disk" && !hasDisk) data = new TextEncoder().encode("{}");
 					else data = new TextEncoder().encode(JSON.stringify(await idb.readPart(part)));
-					let iv = crypto.getRandomValues(new Uint8Array(16));
+					let iv = crypto.getRandomValues(new Uint8Array(12));
 					let encrypted = new Uint8Array(await crypto.subtle.encrypt({
 						name: "AES-GCM", iv
 					}, cryptoKey, data));

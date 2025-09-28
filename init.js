@@ -181,7 +181,7 @@ function reed() {
 		if (!this._db) await this.opendb();
 		let that = this;
 		if (this._encrypted && !raw) {
-			let iv = crypto.getRandomValues(new Uint8Array(16));
+			let iv = crypto.getRandomValues(new Uint8Array(12));
 			value = new TextEncoder().encode(JSON.stringify(value));
 			let ct = new Uint8Array(await crypto.subtle.encrypt({
 				name: "AES-GCM",
@@ -219,8 +219,8 @@ function reed() {
 			store.onsuccess = async (e) => {
 				let value = e.target.result;
 				if (idb._encrypted && value && !raw) {
-					let iv = hexToU8A(e.target.result.slice(part == "disk" ? 128 : 0, (part == "disk" ? 128 : 0) + 32));
-					let ct = hexToU8A(e.target.result.slice((part == "disk" ? 128 : 0) + 32));
+					let iv = hexToU8A(e.target.result.slice(part == "disk" ? 128 : 0, (part == "disk" ? 128 : 0) + 24));
+					let ct = hexToU8A(e.target.result.slice((part == "disk" ? 128 : 0) + 24));
 					try {
 						value = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({
 							name: "AES-GCM",
@@ -1087,7 +1087,7 @@ async function diskProtection() {
 					let data;
 					if (part == "disk" && !hasDisk) data = new TextEncoder().encode("{}");
 					else data = new TextEncoder().encode(JSON.stringify(await idb.readPart(part)));
-					let iv = crypto.getRandomValues(new Uint8Array(16));
+					let iv = crypto.getRandomValues(new Uint8Array(12));
 					let encrypted = new Uint8Array(await crypto.subtle.encrypt({
 						name: "AES-GCM", iv
 					}, cryptoKey, data));

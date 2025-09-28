@@ -59,7 +59,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		activityNote.innerText = await availableAPIs.lookupLocale("UPDATING_MODCFG");
 		try {
 			let updateService = new URL("bdp://localhost");
-			updateService.hostname = await availableAPIs.getUpdateService();
+			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
 			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
@@ -88,7 +88,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		activityNote.innerText = "";
 		try {
 			let updateService = new URL("bdp://localhost");
-			updateService.hostname = await availableAPIs.getUpdateService();
+			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
 			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
@@ -236,6 +236,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
 			let result = {};
+			let isRegenNeeded = false;
 			try {
 				let ipcPipe = await availableAPIs.createPipe();
 				await availableAPIs.windowVisibility(false);
@@ -287,7 +288,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		activityNote.innerText = "";
 		try {
 			let updateService = new URL("bdp://localhost");
-			updateService.hostname = await availableAPIs.getUpdateService();
+			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
 			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
@@ -395,7 +396,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		activityNote.innerText = await availableAPIs.lookupLocale("UPDATING_MODULES");
 		try {
 			let updateService = new URL("bdp://localhost");
-			updateService.hostname = await availableAPIs.getUpdateService();
+			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
 			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
@@ -488,7 +489,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		activityNote.innerText = await availableAPIs.lookupLocale("REPAIRING_SYSTEM");
 		try {
 			let updateService = new URL("bdp://localhost");
-			updateService.hostname = await availableAPIs.getUpdateService();
+			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
 			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));

@@ -314,7 +314,7 @@ function ConnfulServer(gate, socket, address) {
 						return;
 					}
 					connections[packetData.data.connectionID].theirMainKeyReceived = theirMainKeyDecrypt;
-					let iv = crypto.getRandomValues(new Uint8Array(16));
+					let iv = crypto.getRandomValues(new Uint8Array(12));
 					socket.send(JSON.stringify({
 						from: serverAddress,
 						data: {
@@ -344,7 +344,7 @@ function ConnfulServer(gate, socket, address) {
 						while (lockc >= mylockc && lockc != 0) await lock;
 						lock = new Promise(r => _lock = r);
 						lockc++;
-						let iv = crypto.getRandomValues(new Uint8Array(16));
+						let iv = crypto.getRandomValues(new Uint8Array(12));
 						socket.send(JSON.stringify({
 							from: serverAddress,
 							data: {
