@@ -3,10 +3,11 @@ const crypto = require("crypto");
 let keypair = require("./keypair.json");
 
 let serverTrust = crypto.generateKeyPairSync("ed25519");
+let netprefix = crypto.createHash("sha256").update(Buffer.from(keypair.networkID.x, "base64url")).digest().subarray(0, 6).toString("hex");
 
 let serverTrustInfo = {
 	key: serverTrust.publicKey.export({ format: "jwk" }),
-	usages: [ "connfulSecureServer:7f00000150434f53334e6574776f726b", "connfulSecureServer:pcosserver.pc" ],
+	usages: [ "connfulSecureServer:" + netprefix.repeat(2) + "00000001", "connfulSecureServer:pcosserver.pc" ],
 	signedBy: "pcosIntermediate",
 	dates: {
 		since: Date.now(),

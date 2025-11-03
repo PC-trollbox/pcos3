@@ -879,14 +879,14 @@ async function bdpGet(path) {
 	await availableAPIs.connfulConnectionSettled(connection);
 	await availableAPIs.connfulWrite({
 		connectionID: connection,
-		data: url.pathname + url.search,
+		data: new TextEncoder().encode(url.pathname + url.search),
 		host: hostname
 	});
-	let data = await availableAPIs.connfulRead(connection);
+	let data = new TextDecoder().decode(await availableAPIs.connfulRead(connection));
 	data = JSON.parse(data);
 	let chunks = [];
 	while (chunks.length != data.length) {
-		let newData = await availableAPIs.connfulRead(connection);
+		let newData = new TextDecoder().decode(await availableAPIs.connfulRead(connection));
 		newData = JSON.parse(newData);
 		chunks[newData.ctr] = newData.chunk;
 	}

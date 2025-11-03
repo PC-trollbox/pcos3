@@ -1,0 +1,49 @@
+Packets are generated in this way:
+Source address (16 bytes) / Target address (16 bytes) / Packet ID (16 bytes) / Protocol (1 byte) / Payload
+The packet size is currently unlimited.
+
+Control (protocol 0x00) has the following packet payloads:
+	Code (1 byte) / Payload
+	Codes can be:
+		- CONNECTED (0x00); sent on WebSocket open or auth completion; the payload means:
+			Auth method (1 byte) / Gateway Spoofing Allowed (1 byte) / Hostname length (1 byte) / Assigned hostname ([Hostname length] bytes)
+			"Gateway Spoofing Allowed" is either 0 or 255.
+			Auth methods:
+				- NO_AUTH (0x00); no authentication is needed, sent after the auth is completed
+				- PUBKEY_AUTH (0x01); authenticate using Ed25519 key
+		- AUTH_FAILED (0x01); sent when public key or signature is incorrect
+		- SIGN_REQUEST (0x02); sent after sending public key; the following payload is 32 bytes
+		- PUBKEY_SEND (0x03); sending the public key; the payload is:
+			Ed25519 public key coordinate (32 bytes) / User-customizable bits (4 bytes) / Hostname length (1 byte) / Requested hostname ([Hostname length] bytes)
+		- SIGNATURE_SEND (0x04); sending the signature; the payload is 64 bytes of the Ed25519 signature
+		- INVALID_SOURCE (0x05); sent when the source address is spoofed
+		- ADDRESS_CONFLICT (0x06); sent when the address generated ends up the same as another one that is connected
+		- ADDRESS_UNREACHABLE (0x07); sent when the target address is not registered in the network
+
+Ping (protocol 0x01) has the following packet payloads:
+	Is Pong (1 byte) / Payload (64 bytes)
+	If "Is Pong" is 0, re-send the same packet with the source and target addresses swapped and "Is Pong" set to 255.
+
+Connectionless (protocol 0x02) has the following packet payloads:
+	Gate Size (1 byte) / Gate ([Gate Size] bytes) / Payload
+	If the "Gate" starts with "user_", it is non-privileged. All other gates are privileged.
+	Privileges are determined by the system connected to the network.
+
+	On gate "resolve" connectionless-based protocol has the following connless payload:
+		Reply Gate Size (1 byte) / Reply Gate ([Reply Gate Size] bytes) / Query Size (1 byte) / Query ([Query Size] bytes)
+		A server, if running, should direct their reply at the specified "Reply Gate" with the following connless payload equaling 16 bytes of the address.
+		If a server replies with 0 bytes, it means no reply is available. The domain might not be found.
+
+Connectionful (protocol 0x03) has the following packet payloads:
+	Is Server (1 byte) / Connection ID (16 bytes) / Action (1 byte) / Payload
+	Is Server set to 255 is a server; to 0 is a client.
+	Actions:
+		- START (0x00); sent when connection begins. The payload means, for a message from the client to the server:
+			Gate Size (1 byte) / Gate ([Gate Size] bytes) / Temporary key
+			For a message from the server to the client, only the temporary key is the payload.
+		- XCHANGE (0x01); sent when exchanging permanent keys
+			Initialization Vector (12 bytes) / Ciphertext
+		- DROP (0x02); sent on disconnection. Has no payload
+		- DATA (0x03); sent when exchanging data (the most of the connection)
+			Initialization Vector (12 bytes) / Ciphertext
+		- NICE2MEETU (0x04); sent by client only when completing verification (after xchange)

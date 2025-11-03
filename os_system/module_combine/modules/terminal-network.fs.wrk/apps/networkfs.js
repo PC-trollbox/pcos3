@@ -69,13 +69,13 @@ function IPv6Decompressor(ip) {
 				let listenToPipe = await availableAPIs.listenToPipe(inPipe);
 				availableAPIs.connfulWrite({
 					connectionID: conn,
-					data: JSON.stringify(listenToPipe)
+					data: new TextEncoder().encode(JSON.stringify(listenToPipe))
 				});
 			}
 		})();
 		let conn2pipe = (async function() {
 			while (true) {
-				let networkListen = await availableAPIs.connfulRead(conn);
+				let networkListen = new TextDecoder().decode(await availableAPIs.connfulRead(conn));
 				availableAPIs.sendToPipe({
 					pipe: outPipe,
 					data: JSON.parse(networkListen)

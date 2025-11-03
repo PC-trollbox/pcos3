@@ -1,121 +1,103 @@
 async function networkd() {
-	let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 	let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 	modules.network = { connected: false, address: null, ws: null, runOnClose: Promise.resolve(), _runOnClose: _ => 1 };
 	try {
 		let config = await modules.fs.read(modules.defaultSystem + "/etc/network.json");
 		config = JSON.parse(config);
-		function isPacketFiltered(packet) {
-			if (!config.filters) return false;
-			for (let filter of config.filters) {
-				if (filter.type == 0) return filter.result;
-				if (filter.type == 1 && isPacketFrom(packet, filter)) return filter.result;
-				if (filter.type == 2 && filter.protocol == packet.data.type) return filter.result;
-				if (filter.type == 3 && isPacketFrom(packet, filter) && filter.protocol == packet.data.type) return filter.result;
-				if (filter.type == 4 && isPacketFrom(packet, filter) &&
-					(packet.data.type == "connectionful" || packet.data.type == "connectionless")) {
-						if (packet.data.gate == filter.gate) return filter.result;
-					}
-			}
-			return true;
-		}
-		function isPacketFrom(packet, filter) {
-			if (filter.from == packet.from) return true;
-			if (filter.ipHash == packet.from.slice(0, 8)) return true;
-			if (filter.systemID == packet.from.slice(8, 24)) return true;
-			return false;
-		}
 		modules.network.reloadConfig = async function() {
 			config = JSON.parse(await modules.fs.read(modules.defaultSystem + "/etc/network.json"));
 			modules.network.updates = config.updates;
 			try {
-				ws.send(JSON.stringify({
-					finalProxyPacket: true
-				}));
 				ws.close();
 			} catch {
 				onclose();
 			}
 		}
 		modules.network.updates = config.updates;
-		let stage = 0;
 		let pukey = (modules.core.prefs.read("system_id") || {}).public;
 		let importedKey = await crypto.subtle.importKey("jwk", (modules.core.prefs.read("system_id") || {}).private, { name: "Ed25519" }, true, ["sign"]);
 		let ws = new WebSocket(config.url);
-		let handle = Array.from(crypto.getRandomValues(new Uint8Array(64))).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-		modules.network.runOnClose = new Promise(a => modules.network._runOnClose = a);
 		ws.binaryType = "arraybuffer";
+		let handle = Array.from(crypto.getRandomValues(new Uint8Array(64))).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
+		let gateway;
+		let systemIDEncode = sysIDc => Uint8Array.from(atob(sysIDc.replaceAll("-", "+").replaceAll("_", "/")).split("").map(a => a.charCodeAt()));
+		modules.network.runOnClose = new Promise(a => modules.network._runOnClose = a);
 		async function onclose() {
+			try {
+				ws.close();
+			} catch {}
 			modules.network.connected = false;
 			modules.network.address = null;
 			modules.network.hostname = null;
+			modules.network.ws = null;
 			modules.network._runOnClose();
 			ws = new WebSocket(config.url);
-			stage = 0;
+			ws.binaryType = "arraybuffer";
 			ws.onmessage = onmessage;
 			ws.onclose = onclose;
 			modules.network.runOnClose = new Promise(a => modules.network._runOnClose = a);
 		}
-		async function onmessage(e) {
-			let messageData;
-			try {
-				messageData = JSON.parse(e.data);
-			} catch {
-				return;
+		function completeConnection(messageData) {
+			modules.websocket._handles[handle] = {
+				ws: ws,
+				acl: {
+					owner: handle.slice(0, 16),
+					group: handle.slice(0, 16),
+					world: true
+				}
 			}
-			if (stage == 0) {
-				ws.send(JSON.stringify({ ...pukey, forceConnect: true, userCustomizable: config.ucBits, hostname: config.hostname }));
-				stage++;
-			} else if (stage == 1) {
-				if (messageData.event != "SignatureRequest") {
-					ws.onclose = null;
-					delete modules.websocket._handles[handle];
-					return ws.close();
-				}
-				ws.send(u8aToHex(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, importedKey, hexToU8A(messageData.signBytes)))));
-				stage++;
-			} else if (stage == 2) {
-				if (messageData.event != "ConnectionEstablished") {
-					ws.onclose = null;
-					delete modules.websocket._handles[handle];
-					return ws.close();
-				}
-				modules.websocket._handles[handle] = {
-					ws: ws,
-					acl: {
-						owner: handle.slice(0, 16),
-						group: handle.slice(0, 16),
-						world: true
+			modules.network.connected = true;
+			modules.network.address = u8aToHex(messageData.slice(16, 32));
+			modules.network.hostname = new TextDecoder().decode(messageData.slice(53, 53 + messageData[52]));
+			modules.network.ws = handle;
+		}
+		async function onmessage(e) {
+			let messageData = new Uint8Array(e.data);
+			if (messageData[48] == 0 && !modules.network.connected) { // Control protocol
+				if (messageData[49] == 0) { // Connected
+					gateway = messageData.slice(0, 16);
+					if (messageData[50] == 1) { // Public key authentication
+						let hostname = new TextEncoder().encode(config.hostname || "");
+						if (hostname.length > 255) hostname = hostname.slice(0, 255);
+						let replyPacket = new Uint8Array(87 + hostname.length);
+						replyPacket.set(messageData.slice(16, 32), 0);
+						replyPacket.set(gateway, 16);
+						replyPacket.set(messageData.slice(32, 48), 32);
+						replyPacket.set(Uint8Array.from([ 0, 3 ]), 48); // Control Protocol; send public key
+						replyPacket.set(systemIDEncode(pukey.x), 50);
+						replyPacket.set(Uint8Array.from([ config.ucBits >>> 24 & 255, config.ucBits >>> 16 & 255, config.ucBits >>> 8 & 255, config.ucBits & 255 ]), 82);
+						replyPacket.set(Uint8Array.from([ hostname.length ]), 86);
+						replyPacket.set(hostname, 87);
+						ws.send(replyPacket);
+					} else {
+						completeConnection(messageData);
 					}
-				}
-				modules.network.connected = true;
-				modules.network.address = messageData.address;
-				modules.network.hostname = messageData.hostname;
-				modules.network.ws = handle;
-				stage++;
-			} else if (stage == 3) {
-				if (messageData.event == "DisconnectionComplete") {
-					modules.network.connected = false;
-					modules.network.address = null;
-					modules.network.hostname = null;
-					modules.network.ws = null;
+				} else if (messageData[49] == 1) { // Auth failed
+					onclose = null;
+					ws.close();
 					modules.network._runOnClose();
-					ws.onclose = null;
-					delete modules.websocket._handles[handle];
-					return ws.close();
+					modules.core.tty_bios_api.println("network: invalid System ID data");
+				} else if (messageData[49] == 2) { // Signature request
+					let replyPacket = new Uint8Array(114);
+					replyPacket.set(messageData.slice(16, 32), 0);
+					replyPacket.set(gateway, 16);
+					replyPacket.set(messageData.slice(32, 48), 32);
+					replyPacket.set(Uint8Array.from([ 0, 4 ]), 48); // Control Protocol; send signature
+					replyPacket.set(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, importedKey, messageData.slice(50, 82))), 50);
+					ws.send(replyPacket);
+				} else if (messageData[49] == 6) { // Address conflict
+					config.ucBits = Math.floor(Math.random() * (2 ** 32));
+					ws.close();
 				}
-				if (messageData.from) {
-					if (isPacketFiltered(messageData)) {
-						e.stopImmediatePropagation();
-						e.preventDefault();
-						return false;
-					}
-					if (messageData.data.type == "ping") {
-						if (typeof messageData.data.resend !== "string") return;
-						if (messageData.data.resend.length > 64) return;
-						ws.send(JSON.stringify({ receiver: messageData.from, data: { type: "pong", resend: messageData.data.resend } }));
-					}
-				}
+			}
+			if (messageData[48] == 1 && messageData[49] == 0) { // Ping Protocol; not a pong
+				let replyPacket = new Uint8Array(114);
+				replyPacket.set(messageData.slice(16, 32), 0);
+				replyPacket.set(messageData.slice(0, 16), 16);
+				replyPacket.set(messageData.slice(32, 48), 32);
+				replyPacket.set(Uint8Array.from([ 1, 255 ]), 48); // Ping Protocol; is a pong
+				replyPacket.set(messageData.slice(50, 114), 50);
+				ws.send(replyPacket);
 			}
 		}
 		ws.onmessage = onmessage;

@@ -5,6 +5,7 @@
 let onClose = () => availableAPIs.terminate();
 (async function() {
 	// @pcos-app-mode isolatable
+	await availableAPIs.closeability(false);
 	let networkDefaultURL = new URL(await availableAPIs.runningServer());
 	networkDefaultURL.protocol = "ws" + (networkDefaultURL.protocol == "https:" ? "s" : "") + ":";
 	networkDefaultURL.pathname = "";
@@ -83,7 +84,6 @@ let onClose = () => availableAPIs.terminate();
 	if (automatic_configuration.extraModules) installed_modules.push(...automatic_configuration.extraModules);
 	let downloadFromBdpOnMissing = new URL("bdp://localhost");
 	downloadFromBdpOnMissing.hostname = automatic_configuration.secondstage.network.updates;
-	await availableAPIs.closeability(false);
 	await new Promise(async function(resolve) {
 		let locales = await availableAPIs.installedLocales();
 		let localeSelect = document.createElement("select");
@@ -803,14 +803,14 @@ async function bdpGet(path) {
 	await availableAPIs.connfulConnectionSettled(connection);
 	await availableAPIs.connfulWrite({
 		connectionID: connection,
-		data: url.pathname + url.search,
+		data: new TextEncoder().encode(url.pathname + url.search),
 		host: hostname
 	});
-	let data = await availableAPIs.connfulRead(connection);
+	let data = new TextDecoder().decode(await availableAPIs.connfulRead(connection));
 	data = JSON.parse(data);
 	let chunks = [];
 	while (chunks.length != data.length) {
-		let newData = await availableAPIs.connfulRead(connection);
+		let newData = new TextDecoder().decode(await availableAPIs.connfulRead(connection));
 		newData = JSON.parse(newData);
 		chunks[newData.ctr] = newData.chunk;
 	}

@@ -205,15 +205,15 @@ function IPv6Decompressor(ip) {
 			await availableAPIs.connfulConnectionSettled(connection);
 			await availableAPIs.connfulWrite({
 				connectionID: connection,
-				data: url.pathname + url.search,
+				data: new TextEncoder().encode(url.pathname + url.search),
 				host: hostname
 			});
-			let data = await availableAPIs.connfulRead(connection);
+			let data = new TextDecoder().decode(await availableAPIs.connfulRead(connection));
 			data = JSON.parse(data);
 			let chunks = [];
 			theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", "0").replace("%s", data.length);
 			while (chunks.length != data.length) {
-				let newData = await availableAPIs.connfulRead(connection);
+				let newData = new TextDecoder().decode(await availableAPIs.connfulRead(connection));
 				newData = JSON.parse(newData);
 				chunks[newData.ctr] = newData.chunk;
 				theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", chunks.length).replace("%s", data.length);

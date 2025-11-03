@@ -121,16 +121,13 @@ async function updatePrediction(elementInterface) {
 		operation: "digest",
 		cspArgument: {
 			algorithm: "SHA-256",
-			data: hexToU8A(generateString(findInputNumberString(publicSystemID.x, base64Charset), hexCharset))
+			data: Uint8Array.from(atob(publicSystemID.x.replaceAll("-", "+").replaceAll("_", "/")).split("").map(a => a.charCodeAt()))
 		}
-	}))).padStart(16, "0").slice(0, 16);
+	}))).slice(0, 12);
 	let ucPredict = Math.round(Math.abs(Number(elementInterface.ucBits.value))).toString(16).padStart(8, "0").slice(0, 8);
-	return elementInterface.addressPrediction.innerText = ("xxxxxxxx" + sysIDx + ucPredict).match(/.{1,4}/g).join(":");
+	return elementInterface.addressPrediction.innerText = ("xxxxxxxxxxxx" + sysIDx + ucPredict).match(/.{1,4}/g).join(":");
 }
-let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
-let base64Charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-let hexCharset = "0123456789abcdef";
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) await window.availableAPIs.terminate();
 }); null;
