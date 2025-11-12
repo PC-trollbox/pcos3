@@ -19,7 +19,8 @@ async function consentui(ses = modules.session.active, config, token) {
 			args: config.args,
 			submittedIntent: config.intent,
 			submittedName: config.name
-		})
+		}),
+		config.sessionToken || ""
 	]);
 	async function waitForIt() {
 		let msg = await Promise.race([

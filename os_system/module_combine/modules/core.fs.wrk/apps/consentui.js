@@ -60,6 +60,14 @@ let ipc;
 		e.stopImmediatePropagation();
 		e.preventDefault();
 		e.stopPropagation();
+		try {
+			if (exec_args[3]) {
+				await availableAPIs.sendToPipe({ pipe: ipc, data: { success: true, token: exec_args[3] } });
+				return await availableAPIs.terminate();
+			}
+		} catch {
+			exec_args[3] = null;
+		}
 		let userLogonSession;
 		let userLogonID;
 		let desired_username = input.value;

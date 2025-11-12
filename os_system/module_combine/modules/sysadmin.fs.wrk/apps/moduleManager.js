@@ -891,7 +891,7 @@ async function bdpGet(path) {
 		chunks[newData.ctr] = newData.chunk;
 	}
 	try {
-		await availableAPIs.connfulClose(connection);
+		await availableAPIs.connfulDisconnect(connection);
 	} catch {}
 	return { ...data, content: chunks.join("") };
 }

@@ -638,54 +638,6 @@ function reeAPIs() {
 					await modules.users.moduser(user, { ...previousUserInfo, securityChecks: sanitizedChecks }, token || processToken);
 					return true;
 				},
-				getNewToken: async function(desiredUser) {
-					if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
-					if (modules.session.attrib(ses, "secureLock")) await modules.session.attrib(ses, "secureLock");
-					if (modules.session.active != ses) throw new Error("TRY_AGAIN_LATER");
-					let releaseLock;
-					let lock = new Promise((resolve) => releaseLock = resolve);
-					modules.session.attrib(ses, "secureLock", lock);
-					let secureSession = await modules.session.mksession();
-					modules.session.attrib(ses, "secureID", secureSession);
-					modules.session.attrib(secureSession, "language", language);
-
-					let dom = modules.session.tracker[secureSession].html;
-					let ogDom = modules.session.tracker[ses].html;
-					let bgfx = document.createElement("div");
-					bgfx.classList.add("session", "secure");
-					dom.appendChild(bgfx);
-					modules.session.attrib(secureSession, "dark", modules.session.attrib(ses, "dark"));
-					dom.style.background = ogDom.style.background;
-					dom.style.backgroundSize = "100% 100%";
-
-					modules.session.muteAllSessions();
-					modules.session.activateSession(secureSession);
-
-					try {
-						let logonUI = await modules.authui(secureSession, desiredUser);
-						return new Promise(function(resolve) {
-							logonUI.hook(async function(result) {
-								releaseLock();
-								modules.session.attrib(ses, "secureLock", null);
-								modules.session.attrib(ses, "secureID", null);
-								modules.session.muteAllSessions();
-								modules.session.rmsession(secureSession);
-								modules.session.activateSession(ses);
-								if (result.success == false) return resolve(false);
-								return resolve(result.token);
-							});
-						});
-					} catch (e) {
-						console.error("authui:", e);
-						releaseLock();
-						modules.session.attrib(ses, "secureLock", null);
-						modules.session.attrib(ses, "secureID", null);
-						modules.session.muteAllSessions();
-						modules.session.rmsession(secureSession);
-						modules.session.activateSession(ses);
-						return false;
-					}
-				},
 				getProcessToken: () => processToken,
 				setProcessToken: async function(desiredToken) {
 					if (!privileges.includes("ELEVATE_PRIVILEGES")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1072,6 +1024,11 @@ function reeAPIs() {
 					modules.session.muteAllSessions();
 					modules.session.activateSession(secureSession);
 					let task = await modules.tasks.taskInfo(taskId);
+					let preForked = undefined;
+					try {
+						if (privileges.includes("ELEVATE_PRIVILEGES_EZ") && modules.liu[user]?.session == ses && desiredUser == user)
+							preForked = await modules.tokens.fork(modules.liu[user].logon.token);
+					} catch {}
 
 					try {
 						let logonUI = await modules.consentui(secureSession, {
@@ -1079,7 +1036,8 @@ function reeAPIs() {
 							path: task.file,
 							args: task.arg,
 							intent,
-							name: params.name
+							name: params.name,
+							sessionToken: preForked
 						});
 						return new Promise(function(resolve) {
 							logonUI.hook(async function(result) {

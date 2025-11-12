@@ -219,7 +219,7 @@ function IPv6Decompressor(ip) {
 				theWebsite.innerText = (await availableAPIs.lookupLocale("BLOG_BROWSER_LOADING_PROGRESS")).replace("%s", chunks.length).replace("%s", data.length);
 			}
 			try {
-				await availableAPIs.connfulClose(connection);
+				await availableAPIs.connfulDisconnect(connection);
 			} catch {}
 			data.content = chunks.join("");
 			if (data.type == "script") {
