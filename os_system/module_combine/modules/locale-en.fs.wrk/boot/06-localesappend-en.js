@@ -548,5 +548,7 @@ modules.locales.en = {
 	"UMOUNT_OFFLINE_OS": "Unmount offline OS",
 	"SWAP_OFFLINE_OS": "Swap to offline OS",
 	"SWAPPING_SYSTEMS": "Swapping to the system...",
-	"INSTALL_OFFLINE_MODULE": "Install offline module"
+	"INSTALL_OFFLINE_MODULE": "Install offline module",
+	"RESTRICT_PROMPT": "Access levels:\r\nfull - Full access\r\nuser - Regular access (default)\r\nro - Read-only access\r\nInput access level",
+	"RESTRICT_OPTION": "Restricted access"
 };

@@ -591,7 +591,7 @@ function reeAPIs() {
 				setOwnSecurityChecks: async function(arg) {
 					let {token, checks} = arg;
 					if (!privileges.includes("SET_SECURITY_CHECKS")) throw new Error("UNAUTHORIZED_ACTION");
-					let allowedTypes = [ "pbkdf2", "informative", "informative_deny", "timeout", "timeout_deny", "serverReport", "pc-totp", "totp", "workingHours", "zkpp" ];
+					let allowedTypes = [ "pbkdf2", "informative", "informative_deny", "timeout", "timeout_deny", "serverReport", "pc-totp", "totp", "workingHours", "zkpp", "privrestrict" ];
 					let sanitizedChecks = [];
 					checks.filter(a => allowedTypes.includes(a.type));
 					for (let checkIndex in checks) {
@@ -631,7 +631,7 @@ function reeAPIs() {
 						} else if (check.type == "zkpp") {
 							if (!check.publicKey) continue;
 							check = { type: "zkpp", publicKey: check.publicKey };
-						}
+						} else if (check.type == "privrestrict") check = { type: "privrestrict" };
 						sanitizedChecks.push(check);
 					}
 					let previousUserInfo = await modules.users.getUserInfo(user, false, token || processToken);

@@ -547,5 +547,7 @@ modules.locales.ru = {
 	"UMOUNT_OFFLINE_OS": "Размонтировать автономную ОС",
 	"SWAP_OFFLINE_OS": "Переключиться на автономную ОС",
 	"SWAPPING_SYSTEMS": "Переключение на систему...",
-	"INSTALL_OFFLINE_MODULE": "Установить модуль офлайн"
+	"INSTALL_OFFLINE_MODULE": "Установить модуль офлайн",
+	"RESTRICT_PROMPT": "Уровни доступа:\r\nfull - Полный доступ\r\nuser - Обычный доступ (умолчание)\r\nro - Доступ только для чтения\r\nВведите уровень доступа",
+	"RESTRICT_OPTION": "Ограниченный доступ"
 };

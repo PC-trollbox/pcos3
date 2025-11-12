@@ -3,6 +3,7 @@ async function setupUsers() {
 	async function handleAuthentication(user, prompts, finishFunction) {
 		let currentPromptIndex = 0;
 		let destroyed = false;
+		let cut = [];
 
 		return {
 			getNextPrompt: async function() {
@@ -14,6 +15,7 @@ async function setupUsers() {
 					if (finishFunction) await finishFunction(true);
 					let token = await modules.tokens.generate();
 					await modules.tokens.userInitialize(token, user);
+					await modules.tokens.removePrivileges(token, cut);
 					return {
 						success: true,
 						message: modules.locales.get("AUTH_SUCCESS"),
@@ -36,6 +38,11 @@ async function setupUsers() {
 						let verified;
 						try {
 							verified = await currentPrompt.verify(input);
+							if (verified instanceof Array) {
+								cut.push(...verified);
+								cut = Array.from(new Set(cut));
+								verified = true;
+							}
 						} catch {
 							verified = false;
 						}
@@ -226,7 +233,18 @@ async function setupUsers() {
 						credentials[check].challenge = randomChallenge;
 						credentials[check].verify = input => nacl.sign.detached.verify(hexToU8A(credentials[check].challenge), hexToU8A(input), hexToU8A(credentials[check].publicKey));
 					}
-
+				}
+				if (credentials[check].type == "privrestrict") {
+					credentials[check].message = modules.locales.get("RESTRICT_PROMPT");
+					credentials[check].type = "input";
+					credentials[check].userInput = true;
+					credentials[check].verify = function(input) {
+						let admin = ["FS_UNMOUNT", "SYSTEM_SHUTDOWN", "SWITCH_USERS_AUTOMATICALLY", "USER_INFO_OTHERS", "SET_USER_INFO", "FS_BYPASS_PERMISSIONS", "IPC_BYPASS_PERMISSIONS", "TASK_BYPASS_PERMISSIONS", "SENSITIVE_USER_INFO_OTHERS", "SYSTEM_STABILITY", "RUN_KLVL_CODE", "IDENTIFY_SYSTEM_SENSITIVE", "WEBSOCKET_BYPASS_PERMISSIONS", "LLDISK_READ", "LLDISK_WRITE", "LLDISK_LIST_PARTITIONS", "LLDISK_REMOVE", "LLDISK_IDB_READ", "LLDISK_IDB_WRITE", "LLDISK_IDB_REMOVE", "LLDISK_IDB_LIST", "LLDISK_IDB_SYNC", "FS_MOUNT", "SET_DEFAULT_SYSTEM", "GET_SYSTEM_RESOURCES", "LLDISK_INIT_PARTITIONS", "LOGOUT_OTHERS", "LULL_SYSTEM_FORCE", "CONNLESS_LISTEN_GLOBAL", "GET_USER_LIST", "CONNFUL_LISTEN_GLOBAL", "NETWORK_RAW_WRITE", "NETWORK_RAW_READ", "SET_FIRMWARE", "RELOAD_NETWORK_CONFIG"];
+						let write = [ "FS_WRITE", "FS_REMOVE", "FS_CHANGE_PERMISSION", "SET_SECURITY_CHECKS" ];
+						if (input == "full") return [];
+						if (input == "ro") return [ ...admin, ...write ];
+						return admin;
+					};
 				}
 			}
 			if (credentials.length == 0) {

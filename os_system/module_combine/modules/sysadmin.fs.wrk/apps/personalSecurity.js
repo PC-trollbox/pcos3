@@ -59,7 +59,8 @@
 		"pc-totp",
 		"totp",
 		"workingHours",
-		"zkpp"
+		"zkpp",
+		"privrestrict"
 	];
 	let checks = (await availableAPIs.getUserInfo({ desiredUser: await availableAPIs.getUser(), sensitive: true })).securityChecks;
 
@@ -73,7 +74,8 @@
 		"pc-totp": "PCTOTP_OPTION",
 		"totp": "RFCTOTP_OPTION",
 		"workingHours": "WORKING_HOURS_OPTION",
-		"zkpp": "ZKPP_OPTION"
+		"zkpp": "ZKPP_OPTION",
+		"privrestrict": "RESTRICT_OPTION"
 	};
 
 	async function reparse() {

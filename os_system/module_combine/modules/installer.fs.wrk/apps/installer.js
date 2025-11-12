@@ -558,7 +558,8 @@ Used libraries:
 											type: "pbkdf2",
 											hash: u8aToHex(derived),
 											salt: u8aToHex(salt)
-										}
+										},
+										{ type: "privrestrict" }
 									],
 									groups: [ username, "users" ],
 									homeDirectory: "system" + homedir.slice(6),
