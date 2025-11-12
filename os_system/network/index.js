@@ -213,6 +213,7 @@ server.on("connection", function(socket, req) {
 });
 
 function ConnfulServer(gate, socket) {
+	let string_gate = gate;
 	gate = new TextEncoder().encode(gate);
 	let connectedEvent = new events.EventEmitter();
 	let connections = {};
@@ -265,7 +266,8 @@ function ConnfulServer(gate, socket) {
 					}, connections[packetConnectionID + ":server"].aesUsableKey, gotPacket.slice(79))));
 					let usableMainKey = await crypto.subtle.importKey("jwk", theirMainKeyDecrypt.keyInfo.key, { name: "Ed25519" }, true, ["verify"]);
 					let verifyKeySignature = await crypto.subtle.verify({ name: "Ed25519" }, usableMainKey, hexToU8A(connections[packetConnectionID + ":server"].theirKeyRaw.signature), new TextEncoder().encode(JSON.stringify(connections[packetConnectionID + ":server"].theirKeyRaw.keyInfo)));
-					if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + u8aToHex(gotPacket.slice(0, 16)))) {
+					if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + connections[packetConnectionID + ":server"].from) && 
+							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + connections[packetConnectionID + ":server"].from + ":" + string_gate))) {
 						delete connections[packetConnectionID + ":server"];
 						let packet = new Uint8Array(67);
 						packet.set(serverAddress, 0);

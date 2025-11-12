@@ -69,6 +69,7 @@ function reeAPIs() {
 
 		async function connfulConnect(connOpts) {
 			let { address, gate, key, private: privateKey, doNotVerifyServer, verifyByDomain } = connOpts;
+			let string_gate = gate;
 			gate = new TextEncoder().encode(gate);
 			if (gate.length < 1 || gate.length > 255) throw new Error("INVALID_GATE_PARAMETER");
 			let websocketHandle = modules.network.ws;
@@ -81,7 +82,14 @@ function reeAPIs() {
 			if (!key && !privateKey) {
 				newKeyKA = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
 				exportedKA = await crypto.subtle.exportKey("jwk", newKeyKA.publicKey);
-				exportedKA = { keyInfo: { usages: ["connfulSecureClient:" + modules.network.address], key: exportedKA }, signature: null };
+				exportedKA = {
+					keyInfo: {
+						usages: [
+							"connfulSecureClient:" + modules.network.address,
+							"connfulSecureClient:" + modules.network.address + ":" + string_gate
+						], key: exportedKA
+					}, signature: null
+				};
 				newKeyKA = newKeyKA.privateKey;
 			} else {
 				newKeyKA = await crypto.subtle.importKey("jwk", privateKey, { name: "Ed25519" }, true, ["sign"]);
@@ -168,7 +176,9 @@ function reeAPIs() {
 							}
 						}
 						if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address) &&
-							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain))) {
+							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain)) &&
+							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address + ":" + string_gate) &&
+							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain + ":" + string_gate)) {
 							_rejectPromise(new Error("SERVER_SIGNATURE_VERIFICATION_FAILED"));
 							websocket.removeEventListener("message", eventListener);
 							delete connections[packetConnectionID + ":client"];
@@ -1201,6 +1211,7 @@ function reeAPIs() {
 				connfulListen: async function(listenOpts) {
 					if (!privileges.includes("CONNFUL_LISTEN")) throw new Error("UNAUTHORIZED_ACTION");
 					let { gate, key, private: privateKey, verifyClientKeyChain } = listenOpts;
+					let string_gate = gate;
 					gate = new TextEncoder().encode(gate);
 					if (gate.length < 1 || gate.length > 255) throw new Error("INVALID_GATE_PARAMETER");
 					if (!gate.startsWith("user_") && !privileges.includes("CONNFUL_LISTEN_GLOBAL")) throw new Error("UNAUTHORIZED_ACTION");
@@ -1282,7 +1293,8 @@ function reeAPIs() {
 										verifyKeySignature = await recursiveKeyVerify(theirMainKeyDecrypt, khrlSignatures);
 									} catch { }
 								}
-								if (!verifyKeySignature || !theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + u8aToHex(gotPacket.slice(0, 16)))) {
+								if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + connections[packetConnectionID + ":server"].from) && 
+										!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureClient:" + connections[packetConnectionID + ":server"].from + ":" + string_gate))) {
 									delete connections[packetConnectionID + ":server"];
 									let packet = new Uint8Array(67);
 									packet.set(hexToU8A(modules.network.address), 0);
