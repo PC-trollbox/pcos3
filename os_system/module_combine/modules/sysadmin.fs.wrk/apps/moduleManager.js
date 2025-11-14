@@ -25,6 +25,103 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	}
 	document.body.innerText = "";
 
+	let pargs = {};
+	let ppos = [];
+	for (let arg of exec_args) {
+		if (arg.startsWith("--")) {
+			let key = arg.split("=")[0].slice(2);
+			let value = arg.split("=").slice(1).join("=");
+			if (arg.split("=")[1] == null) value = true;
+			if (pargs.hasOwnProperty(key)) {
+				let ogValues = pargs[key];
+				if (ogValues instanceof Array) pargs[key] = [ ...ogValues, value ];
+				else pargs[key] = [ ogValues, value ];
+			} else pargs[key] = value;
+		} else ppos.push(arg);
+	}
+
+	let log = console.log;
+	async function regenerateKernel() {
+		try {
+			log(await availableAPIs.lookupLocale("GENERATING_KERNEL"));
+			let entireBoot = [];
+			let bootFiles = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/boot" });
+			if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
+			if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
+			for (let bootFile of bootFiles) {
+				entireBoot.push([ bootFile, await availableAPIs.fs_read({
+					path: (await availableAPIs.getSystemMount()) + "/boot/" + bootFile
+				}) ]);
+			}
+			entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
+				.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/boot/00-compiled.js",
+				data: entireBoot + "\nreturn;/*"
+			});
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/boot/99-zzpatchfinisher.js",
+				data: "*/"
+			});
+		} catch (e) {
+			console.error(e);
+			log(await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED"));
+			throw e;
+		}
+	}
+
+	async function coreFunction(program, env) {
+		let { moduleConfig, updateService } = env;
+		let statementNum = 0;
+		let isRegenNeeded = false;
+		for (let statement of program) {
+			let moduleName = statement.moduleName;
+			let localInfo = moduleConfig.local[moduleName];
+			let remoteInfo = moduleConfig.remote[moduleName];
+			let remoteFileName = remoteInfo?.bootOrder + "-" + remoteInfo?.commonName + ".fs";
+			let localFileName = localInfo?.bootOrder + "-" + moduleName + ".fs";
+			log((await availableAPIs.lookupLocale("MANAGING_MODULE"))
+				.replace("%s", moduleName || (await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER"))).replace("%s", statementNum + 1)
+				.replace("%s", program.length).replace("%s", (statementNum / program.length * 100).toFixed(2)));
+			if (statement.type == "install") {
+				if (statement.file) {
+					remoteInfo = JSON.parse(await availableAPIs.fs_read({ path: statement.file })).buildInfo;
+					remoteFileName = remoteInfo?.bootOrder + "-" + remoteInfo?.commonName + ".fs";
+					moduleName = remoteInfo?.commonName;
+				}
+				if (localInfo && localInfo?.bootOrder != remoteInfo?.bootOrder)
+					await availableAPIs.fs_rm({
+						path: (await availableAPIs.getSystemMount()) + "/modules/" + localFileName
+					});
+				let moduleContent = statement.file ? (await availableAPIs.fs_read({ path: statement.file })) :
+					(await bdpGet(new URL("/module_repository/" + remoteFileName, updateService))).content;
+				await availableAPIs.fs_write({
+					path: (await availableAPIs.getSystemMount()) + "/modules/" + remoteFileName,
+					data: moduleContent
+				});
+				let parsedModule = JSON.parse(moduleContent);
+				moduleConfig.local[moduleName] = parsedModule?.buildInfo || remoteInfo;
+				isRegenNeeded = parsedModule.backend?.files?.boot;
+			} else if (statement.type == "remove") {
+				isRegenNeeded = !!(JSON.parse(await availableAPIs.fs_read({
+					path: (await availableAPIs.getSystemMount()) + "/modules/" + localFileName
+				})).backend?.files?.boot);
+				await availableAPIs.fs_rm({ path: (await availableAPIs.getSystemMount()) + "/modules/" + localFileName });
+				delete moduleConfig.local[moduleName];
+			}
+			statementNum++;
+		}
+		await availableAPIs.fs_write({
+			path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
+			data: JSON.stringify(moduleConfig)
+		});
+		log(await availableAPIs.lookupLocale("RELOADING_MODULES"));
+		await reloadModules(await availableAPIs.getSystemMount());
+		if (isRegenNeeded) await regenerateKernel();
+		log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
+		if (isRegenNeeded) log(await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT"));
+	}
+
 	let styleElement = document.createElement("style");
 	styleElement.innerText = `th, td { border: 1px solid black; }
 	table { overflow: scroll; min-width: 100%; width: max-content; }`;
@@ -41,6 +138,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let mountOfflineBtn = document.createElement("button");
 	let umountOfflineBtn = document.createElement("button");
 	let swapToSystemBtn = document.createElement("button");
+	log = logString => activityNote.innerText = logString;
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
 	installOnlineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_ONLINE_MODULE");
@@ -56,7 +154,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	updateModCfgBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
-		activityNote.innerText = await availableAPIs.lookupLocale("UPDATING_MODCFG");
+		log(await availableAPIs.lookupLocale("UPDATING_MODCFG"));
 		try {
 			let updateService = new URL("bdp://localhost");
 			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
@@ -68,15 +166,15 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
 				data: JSON.stringify(moduleConfig)
 			});
-			activityNote.innerText = await availableAPIs.lookupLocale("UPDATE_COUNTING");
+			log(await availableAPIs.lookupLocale("UPDATE_COUNTING"));
 			let forUpdate = [];
 			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
 				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
 					forUpdate.push(module);
-			activityNote.innerText = (await availableAPIs.lookupLocale("UPDATE_COUNT")).replace("%s", forUpdate.length);
+			log((await availableAPIs.lookupLocale("UPDATE_COUNT")).replace("%s", forUpdate.length));
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
+			log(await availableAPIs.lookupLocale("FAILED_TO_UPDATE"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -110,7 +208,6 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			let lostModules = Object.keys(moduleConfig.local).filter(a => !(moduleConfig.remote || {})[a]).sort((a, b) => a.localeCompare(b));
 			let remoteModules = Object.keys(moduleConfig.remote || {}).sort((a, b) => a.localeCompare(b));
 			let toInstall = [];
-			let isRegenNeeded = false;
 			for (let module of lostModules) {
 				let tableRow = document.createElement("tr");
 				let tableCellInstalled = document.createElement("td");
@@ -185,43 +282,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				discardChangesBtn.onclick = _ => reject();
 				applyChangesBtn.onclick = async function() {
 					try {
-						let modNum = 0;
-						for (let module of toInstall) {
-							activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toInstall.length).replace("%s", (modNum / toInstall.length * 100).toFixed(2));
-							if (moduleConfig.local[module] && moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
-								await availableAPIs.fs_rm({
-									path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
-								});
-							let moduleContent = (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content;
-							await availableAPIs.fs_write({
-								path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
-								data: moduleContent
-							});
-							if (JSON.parse(moduleContent).backend?.files?.boot) isRegenNeeded = true;
-							moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
-							modNum++;
-						}
-						await availableAPIs.fs_write({
-							path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-							data: JSON.stringify(moduleConfig)
-						});
-						activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
-						await reloadModules(await availableAPIs.getSystemMount());
-						try {
-							if (isRegenNeeded) await regenerateKernel();
-						} catch (e) {
-							console.error(e);
-							activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-						}
-						activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-						if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
+						await coreFunction(toInstall.map(a => {return{ type: "install", moduleName: a }}), { updateService, moduleConfig });
 						resolve();
 					} catch (e) { reject(e); }
 				}
 			});
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+			log(await availableAPIs.lookupLocale("FAILED_OP"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -236,7 +304,6 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
 			let result = {};
-			let isRegenNeeded = false;
 			try {
 				let ipcPipe = await availableAPIs.createPipe();
 				await availableAPIs.windowVisibility(false);
@@ -248,35 +315,11 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				await availableAPIs.windowVisibility(true);
 				throw e;
 			}
-			let moduleContent = JSON.parse(await availableAPIs.fs_read({ path: result.selected }));
-			activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", moduleContent.commonName).replace("%s", "1").replace("%s", "1").replace("%s", "0.00");
-			if (moduleConfig.local[moduleContent.commonName] && moduleContent.buildInfo.bootOrder != moduleConfig.local[moduleContent.commonName].bootOrder)
-				await availableAPIs.fs_rm({
-					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + moduleContent.buildInfo.commonName + ".fs"
-				});
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleContent.buildInfo.bootOrder + "-" + moduleContent.buildInfo.commonName + ".fs",
-				data: JSON.stringify(moduleContent)
-			});
-			if (moduleContent.backend.files.boot) isRegenNeeded = true;
-			moduleConfig.local[moduleContent.buildInfo.commonName] = moduleContent.buildInfo;
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-				data: JSON.stringify(moduleConfig)
-			});
-			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
-			await reloadModules(await availableAPIs.getSystemMount());
-			try {
-				if (isRegenNeeded) await regenerateKernel();
-			} catch (e) {
-				console.error(e);
-				activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-			}
-			activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-			if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
+			if (result.selected)
+				await coreFunction([ { type: "install", file: result.selected } ], { moduleConfig });
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+			log(await availableAPIs.lookupLocale("FAILED_OP"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -308,8 +351,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			applyChangesBtn.innerText = await availableAPIs.lookupLocale("APPLY_CHANGES");
 			discardChangesBtn.innerText = await availableAPIs.lookupLocale("DISCARD_CHANGES");
 			let toRemove = [];
-			let unremovable = [ "bootable", "core", "keys" ];
-			let isRegenNeeded = false;
+			let unremovable = pargs.unremovable ? (pargs.unremovable instanceof Array ? pargs.unremovable : [ pargs.unremovable ]) : [ "bootable", "core", "keys" ];
 			let localModules = Object.keys(moduleConfig.local).sort((a, b) => a.localeCompare(b));
 			for (let module of localModules) {
 				let tableRow = document.createElement("tr");
@@ -352,39 +394,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				discardChangesBtn.onclick = _ => reject();
 				applyChangesBtn.onclick = async function() {
 					try {
-						let modNum = 0;
-						for (let module of toRemove) {
-							activityNote.innerText = (await availableAPIs.lookupLocale("REMOVING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRemove.length).replace("%s", (modNum / toRemove.length * 100).toFixed(2));
-							isRegenNeeded = isRegenNeeded || !!(JSON.parse(await availableAPIs.fs_read({
-								path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
-							})).backend?.files?.boot);
-							await availableAPIs.fs_rm({
-								path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
-							});
-							delete moduleConfig.local[module];
-							modNum++;
-						}
-						await availableAPIs.fs_write({
-							path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-							data: JSON.stringify(moduleConfig)
-						});
-						activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
-						await reloadModules(await availableAPIs.getSystemMount());
-						try {
-							if (isRegenNeeded) await regenerateKernel();
-						} catch (e) {
-							console.error(e);
-							activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-						}
-						activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-						if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
+						await coreFunction(toRemove.map(a => {return{ type: "remove", moduleName: a }}), { updateService, moduleConfig });
 						resolve();
 					} catch (e) { reject(e); }
 				}
 			});
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+			log(await availableAPIs.lookupLocale("FAILED_OP"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -393,7 +410,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	updateSystemButton.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
-		activityNote.innerText = await availableAPIs.lookupLocale("UPDATING_MODULES");
+		log(await availableAPIs.lookupLocale("UPDATING_MODULES"));
 		try {
 			let updateService = new URL("bdp://localhost");
 			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
@@ -401,92 +418,34 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
 			}));
 			let forUpdate = [];
-			let isRegenNeeded = false;
 			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
 				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
 					forUpdate.push(module);
-			let modNum = 0;
-			for (let module of forUpdate) {
-				activityNote.innerText = (await availableAPIs.lookupLocale("INSTALLING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", forUpdate.length).replace("%s", (modNum / forUpdate.length * 100).toFixed(2));
-				if (moduleConfig.remote[module].bootOrder != moduleConfig.local[module].bootOrder)
-					await availableAPIs.fs_rm({
-						path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
-					});
-				let moduleContent = (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content;
-				await availableAPIs.fs_write({
-					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
-					data: moduleContent
-				});
-				if (JSON.parse(moduleContent).backend?.files?.boot) isRegenNeeded = true;
-				moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
-				modNum++;
-			}
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-				data: JSON.stringify(moduleConfig)
-			});
-			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
-			await reloadModules(await availableAPIs.getSystemMount());
-			
-			try {
-				if (isRegenNeeded) await regenerateKernel();
-			} catch (e) {
-				console.error(e);
-				activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-			}
-			if (forUpdate.length) {
-				activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-				if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
-			} else if (!forUpdate.length) activityNote.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
+			if (forUpdate.length) await coreFunction(forUpdate.map(a => {return{ type: "install", moduleName: a }}), { updateService, moduleConfig });
+			else if (!forUpdate.length) log(await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE"));
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
+			log(await availableAPIs.lookupLocale("FAILED_TO_UPDATE"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
 	});
-
-	async function regenerateKernel() {
-		activityNote.innerText = await availableAPIs.lookupLocale("GENERATING_KERNEL");
-		let entireBoot = [];
-		let bootFiles = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/boot" });
-		if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
-		if (bootFiles.includes("99-zzpatchfinisher.js")) bootFiles.splice(bootFiles.indexOf("99-zzpatchfinisher.js"), 1);
-		for (let bootFile of bootFiles) {
-			entireBoot.push([ bootFile, await availableAPIs.fs_read({
-				path: (await availableAPIs.getSystemMount()) + "/boot/" + bootFile
-			}) ]);
-		}
-		entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0]))
-			.map(a => "// modules/.../boot/" + a[0] + "\n" + a[1]).join("\n");
-		await availableAPIs.fs_write({
-			path: (await availableAPIs.getSystemMount()) + "/boot/00-compiled.js",
-			data: entireBoot + "\nreturn;/*"
-		});
-		await availableAPIs.fs_write({
-			path: (await availableAPIs.getSystemMount()) + "/boot/99-zzpatchfinisher.js",
-			data: "*/"
-		});
-	}
 
 	regenerateKernelBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
 		try {
 			await regenerateKernel();
-		} catch (e) {
-			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-		}
+			log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
+		} catch {}
 		await availableAPIs.closeability(true);
 		container.hidden = false;
-		activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 	});
 
 	repairOSBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
-		activityNote.innerText = await availableAPIs.lookupLocale("REPAIRING_SYSTEM");
+		log(await availableAPIs.lookupLocale("REPAIRING_SYSTEM"));
 		try {
 			let updateService = new URL("bdp://localhost");
 			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
@@ -496,7 +455,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			let toRepair = Object.keys(moduleConfig.local).filter(a => !!(moduleConfig.remote || {})[a]).sort((a, b) => a.localeCompare(b));
 			let modNum = 0;
 			for (let module of toRepair) {
-				activityNote.innerText = (await availableAPIs.lookupLocale("REPAIRING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRepair.length).replace("%s", (modNum / toRepair.length * 100).toFixed(2));
+				log((await availableAPIs.lookupLocale("REPAIRING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRepair.length).replace("%s", (modNum / toRepair.length * 100).toFixed(2)));
 				let moduleContent = (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content;
 				await availableAPIs.fs_rm({
 					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
@@ -512,18 +471,13 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
 				data: JSON.stringify(moduleConfig)
 			});
-			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
+			log(await availableAPIs.lookupLocale("RELOADING_MODULES"));
 			await reloadModules(await availableAPIs.getSystemMount());
-			try {
-				await regenerateKernel();
-			} catch (e) {
-				console.error(e);
-				activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
-			}
+			await regenerateKernel();
 			await availableAPIs.shutdown({ isReboot: true });
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("REPAIR_FAILED");
+			log(await availableAPIs.lookupLocale("REPAIR_FAILED"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -547,9 +501,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					mountBtn.innerText = mountpoint;
 					mountBtn.onclick = async function() {
 						try {
-							activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
+							log(await availableAPIs.lookupLocale("RELOADING_MODULES"));
 							await reloadModules(mountpoint, await availableAPIs.getSystemMount(), mountpoint + "-sys");
-							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+							log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
 							resolve();
 						} catch (e) {
 							reject(e);
@@ -560,7 +514,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+			log(await availableAPIs.lookupLocale("FAILED_OP"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -584,7 +538,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					mountBtn.innerText = mountpoint;
 					mountBtn.onclick = async function() {
 						try {
-							activityNote.innerText = await availableAPIs.lookupLocale("UNMOUNTING_MOUNTS");
+							log(await availableAPIs.lookupLocale("UNMOUNTING_MOUNTS"));
 							await availableAPIs.fs_unmount({ mount: mountpoint });
 							for (let mount of modSys[mountpoint].slice(1))
 								await availableAPIs.fs_unmount({ mount });
@@ -593,7 +547,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 								path: "ram/run/moduleSystem.json",
 								data: JSON.stringify(modSys)
 							});
-							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+							log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
 							resolve();
 						} catch (e) {
 							reject(e);
@@ -604,7 +558,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+			log(await availableAPIs.lookupLocale("FAILED_OP"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -628,7 +582,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					mountBtn.innerText = mountpoint;
 					mountBtn.onclick = async function() {
 						try {
-							activityNote.innerText = await availableAPIs.lookupLocale("SWAPPING_SYSTEMS");
+							log(await availableAPIs.lookupLocale("SWAPPING_SYSTEMS"));
 							let oldSysName = await availableAPIs.getSystemMount();
 							let newOldSysName = await availableAPIs.getSystemMount();
 							while (modSys[newOldSysName]) newOldSysName = newOldSysName + "~";
@@ -655,7 +609,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 								path: "ram/run/moduleSystem.json",
 								data: JSON.stringify(modSys)
 							});
-							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+							log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
 							resolve();
 						} catch (e) {
 							reject(e);
@@ -666,7 +620,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+			log(await availableAPIs.lookupLocale("FAILED_OP"));
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -684,6 +638,55 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	container.appendChild(swapToSystemBtn);
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
+
+	if (ppos[0]) {
+		log = function(logString) {
+			activityNote.innerText = logString;
+			availableAPIs.attachCLI();
+			availableAPIs.toMyCLI(logString + "\r\n");
+		}
+	}
+	if (ppos[0] == "update") updateModCfgBtn.click();
+	if (ppos[0] == "upgrade") updateSystemButton.click();
+	if (ppos[0] == "repairex") repairOSBtn.click();
+	if (ppos[0] == "installex") installOnlineModuleBtn.click();
+	if (ppos[0] == "removeex") removeModuleBtn.click();
+	if (ppos[0] == "regen") {
+		await availableAPIs.windowVisibility(false);
+		try {
+			await regenerateKernel();
+		} catch {}
+		availableAPIs.terminate();
+	} else if (ppos[0] == "install" || ppos[0] == "remove") {
+		await availableAPIs.windowVisibility(false);
+		let updateService, moduleConfig;
+		try {
+			updateService = new URL("bdp://localhost");
+			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
+			moduleConfig = JSON.parse(await availableAPIs.fs_read({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
+			}));
+		} catch (e) {
+			console.error(e);
+			log("Failed to read environment properties");
+		}
+		await coreFunction(ppos.slice(1).map(a =>{return{ type: ppos[0], moduleName: a }}), { moduleConfig, updateService });
+		availableAPIs.terminate();
+	} else if (ppos[0] == "help") {
+		await availableAPIs.toMyCLI("moduleManager [options] [operation]\r\n");
+		await availableAPIs.toMyCLI("\t--unremovable - make other packages unremovable instead of system defaults");
+		await availableAPIs.toMyCLI("\tGUI operations:\r\n");
+		await availableAPIs.toMyCLI("\t\tupdate - Update module configuration\r\n");
+		await availableAPIs.toMyCLI("\t\tupgrade - Upgrade the system\r\n");
+		await availableAPIs.toMyCLI("\t\trepairex - Repair the system\r\n");
+		await availableAPIs.toMyCLI("\t\tinstallex - Install a module online\r\n");
+		await availableAPIs.toMyCLI("\t\tremoveex - Remove a module\r\n");
+		await availableAPIs.toMyCLI("\tCLI operations:\r\n");
+		await availableAPIs.toMyCLI("\t\tregen - Regenerate the kernel\r\n");
+		await availableAPIs.toMyCLI("\t\tinstall [package1] ... [packageN] - Install packages\r\n");
+		await availableAPIs.toMyCLI("\t\tremove [package1] ... [packageN] - Remove packages\r\n");
+		availableAPIs.terminate();
+	}
 })();
 async function recursiveKeyVerify(mnt, key, khrl) {
 	if (!key) throw new Error("NO_KEY");

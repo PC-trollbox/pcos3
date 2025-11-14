@@ -77,7 +77,7 @@ let onClose = () => availableAPIs.terminate();
 		}
 	} catch {}
 	let installed_modules = [
-		"50-bootable.fs", "50-core.fs", "50-diff.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-sysadmin.fs",
+		"50-bootable.fs", "50-core.fs", "00-keys.fs", "50-pcos-icons.fs", "50-pcos-sounds.fs", "50-pcos-wallpapers.fs", "50-sysadmin.fs",
 		"50-terminal-disks.fs", "50-terminal-network.fs", "50-terminal-users.fs", "50-terminal.fs", "50-tweetnacl.fs", "50-xterm.fs", "50-blogBrowser.fs",
 		"50-calculator.fs", "50-crypto-tools.fs", "50-multimedia.fs"
 	];
@@ -364,7 +364,7 @@ Used libraries:
 					let password = useraccountpassword.value;
 					if (!username && !canSkip) return;
 					if (username.includes("/")) return;
-					if (!password && !canSkip) return;
+					if (!password && !canSkip) return htmlAlert(await availableAPIs.lookupLocale("PASSWORD_INPUT_ALERT"));
 					let homedir = username == "root" ? ("target/root") : ("target/home/" + username);
 					let darkModeChecked = darkmode.checked;
 					content.innerHTML = "";
@@ -407,6 +407,12 @@ Used libraries:
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CHANGING_ROOT_PERMISSIONS"));
 						await availableAPIs.fs_chmod({ path: "target", newPermissions: "rx" });
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("COPYING_FOLDERS"));
+						let moduleStatus = document.createElement("progress");
+						description.appendChild(document.createElement("br"));
+						description.appendChild(moduleStatus);
+						try {
+							recursiveRemove("target/boot");
+						} catch {}
 						try {
 							recursiveRemove("target/modules");
 						} catch {}
@@ -414,7 +420,9 @@ Used libraries:
 							await availableAPIs.fs_mkdir({ path: "target/modules" });
 						} catch {}
 						let modules = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/modules" });
-						for (let module of installed_modules) {
+						moduleStatus.max = installed_modules.length;
+						for (let moduleIndex in installed_modules) {
+							let module = installed_modules[moduleIndex];
 							if (!modules.includes(module)) {
 								if (downloadFromBdpOnMissing) try {
 									let fetchModule = await bdpGet(new URL("/module_repository/" + module, downloadFromBdpOnMissing));
@@ -433,6 +441,7 @@ Used libraries:
 										path: (await availableAPIs.getSystemMount()) + "/modules/" + module
 									})
 								});
+								moduleStatus.value++;
 							}
 						}
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_DIRECTORY_STRUCTURE"));
@@ -504,6 +513,18 @@ Used libraries:
 							});
 						}
 						if (!canSkip) {
+							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER_STRUCTURE"));
+							await availableAPIs.fs_write({
+								path: "target/etc/security/users",
+								data: JSON.stringify({authui: {
+									securityChecks: [],
+									groups: ["authui"],
+									homeDirectory: "system",
+									blankPrivileges: true,
+									additionalPrivilegeSet: [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "FS_READ", "FS_LIST_PARTITIONS", "CSP_OPERATIONS" ]
+								}})
+							});
+							await availableAPIs.fs_chmod({ path: "target/etc/security/users", newPermissions: "" });
 							description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_USER"));
 							let salt = await availableAPIs.cspOperation({
 								cspProvider: "basic",
@@ -539,17 +560,6 @@ Used libraries:
 							await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: key });
 							let currentMount = await availableAPIs.getSystemMount();
 							await availableAPIs.setSystemMount("target");
-							await availableAPIs.fs_write({
-								path: "target/etc/security/users",
-								data: JSON.stringify({authui: {
-									securityChecks: [],
-									groups: ["authui"],
-									homeDirectory: "system",
-									blankPrivileges: true,
-									additionalPrivilegeSet: [ "IPC_SEND_PIPE", "GET_LOCALE", "GET_THEME", "ELEVATE_PRIVILEGES", "FS_READ", "FS_LIST_PARTITIONS", "CSP_OPERATIONS" ]
-								}})
-							});
-							await availableAPIs.fs_chmod({ path: "target/etc/security/users", newPermissions: "" });
 							await availableAPIs.setUserInfo({
 								desiredUser: username,
 								info: {
@@ -611,6 +621,13 @@ Used libraries:
 								} catch {}
 							}
 							if (!automatic_configuration.secondstage.noReconfiguring || newInstall) {
+								description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_DARKMODE2L"));
+								try {
+									await availableAPIs.fs_write({
+										path: "target/etc/darkLockScreen",
+										data: "false"
+									});
+								} catch {}
 								description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("INSTALLING_WP2L"));
 								try {
 									await availableAPIs.fs_write({
