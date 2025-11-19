@@ -343,9 +343,7 @@ async function requireLogon() {
 				group: userInfo.groups[0],
 				world: false
 			});
-			let taskbar = document.createElement("div");
-			let clock = document.createElement("span");
-			let startButton = document.createElement("button");
+			let { taskbar, icons: taskbarIcons, startButton } = modules.session.tracker[session].extendedHTML;
 			let startMenu = modules.window(session);
 			let forkedStartMenuToken = await modules.tokens.fork(resolvedLogon.token);
 
@@ -368,8 +366,7 @@ async function requireLogon() {
 			}
 
 			startMenuStub();
-			startButton.innerText = modules.locales.get("START_MENU_BTN", locale);
-			startButton.style = "padding: 4px;";
+			startButton.disabled = false;
 			try {
 				await modules.tasks.exec(modules.defaultSystem + "/apps/startMenu.js", [], startMenu, forkedStartMenuToken, true, startMenuChannel);
 			} catch (e) {
@@ -413,10 +410,6 @@ async function requireLogon() {
 				}
 			})();
 
-			taskbar.className = "taskbar";
-			clock.className = "clock";
-			let filler = document.createElement("div");
-			filler.className = "filler";
 			let battery = document.createElement("div");
 			let networkIcon = document.createElement("div");
 			let pcosNetworkIcon = document.createElement("div");
@@ -433,10 +426,7 @@ async function requireLogon() {
 				}
 			}
 
-			let toggle = false;
-			clock.addEventListener("click", _ => toggle = !toggle);
 			liu[liuUser].clockInterval = setInterval(async function() {
-				clock.innerText = Intl.DateTimeFormat(locale, { timeStyle: toggle ? undefined : "medium" }).format()
 				networkIcon.style.backgroundImage = "url(" + JSON.stringify(navigator.onLine ? iconCache.network_ : iconCache.network_offline_) + ")";
 				networkIcon.title = modules.locales.get("NETWORK_STATUS_" + (navigator.onLine ? "ONLINE" : "OFFLINE"), locale)
 				pcosNetworkIcon.style.backgroundImage = "url(" + JSON.stringify(modules.network.connected ? iconCache.pcos_network_ : iconCache.pcos_network_offline_) + ")";
@@ -462,12 +452,9 @@ async function requireLogon() {
 			battery.className = "icon";
 			networkIcon.className = "icon";
 			pcosNetworkIcon.className = "icon";
-			taskbar.appendChild(startButton);
-			taskbar.appendChild(filler);
-			taskbar.appendChild(battery);
-			taskbar.appendChild(networkIcon);
-			taskbar.appendChild(pcosNetworkIcon);
-			taskbar.appendChild(clock);
+			taskbarIcons.appendChild(battery);
+			taskbarIcons.appendChild(networkIcon);
+			taskbarIcons.appendChild(pcosNetworkIcon);
 			dom.appendChild(taskbar);
 		}
 	}
@@ -568,8 +555,7 @@ async function serviceLogon() {
 			await modules.session.activateSession(modules.session.systemSession);
 		}
 	}
-	let taskbar = document.createElement("div");
-	taskbar.className = "taskbar";
+	let taskbar = modules.session.tracker[session].extendedHTML.taskbar;
 
 	taskbar.appendChild(startButton);
 	dom.appendChild(taskbar);

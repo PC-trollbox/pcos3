@@ -40,15 +40,15 @@ function loadUserFriendly() {
 			return string;
 		},
 		considerateTime: function(language, ms, majorUnitsOnly, displayMs) {
-			let dateObject = new Date(ms + (new Date(ms).getTimezoneOffset() * 60000));
+			let dateObject = new Date(ms);
 			let string = "";
-			let years = dateObject.getFullYear() - 1970;
-			let months = dateObject.getMonth();
-			let days = dateObject.getDate() - 1;
-			let hours = dateObject.getHours();
-			let minutes = dateObject.getMinutes();
-			let seconds = dateObject.getSeconds();
-			let millisec = dateObject.getMilliseconds();
+			let years = dateObject.getUTCFullYear() - 1970;
+			let months = dateObject.getUTCMonth();
+			let days = dateObject.getUTCDate() - 1;
+			let hours = dateObject.getUTCHours();
+			let minutes = dateObject.getUTCMinutes();
+			let seconds = dateObject.getUTCSeconds();
+			let millisec = dateObject.getUTCMilliseconds();
 			if (years) string = string + modules.locales.get("SHORT_YEARS", language).replace("%s", years) + " ";
 			if (years && majorUnitsOnly) return string;
 			if (months) string = string + modules.locales.get("SHORT_MONTHS", language).replace("%s", months) + " ";

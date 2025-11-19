@@ -9,15 +9,11 @@ function loadUi() {
 	}
 
 	.taskbar {
-		width: 100%;
 		background: ${modules.core.bootMode == "safe" ? "rgb(128, 128, 128)" : "rgba(128, 128, 128, 0.85)"};
-		left: 0;
-		bottom: 0;
-		position: absolute;
 		padding: 4px;
-		box-sizing: border-box;
 		border-radius: 4px;
 		display: flex;
+		margin: 2px;
 	}
 
 	.taskbar .clock {
@@ -25,13 +21,24 @@ function loadUi() {
 	}
 
 	.taskbar .icon {
-		width: 27px;
-		height: 27px;
+		width: 23px;
+		height: 23px;
 		background-size: contain;
-		margin: 0 4px;
+		background-repeat: no-repeat;
+		margin: 0 2px;
+		display: inline-block;
+	}
+	
+	.taskbar .tbicons {
+		display: flex;
 	}
 
 	.filler {
+		flex: 1;
+	}
+	
+	.desktop {
+		position: relative;
 		flex: 1;
 	}
 
@@ -116,7 +123,6 @@ function loadUi() {
 	.window.fullscreen {
 		width: 100% !important;
 		height: 100% !important;
-		position: fixed;
 		top: 0 !important;
 		left: 0 !important;
 		transform: none;
@@ -149,12 +155,15 @@ function loadUi() {
 		background: black;
 		cursor: default;
 		animation: ${modules.core.bootMode == "safe" ? "none" : "fade-in 0.1s ease-in forwards"};
+		display: flex;
+		flex-direction: column;
 	}
 
 	.session.secure {
 		background: none${modules.core.bootMode == "safe" ? " !important" : ""};
 		backdrop-filter: ${modules.core.bootMode == "safe" ? "none" : "blur(8px) brightness(50%)"};
 		animation: ${modules.core.bootMode == "safe" ? "none" : "fade 0.1s ease-out forwards"};
+		z-index: -1;
 	}
 
 	.hidden {
@@ -212,7 +221,7 @@ function loadUi() {
 		let content = document.createElement('div');
 		content.className = 'content';
 		windowDiv.appendChild(content);
-		session.tracker[sessionId].html.appendChild(windowDiv);
+		session.tracker[sessionId].extendedHTML.desktop.appendChild(windowDiv);
 		if (!asIconWindow) {
 			let openWins = session.attrib(sessionId, "openWins") || [];
 			openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
@@ -286,13 +295,43 @@ function loadUi() {
 		mksession: function() {
 			if (modules.shuttingDown) throw new Error("SYSTEM_SHUTDOWN_REQUESTED");
 			let identifier = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-			let session = document.createElement('div');
+			let session = document.createElement("div");
+			let desktop = document.createElement("div");
+			let taskbar = document.createElement("div");
+			let startButton = document.createElement("button");
+			let taskList = document.createElement("div");
+			let filler = document.createElement("div");
+			let icons = document.createElement("div");
+			let clock = document.createElement("div");
+
 			session.className = "session hidden";
+			desktop.className = "desktop";
+			taskbar.className = "taskbar";
+			icons.className = "tbicons";
+			filler.className = "filler";
+			startButton.disabled = true;
+
+			taskbar.append(startButton, taskList, filler, icons, clock);
+			session.append(desktop, taskbar);
 			document.body.appendChild(session);
+
+			let clockToggled = false;
+			clock.addEventListener("click", _ => clockToggled = !clockToggled);
+			let updateTaskbar = () => {
+				if (!session.parentElement) return;
+				let locale = this.tracker[identifier].attrib.locale || modules.locales?.defaultLocale || "en";
+				startButton.innerText = modules.locales?.get("START_MENU_BTN", locale);
+				clock.innerText = Intl.DateTimeFormat(locale, { timeStyle: clockToggled ? undefined : "medium" }).format();
+				setTimeout(updateTaskbar, 500);
+			}
+
 			this.tracker[identifier] = {
 				html: session,
+				extendedHTML: { desktop, taskbar, startButton, taskList, filler, icons, clock },
 				attrib: {}
 			};
+			updateTaskbar();
+
 			return identifier;
 		},
 		rmsession: function(session) {

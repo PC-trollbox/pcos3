@@ -300,8 +300,8 @@ function ConnfulServer(gate, socket) {
 					connections[packetConnectionID + ":server"].messageSendEvent.on("message", async function(sentMessage) {
 						let mylockc = lockc;
 						while (lockc >= mylockc && lockc != 0) await lock;
-						lock = new Promise(r => _lock = r);
 						lockc++;
+						lock = new Promise(r => _lock = r);
 						let iv = crypto.getRandomValues(new Uint8Array(12));
 						let ct = new Uint8Array(await crypto.subtle.encrypt({
 							name: "AES-GCM",

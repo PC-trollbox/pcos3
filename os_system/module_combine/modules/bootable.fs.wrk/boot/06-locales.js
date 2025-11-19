@@ -8,7 +8,8 @@ function localization() {
 			if (!locale) locale = {};
 			if (!locale.hasOwnProperty(key)) locale = locales[locales.defaultLocale || "en"] || {};
 			return locale.hasOwnProperty(key) ? locale[key] : key;
-		}
+		},
+		defaultLocale: navigator.languages[0].split("-")[0].toLowerCase()
 	}
 	modules.locales = locales;
 }
