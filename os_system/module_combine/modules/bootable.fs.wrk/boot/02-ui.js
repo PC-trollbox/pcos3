@@ -188,6 +188,20 @@ function loadUi() {
 		100% {
 			backdrop-filter: blur(8px) brightness(50%);
 		}
+	}
+	
+	.warning {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		background: #2a2a2a;
+		color: white;
+		border-radius: 4px;
+		opacity: 60%;
+		pointer-events: none;
+		user-select: none;
+		padding: 8px;
+		z-index: 256;
 	}`;
 	document.head.appendChild(uiStyle);
 
@@ -320,9 +334,20 @@ function loadUi() {
 			let updateTaskbar = () => {
 				if (!session.parentElement) return;
 				let locale = this.tracker[identifier].attrib.locale || modules.locales?.defaultLocale || "en";
+				let clockLocale = modules.locales?.get("OS_LOCALE", locale);
 				startButton.innerText = modules.locales?.get("START_MENU_BTN", locale);
-				clock.innerText = Intl.DateTimeFormat(locale, { timeStyle: clockToggled ? undefined : "medium" }).format();
+				clock.innerText = Intl.DateTimeFormat(clockLocale, { timeStyle: clockToggled ? undefined : "medium" }).format();
 				setTimeout(updateTaskbar, 500);
+			};
+
+			if ([ "safe", "disable-harden" ].includes(modules.core.bootMode)) {
+				let warning = document.createElement("span");
+				warning.className = "warning";
+				if (modules.core.bootMode == "disable-harden") {
+					warning.innerText = modules.locales?.get("INSECURE_MODE_MSG") || "Reduced security!";
+					warning.style.background = "#7f0000";
+				} else if (modules.core.bootMode == "safe") warning.innerText = modules.locales?.get("SAFE_MODE_MSG") || "Safe mode";
+				session.appendChild(warning);
 			}
 
 			this.tracker[identifier] = {

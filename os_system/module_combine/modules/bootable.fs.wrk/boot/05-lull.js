@@ -4,7 +4,8 @@ function loadLull() {
 		if (lullSession) return;
 		let style = document.createElement("style");
 		style.innerHTML = `* { cursor: none !important; }
-		.taskbar { display: none !important; }`;
+		.taskbar { display: none !important; }
+		.warning { display: none !important; }`;
 		document.head.appendChild(style);
 		lullSession = modules.session.mksession();
 		modules.session.muteAllSessions();

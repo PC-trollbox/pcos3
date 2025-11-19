@@ -483,7 +483,7 @@ modules.locales.ru = {
 	"LANGUAGE_SELECT": "Ваш язык: ",
 	"CHANGE_LOCALE": "Изменить язык",
 	"MOUNT_EXISTS": "Монтирование уже существует",
-	"INSECURE_MODE_MSG": "Небезопасные параметры!",
+	"INSECURE_MODE_MSG": "Безопасность снижена!",
 	"MODULE_REQUIRED": "Для этой функции требуется модуль \"%s\". Обратитесь к системному администратору.",
 	"CREATING_DIRECTORY_STRUCTURE": "Создание структуры каталогов",
 	"GENERATING_KERNEL": "Создание ядра системы",

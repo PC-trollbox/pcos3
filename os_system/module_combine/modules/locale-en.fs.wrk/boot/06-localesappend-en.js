@@ -483,7 +483,7 @@ modules.locales.en = {
 	"LANGUAGE_SELECT": "Your language: ",
 	"CHANGE_LOCALE": "Change language",
 	"MOUNT_EXISTS": "Mount already exists",
-	"INSECURE_MODE_MSG": "Insecure configuration!",
+	"INSECURE_MODE_MSG": "Reduced security!",
 	"MODULE_REQUIRED": "The module \"%s\" is required for this function. Contact the system administrator.",
 	"CREATING_DIRECTORY_STRUCTURE": "Creating directory structure",
 	"GENERATING_KERNEL": "Generating system kernel",

@@ -13,7 +13,6 @@ async function requireLogon() {
 	let liu = {};
 	modules.liu = liu;
 	serviceLogon();
-	let insertedLockMessage = false;
 	async function handleLogin(resolvedLogon, liu) {
 		modules.session.muteAllSessions();
 		let userInfo = await modules.tokens.info(resolvedLogon.token);
@@ -82,31 +81,10 @@ async function requireLogon() {
 		}
 		if (modules.core.bootMode == "safe") {
 			isDark = true;
-			if (!wasLiuLoaded) {
-				let message = document.createElement("span");
-				message.innerText = modules.locales.get("SAFE_MODE_MSG", locale);
-				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-				dom.appendChild(message);
-				let message2 = document.createElement("span");
-				message2.innerText = modules.locales.get("SAFE_MODE_MSG", locale);
-				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-				dom.appendChild(message2);
-			}
 			bgPic = "";
 		}
-		if (modules.core.bootMode == "disable-harden" && !wasLiuLoaded) {
-			let message = document.createElement("span");
-			message.innerText = modules.locales.get("INSECURE_MODE_MSG", locale);
-			message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-			dom.appendChild(message);
-			let message2 = document.createElement("span");
-			message2.innerText = modules.locales.get("INSECURE_MODE_MSG", locale);
-			message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-			dom.appendChild(message2);
-		}
 		modules.session.attrib(session, "dark", isDark);
-		dom.style.background = "url(" + JSON.stringify(bgPic) + ")";
-		if (modules.core.bootMode == "safe") dom.style.background = "black";
+		dom.style.background = bgPic ? "url(" + JSON.stringify(bgPic) + ")" : "black";
 		dom.style.backgroundSize = "100% 100%";
 		if (!wasLiuLoaded) {
 			let autoRunNecessities = [];
@@ -481,31 +459,8 @@ async function requireLogon() {
 		if (modules.core.bootMode == "safe") {
 			lockIsDark = true;
 			lockWallpaper = "";
-			if (!insertedLockMessage) {
-				insertedLockMessage = true;
-				let message = document.createElement("span");
-				message.innerText = modules.locales.get("SAFE_MODE_MSG");
-				message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-				sysDom.appendChild(message);
-				let message2 = document.createElement("span");
-				message2.innerText = modules.locales.get("SAFE_MODE_MSG");
-				message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-				sysDom.appendChild(message2);
-			}
 		}
-		if (modules.core.bootMode == "disable-harden" && !insertedLockMessage) {
-			insertedLockMessage = true;
-			let message = document.createElement("span");
-			message.innerText = modules.locales.get("INSECURE_MODE_MSG");
-			message.style = "position: absolute; right: 8px; bottom: 8px; color: white;";
-			sysDom.appendChild(message);
-			let message2 = document.createElement("span");
-			message2.innerText = modules.locales.get("INSECURE_MODE_MSG");
-			message2.style = "position: absolute; top: 8px; left: 8px; color: white;";
-			sysDom.appendChild(message2);
-		}
-		sysDom.style.background = "url(" + JSON.stringify(lockWallpaper) + ")";
-		if (modules.core.bootMode == "safe") sysDom.style.background = "black";
+		sysDom.style.background = lockWallpaper ? "url(" + JSON.stringify(lockWallpaper) + ")" : "black";
 		sysDom.style.backgroundSize = "100% 100%";
 		modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
 		let logon, resolvedLogon;
