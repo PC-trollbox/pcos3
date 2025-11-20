@@ -521,5 +521,20 @@ modules.locales.en = {
 	"SWAPPING_SYSTEMS": "Swapping to the system...",
 	"INSTALL_OFFLINE_MODULE": "Install offline module",
 	"RESTRICT_PROMPT": "Access levels:\r\nfull - Full access\r\nuser - Regular access (default)\r\nro - Read-only access\r\nInput access level",
-	"RESTRICT_OPTION": "Restricted access"
+	"RESTRICT_OPTION": "Restricted access",
+	"BREAKOUT_MODULE_NAME": "The Breakout game example (from MDN)",
+	"BOOTABLE_MODULE_NAME": "Main kernel files",
+	"CORE_MODULE_NAME": "Core system files",
+	"DIFF_MODULE_NAME": "Difference computing library (by Logan R. Kearsley)",
+	"INSTFILES_MODULE_NAME": "Installer environment files",
+	"KEYS_MODULE_NAME": "PCsoft cryptographic keys",
+	"MULTIMEDIA_MODULE_NAME": "Multimedia support",
+	"ICONS_MODULE_NAME": "Default PCOS 3 icons",
+	"SOUNDS_MODULE_NAME": "Default PCOS 3 sound effects",
+	"WP_MODULE_NAME": "Default PCOS 3 wallpapers",
+	"TERMDISK_MODULE_NAME": "Disk management CLI tools",
+	"TERMNET_MODULE_NAME": "Networking CLI tools",
+	"TERMUSER_MODULE_NAME": "User management CLI tools",
+	"TWNACL_MODULE_NAME": "TweetNaCl.js cryptographic library",
+	"XTERM_MODULE_NAME": "xterm.js terminal support library (by The xterm.js authors)"
 };

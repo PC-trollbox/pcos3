@@ -520,5 +520,20 @@ modules.locales.ru = {
 	"SWAPPING_SYSTEMS": "Переключение на систему...",
 	"INSTALL_OFFLINE_MODULE": "Установить модуль офлайн",
 	"RESTRICT_PROMPT": "Уровни доступа:\r\nfull - Полный доступ\r\nuser - Обычный доступ (умолчание)\r\nro - Доступ только для чтения\r\nВведите уровень доступа",
-	"RESTRICT_OPTION": "Ограниченный доступ"
+	"RESTRICT_OPTION": "Ограниченный доступ",
+	"BREAKOUT_MODULE_NAME": "Игра-пример Breakout (из MDN)",
+	"BOOTABLE_MODULE_NAME": "Основные файлы ядра",
+	"CORE_MODULE_NAME": "Важные файлы системы",
+	"DIFF_MODULE_NAME": "Библиотека вычисления разности (сделана Logan R. Kearsley)",
+	"INSTFILES_MODULE_NAME": "Файлы установочного окружения",
+	"KEYS_MODULE_NAME": "Криптографические ключи PCsoft",
+	"MULTIMEDIA_MODULE_NAME": "Поддержка мультимедиа",
+	"ICONS_MODULE_NAME": "Иконки PCOS 3 по умолчанию",
+	"SOUNDS_MODULE_NAME": "Звуковые эффекты PCOS 3 по умолчанию",
+	"WP_MODULE_NAME": "Обои PCOS 3 по умолчанию",
+	"TERMDISK_MODULE_NAME": "Управление диском в терминале",
+	"TERMNET_MODULE_NAME": "Сетевые соединения в терминале",
+	"TERMUSER_MODULE_NAME": "Управление пользователями в терминале",
+	"TWNACL_MODULE_NAME": "Криптографическая библиотека TweetNaCl.js",
+	"XTERM_MODULE_NAME": "Библиотека поддержки терминала xterm.js (сделана The xterm.js authors)"
 };

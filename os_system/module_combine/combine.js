@@ -44,6 +44,32 @@ let archivedModules = [
 	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal", "blogBrowser", "calculator", "crypto-tools", "legacy-terminal",
 	"arcadeBreakout", "multimedia"
 ];
+let moduleFriendlyNames = {
+	"arcadeBreakout": "lrn:BREAKOUT_MODULE_NAME",
+	"blogBrowser": "lrn:BLOG_BROWSER_NAME",
+	"bootable": "lrn:BOOTABLE_MODULE_NAME",
+	"calculator": "lrn:CALC_TITLE",
+	"core": "lrn:CORE_MODULE_NAME",
+	"crypto-tools": "lrn:CRYPTO_TOOLS_TITLE",
+	"diff": "lrn:DIFF_MODULE_NAME",
+	"installer-modules": "lrn:INSTFILES_MODULE_NAME",
+	"installer": "lrn:INSTALLER_TITLE",
+	"keys": "lrn:KEYS_MODULE_NAME",
+	"legacy-terminal": "lrn:API_TEST_TERM",
+	"locale-en": "English language support",
+	"locale-ru": "Поддержка Русского языка (Russian language support)",
+	"multimedia": "lrn:MULTIMEDIA_MODULE_NAME",
+	"pcos-icons": "lrn:ICONS_MODULE_NAME",
+	"pcos-sounds": "lrn:SOUNDS_MODULE_NAME",
+	"pcos-wallpapers": "lrn:WP_MODULE_NAME",
+	"sysadmin": "lrn:SYSADMIN_TOOLS_TITLE",
+	"terminal-disks": "lrn:TERMDISK_MODULE_NAME",
+	"terminal-network": "lrn:TERMNET_MODULE_NAME",
+	"terminal-users": "lrn:TERMUSER_MODULE_NAME",
+	"terminal": "lrn:REAL_TERMINAL_NAME",
+	"tweetnacl": "lrn:TWNACL_MODULE_NAME",
+	"xterm": "lrn:XTERM_MODULE_NAME"
+}
 let getModuleOrder = module => specialOrdering[module]?.toString().padStart(2, "0") || "50";
 let keypair = false;
 let ext2mime = {
@@ -165,7 +191,9 @@ function createModule(directory, permissionsPrefixed = "") {
 			signer: "moduleSigner",
 			critical: criticalModules.includes(moduleBasename),
 			bootOrder: getModuleOrder(moduleBasename),
-			commonName: moduleBasename
+			commonName: moduleBasename,
+			friendlyNameRef: moduleFriendlyNames[moduleBasename]?.startsWith("lrn:") ? moduleFriendlyNames[moduleBasename].slice(4) : undefined,
+			friendlyName: moduleFriendlyNames[moduleBasename]?.startsWith("lrn:") ? undefined : moduleFriendlyNames[moduleBasename]
 		};
 		let signingKey = keypair.moduleTrust_private;
 		if (path.basename(directory) == "keys.fs.wrk") {

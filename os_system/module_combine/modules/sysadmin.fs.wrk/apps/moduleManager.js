@@ -218,7 +218,8 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				checkboxInstalled.type = "checkbox";
 				checkboxInstalled.checked = true;
 				checkboxInstalled.disabled = true;
-				tableCellModName.innerText = module;
+				let friendlyName = await findFriendlyName(moduleConfig.local[module]);
+				tableCellModName.innerText = friendlyName ? (friendlyName + " (" + module + ")") : module;
 				tableCellModVersion.innerText = moduleConfig.local[module].version;
 				tableCellTargeting.innerText = moduleConfig.local[module].for;
 				tableCellInstalled.appendChild(checkboxInstalled);
@@ -251,7 +252,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					else toInstall.push(module);
 				};
 
+				let localFriendlyName = await findFriendlyName(moduleConfig.local[module]);
+				let remoteFriendlyName = await findFriendlyName(moduleConfig.remote[module]);
 				tableCellModName.innerText = module;
+				if ((localFriendlyName == remoteFriendlyName || !localFriendlyName) && remoteFriendlyName)
+					tableCellModName.innerText = remoteFriendlyName + " (" + module + ")";
+				else if (remoteFriendlyName)
+					tableCellModName.innerText = localFriendlyName + " -> " + remoteFriendlyName + " (" + module + ")";
+
 				tableCellModVersion.innerText = moduleConfig.remote[module].version;
 				if (isInstalled && moduleConfig.remote[module].version > moduleConfig.local[module].version)
 					tableCellModVersion.innerText = moduleConfig.local[module].version + " -> " + tableCellModVersion.innerText;
@@ -369,7 +377,8 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					else toRemove.push(module);
 				};
 
-				tableCellModName.innerText = module;
+				let friendlyName = await findFriendlyName(moduleConfig.local[module]);
+				tableCellModName.innerText = friendlyName ? (friendlyName + " (" + module + ")") : module;
 				tableCellModVersion.innerText = moduleConfig.local[module].version;
 				tableCellTargeting.innerText = moduleConfig.local[module].for;
 
@@ -688,6 +697,11 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		availableAPIs.terminate();
 	}
 })();
+async function findFriendlyName(moduleConfig) {
+	if (moduleConfig?.friendlyNameDB) return moduleConfig.friendlyNameDB[await availableAPIs.lookupLocale("OS_LOCALE")];
+	if (moduleConfig?.friendlyNameRef) return await availableAPIs.lookupLocale(moduleConfig.friendlyNameRef);
+	return moduleConfig?.friendlyName;
+}
 async function recursiveKeyVerify(mnt, key, khrl) {
 	if (!key) throw new Error("NO_KEY");
 	if (key.keyInfo.dates?.since > Date.now()) throw new Error("KEY_NOT_IN_TIME");

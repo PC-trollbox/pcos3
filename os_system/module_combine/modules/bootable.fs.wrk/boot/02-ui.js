@@ -243,7 +243,7 @@ function loadUi() {
 			windowDiv.style.zIndex = openWins.length;
 			openWins.push(windowDiv);
 			session.attrib(sessionId, "openWins", openWins);
-		} else windowDiv.style.zIndex = "-1";
+		} else windowDiv.style.zIndex = "0";
 		if (!fullscreen) makeDraggable(windowDiv, titleBar, reportMovement, asIconWindow ? false : sessionId);
 		return {
 			windowDiv,
