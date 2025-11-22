@@ -104,7 +104,7 @@ server.on("connection", function(socket, req) {
 					}
 					socketList[newAddress.toString("hex")] = socket;
 					if (hostname.length == 0 || (hostname + ".basic") in dnsTable)
-						hostname = "node" + crypto.randomBytes(8).toString("hex") + ".basic";
+						hostname = "node" + crypto.randomBytes(8).toString("hex");
 					hostname = hostname + ".basic";
 					netAddress = newAddress;
 					dnsTable[hostname] = netAddress.toString("hex");

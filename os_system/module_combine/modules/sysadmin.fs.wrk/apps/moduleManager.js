@@ -40,10 +40,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		} else ppos.push(arg);
 	}
 
-	let log = console.log;
 	async function regenerateKernel() {
 		try {
-			log(await availableAPIs.lookupLocale("GENERATING_KERNEL"));
+			activityNote.innerText = await availableAPIs.lookupLocale("GENERATING_KERNEL");
 			let entireBoot = [];
 			let bootFiles = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/boot" });
 			if (bootFiles.includes("00-compiled.js")) bootFiles.splice(bootFiles.indexOf("00-compiled.js"), 1);
@@ -65,7 +64,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED"));
+			activityNote.innerText = await availableAPIs.lookupLocale("REGENERATING_KERNEL_FAILED");
 			throw e;
 		}
 	}
@@ -76,13 +75,13 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		let isRegenNeeded = false;
 		for (let statement of program) {
 			let moduleName = statement.moduleName;
-			let localInfo = moduleConfig.local[moduleName];
-			let remoteInfo = moduleConfig.remote[moduleName];
+			let localInfo = (moduleConfig.local || {})[moduleName];
+			let remoteInfo = (moduleConfig.remote || {})[moduleName];
 			let remoteFileName = remoteInfo?.bootOrder + "-" + remoteInfo?.commonName + ".fs";
 			let localFileName = localInfo?.bootOrder + "-" + moduleName + ".fs";
-			log((await availableAPIs.lookupLocale("MANAGING_MODULE"))
+			activityNote.innerText = (await availableAPIs.lookupLocale("MANAGING_MODULE"))
 				.replace("%s", moduleName || (await availableAPIs.lookupLocale("UNKNOWN_PLACEHOLDER"))).replace("%s", statementNum + 1)
-				.replace("%s", program.length).replace("%s", (statementNum / program.length * 100).toFixed(2)));
+				.replace("%s", program.length).replace("%s", (statementNum / program.length * 100).toFixed(2));
 			if (statement.type == "install") {
 				if (statement.file) {
 					remoteInfo = JSON.parse(await availableAPIs.fs_read({ path: statement.file })).buildInfo;
@@ -115,11 +114,11 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
 			data: JSON.stringify(moduleConfig)
 		});
-		log(await availableAPIs.lookupLocale("RELOADING_MODULES"));
+		activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
 		await reloadModules(await availableAPIs.getSystemMount());
 		if (isRegenNeeded) await regenerateKernel();
-		log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
-		if (isRegenNeeded) log(await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT"));
+		activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+		if (isRegenNeeded) activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP_REBOOT");
 	}
 
 	let styleElement = document.createElement("style");
@@ -138,7 +137,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let mountOfflineBtn = document.createElement("button");
 	let umountOfflineBtn = document.createElement("button");
 	let swapToSystemBtn = document.createElement("button");
-	log = logString => activityNote.innerText = logString;
+	let reinventorizeBtn = document.createElement("button");
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
 	installOnlineModuleBtn.innerText = await availableAPIs.lookupLocale("INSTALL_ONLINE_MODULE");
@@ -150,11 +149,12 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	mountOfflineBtn.innerText = await availableAPIs.lookupLocale("MOUNT_OFFLINE_OS");
 	umountOfflineBtn.innerText = await availableAPIs.lookupLocale("UMOUNT_OFFLINE_OS");
 	swapToSystemBtn.innerText = await availableAPIs.lookupLocale("SWAP_OFFLINE_OS");
+	reinventorizeBtn.innerText = await availableAPIs.lookupLocale("REINVENTORIZE_MODULES");
 
 	updateModCfgBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
-		log(await availableAPIs.lookupLocale("UPDATING_MODCFG"));
+		activityNote.innerText = await availableAPIs.lookupLocale("UPDATING_MODCFG");
 		try {
 			let updateService = new URL("bdp://localhost");
 			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
@@ -166,15 +166,15 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
 				data: JSON.stringify(moduleConfig)
 			});
-			log(await availableAPIs.lookupLocale("UPDATE_COUNTING"));
+			activityNote.innerText = await availableAPIs.lookupLocale("UPDATE_COUNTING");
 			let forUpdate = [];
 			for (let module in moduleConfig.local) if (moduleConfig.remote.hasOwnProperty(module))
 				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
 					forUpdate.push(module);
-			log((await availableAPIs.lookupLocale("UPDATE_COUNT")).replace("%s", forUpdate.length));
+			activityNote.innerText = (await availableAPIs.lookupLocale("UPDATE_COUNT")).replace("%s", forUpdate.length);
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_TO_UPDATE"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -297,7 +297,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -327,7 +327,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				await coreFunction([ { type: "install", file: result.selected } ], { moduleConfig });
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -410,7 +410,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -419,7 +419,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	updateSystemButton.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
-		log(await availableAPIs.lookupLocale("UPDATING_MODULES"));
+		activityNote.innerText = await availableAPIs.lookupLocale("UPDATING_MODULES");
 		try {
 			let updateService = new URL("bdp://localhost");
 			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
@@ -431,10 +431,10 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				if (moduleConfig.remote[module].version > moduleConfig.local[module].version) 
 					forUpdate.push(module);
 			if (forUpdate.length) await coreFunction(forUpdate.map(a => {return{ type: "install", moduleName: a }}), { updateService, moduleConfig });
-			else if (!forUpdate.length) log(await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE"));
+			else if (!forUpdate.length) activityNote.innerText = await availableAPIs.lookupLocale("SYSTEM_UP_TO_DATE");
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_TO_UPDATE"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_TO_UPDATE");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -445,7 +445,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		container.hidden = true;
 		try {
 			await regenerateKernel();
-			log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 		} catch {}
 		await availableAPIs.closeability(true);
 		container.hidden = false;
@@ -454,7 +454,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	repairOSBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
-		log(await availableAPIs.lookupLocale("REPAIRING_SYSTEM"));
+		activityNote.innerText = await availableAPIs.lookupLocale("REPAIRING_SYSTEM");
 		try {
 			let updateService = new URL("bdp://localhost");
 			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
@@ -464,7 +464,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			let toRepair = Object.keys(moduleConfig.local).filter(a => !!(moduleConfig.remote || {})[a]).sort((a, b) => a.localeCompare(b));
 			let modNum = 0;
 			for (let module of toRepair) {
-				log((await availableAPIs.lookupLocale("REPAIRING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRepair.length).replace("%s", (modNum / toRepair.length * 100).toFixed(2)));
+				activityNote.innerText = (await availableAPIs.lookupLocale("REPAIRING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRepair.length).replace("%s", (modNum / toRepair.length * 100).toFixed(2));
 				let moduleContent = (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content;
 				await availableAPIs.fs_rm({
 					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
@@ -480,13 +480,13 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
 				data: JSON.stringify(moduleConfig)
 			});
-			log(await availableAPIs.lookupLocale("RELOADING_MODULES"));
+			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
 			await reloadModules(await availableAPIs.getSystemMount());
 			await regenerateKernel();
 			await availableAPIs.shutdown({ isReboot: true });
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("REPAIR_FAILED"));
+			activityNote.innerText = await availableAPIs.lookupLocale("REPAIR_FAILED");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -510,9 +510,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					mountBtn.innerText = mountpoint;
 					mountBtn.onclick = async function() {
 						try {
-							log(await availableAPIs.lookupLocale("RELOADING_MODULES"));
+							activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
 							await reloadModules(mountpoint, await availableAPIs.getSystemMount(), mountpoint + "-sys");
-							log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
+							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 							resolve();
 						} catch (e) {
 							reject(e);
@@ -523,7 +523,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -547,7 +547,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					mountBtn.innerText = mountpoint;
 					mountBtn.onclick = async function() {
 						try {
-							log(await availableAPIs.lookupLocale("UNMOUNTING_MOUNTS"));
+							activityNote.innerText = await availableAPIs.lookupLocale("UNMOUNTING_MOUNTS");
 							await availableAPIs.fs_unmount({ mount: mountpoint });
 							for (let mount of modSys[mountpoint].slice(1))
 								await availableAPIs.fs_unmount({ mount });
@@ -556,7 +556,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 								path: "ram/run/moduleSystem.json",
 								data: JSON.stringify(modSys)
 							});
-							log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
+							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 							resolve();
 						} catch (e) {
 							reject(e);
@@ -567,7 +567,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -591,7 +591,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					mountBtn.innerText = mountpoint;
 					mountBtn.onclick = async function() {
 						try {
-							log(await availableAPIs.lookupLocale("SWAPPING_SYSTEMS"));
+							activityNote.innerText = await availableAPIs.lookupLocale("SWAPPING_SYSTEMS");
 							let oldSysName = await availableAPIs.getSystemMount();
 							let newOldSysName = await availableAPIs.getSystemMount();
 							while (modSys[newOldSysName]) newOldSysName = newOldSysName + "~";
@@ -618,7 +618,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 								path: "ram/run/moduleSystem.json",
 								data: JSON.stringify(modSys)
 							});
-							log(await availableAPIs.lookupLocale("SUCCESSFUL_OP"));
+							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
 							resolve();
 						} catch (e) {
 							reject(e);
@@ -629,7 +629,39 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			});
 		} catch (e) {
 			console.error(e);
-			log(await availableAPIs.lookupLocale("FAILED_OP"));
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
+		}
+		container.hidden = false;
+		await availableAPIs.closeability(true);
+	});
+
+	reinventorizeBtn.addEventListener("click", async function() {
+		await availableAPIs.closeability(false);
+		container.hidden = true;
+		activityNote.innerText = "";
+		try {
+			activityNote.innerText = await availableAPIs.lookupLocale("REINVENTORIZING_MODULES");
+			let basePath = (await availableAPIs.getSystemMount()) + "/modules";
+			let installedModules = await availableAPIs.fs_ls({ path: basePath });
+			let moduleNum = 0;
+			let moduleConfig = { local: {} };
+			for (let moduleName of installedModules) {
+				activityNote.innerText = (await availableAPIs.lookupLocale("MANAGING_MODULE")).replace("%s", moduleName).replace("%s", moduleNum + 1)
+					.replace("%s", installedModules.length).replace("%s", (moduleNum / installedModules.length * 100).toFixed(2));
+				
+				let buildInfo = JSON.parse(await availableAPIs.fs_read({ path: basePath + "/" + moduleName })).buildInfo;
+				moduleConfig.local[buildInfo.commonName] = buildInfo;
+				
+				moduleNum++;
+			}
+			await availableAPIs.fs_write({
+				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
+				data: JSON.stringify(moduleConfig)
+			});
+			activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
+		} catch (e) {
+			console.error(e);
+			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
 		}
 		container.hidden = false;
 		await availableAPIs.closeability(true);
@@ -645,57 +677,9 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	container.appendChild(mountOfflineBtn);
 	container.appendChild(umountOfflineBtn);
 	container.appendChild(swapToSystemBtn);
+	container.appendChild(reinventorizeBtn);
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
-
-	if (ppos[0]) {
-		log = function(logString) {
-			activityNote.innerText = logString;
-			availableAPIs.attachCLI();
-			availableAPIs.toMyCLI(logString + "\r\n");
-		}
-	}
-	if (ppos[0] == "update") updateModCfgBtn.click();
-	if (ppos[0] == "upgrade") updateSystemButton.click();
-	if (ppos[0] == "repairex") repairOSBtn.click();
-	if (ppos[0] == "installex") installOnlineModuleBtn.click();
-	if (ppos[0] == "removeex") removeModuleBtn.click();
-	if (ppos[0] == "regen") {
-		await availableAPIs.windowVisibility(false);
-		try {
-			await regenerateKernel();
-		} catch {}
-		availableAPIs.terminate();
-	} else if (ppos[0] == "install" || ppos[0] == "remove") {
-		await availableAPIs.windowVisibility(false);
-		let updateService, moduleConfig;
-		try {
-			updateService = new URL("bdp://localhost");
-			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
-			moduleConfig = JSON.parse(await availableAPIs.fs_read({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
-			}));
-		} catch (e) {
-			console.error(e);
-			log("Failed to read environment properties");
-		}
-		await coreFunction(ppos.slice(1).map(a =>{return{ type: ppos[0], moduleName: a }}), { moduleConfig, updateService });
-		availableAPIs.terminate();
-	} else if (ppos[0] == "help") {
-		await availableAPIs.toMyCLI("moduleManager [options] [operation]\r\n");
-		await availableAPIs.toMyCLI("\t--unremovable - make other packages unremovable instead of system defaults");
-		await availableAPIs.toMyCLI("\tGUI operations:\r\n");
-		await availableAPIs.toMyCLI("\t\tupdate - Update module configuration\r\n");
-		await availableAPIs.toMyCLI("\t\tupgrade - Upgrade the system\r\n");
-		await availableAPIs.toMyCLI("\t\trepairex - Repair the system\r\n");
-		await availableAPIs.toMyCLI("\t\tinstallex - Install a module online\r\n");
-		await availableAPIs.toMyCLI("\t\tremoveex - Remove a module\r\n");
-		await availableAPIs.toMyCLI("\tCLI operations:\r\n");
-		await availableAPIs.toMyCLI("\t\tregen - Regenerate the kernel\r\n");
-		await availableAPIs.toMyCLI("\t\tinstall [package1] ... [packageN] - Install packages\r\n");
-		await availableAPIs.toMyCLI("\t\tremove [package1] ... [packageN] - Remove packages\r\n");
-		availableAPIs.terminate();
-	}
 })();
 async function findFriendlyName(moduleConfig) {
 	if (moduleConfig?.friendlyNameDB) return moduleConfig.friendlyNameDB[await availableAPIs.lookupLocale("OS_LOCALE")];

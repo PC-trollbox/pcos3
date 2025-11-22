@@ -535,5 +535,6 @@ modules.locales.ru = {
 	"TERMNET_MODULE_NAME": "Сетевые соединения в терминале",
 	"TERMUSER_MODULE_NAME": "Управление пользователями в терминале",
 	"TWNACL_MODULE_NAME": "Криптографическая библиотека TweetNaCl.js",
-	"XTERM_MODULE_NAME": "Библиотека поддержки терминала xterm.js (сделана The xterm.js authors)"
+	"XTERM_MODULE_NAME": "Библиотека поддержки терминала xterm.js (сделана The xterm.js authors)",
+	"REINVENTORIZE_MODULES": "Переинвенторизовать модули"
 };

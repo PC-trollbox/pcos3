@@ -334,7 +334,7 @@ function loadUi() {
 			let updateTaskbar = () => {
 				if (!session.parentElement) return;
 				let locale = this.tracker[identifier].attrib.locale || modules.locales?.defaultLocale || "en";
-				let clockLocale = modules.locales?.get("OS_LOCALE", locale);
+				let clockLocale = modules.locales?.get("OS_LOCALE", locale)?.replace("OS_LOCALE", "") || undefined;
 				startButton.innerText = modules.locales?.get("START_MENU_BTN", locale);
 				clock.innerText = Intl.DateTimeFormat(clockLocale, { timeStyle: clockToggled ? undefined : "medium" }).format();
 				setTimeout(updateTaskbar, 500);

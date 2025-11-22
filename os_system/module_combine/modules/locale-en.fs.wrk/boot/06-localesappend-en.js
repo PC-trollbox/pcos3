@@ -536,5 +536,6 @@ modules.locales.en = {
 	"TERMNET_MODULE_NAME": "Networking CLI tools",
 	"TERMUSER_MODULE_NAME": "User management CLI tools",
 	"TWNACL_MODULE_NAME": "TweetNaCl.js cryptographic library",
-	"XTERM_MODULE_NAME": "xterm.js terminal support library (by The xterm.js authors)"
+	"XTERM_MODULE_NAME": "xterm.js terminal support library (by The xterm.js authors)",
+	"REINVENTORIZE_MODULES": "Reinventorize modules"
 };
