@@ -71,7 +71,7 @@ let moduleFriendlyNames = {
 	"xterm": "lrn:XTERM_MODULE_NAME"
 }
 let getModuleOrder = module => specialOrdering[module]?.toString().padStart(2, "0") || "50";
-let keypair = false;
+let keypair;
 let ext2mime = {
 	"png": "image/png",
 	"jpg": "image/jpeg",
@@ -195,7 +195,7 @@ function createModule(directory, permissionsPrefixed = "") {
 			friendlyNameRef: moduleFriendlyNames[moduleBasename]?.startsWith("lrn:") ? moduleFriendlyNames[moduleBasename].slice(4) : undefined,
 			friendlyName: moduleFriendlyNames[moduleBasename]?.startsWith("lrn:") ? undefined : moduleFriendlyNames[moduleBasename]
 		};
-		let signingKey = keypair.moduleTrust_private;
+		let signingKey = keypair.moduleSigner_private;
 		if (path.basename(directory) == "keys.fs.wrk") {
 			signingKey = keypair.ksk_private;
 			delete module.buildInfo.signer;

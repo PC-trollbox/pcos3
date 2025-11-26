@@ -2,6 +2,7 @@
 // allow: GET_ROOT_KEY, FS_UNMOUNT, FS_MOUNT, CSP_OPERATIONS, GET_THEME, GET_LOCALE, FS_REMOVE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, FS_BYPASS_PERMISSIONS, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_READ, CONNFUL_WRITE, CONNFUL_DISCONNECT, GET_UPDATE_SERVICE, SYSTEM_SHUTDOWN, MANAGE_TOKENS, ELEVATE_PRIVILEGES, IPC_SEND_PIPE, GET_USER_INFO, START_TASK, IPC_CREATE_PIPE, IPC_LISTEN_PIPE, GET_BOOT_MODE
 // signer: automaticSigner
 // =====END MANIFEST=====
+let cachedKeys = {};
 let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 (async function() {
 	// @pcos-app-mode isolatable
@@ -195,12 +196,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			let tableHeadRow = document.createElement("tr");
 			let tableCellInstalled = document.createElement("th");
 			let tableCellModName = document.createElement("th");
+			let tableCellTrustedBy = document.createElement("th");
 			let tableCellModVersion = document.createElement("th");
 			let tableCellTargeting = document.createElement("th");
 			let tableBody = document.createElement("tbody");
 			let applyChangesBtn = document.createElement("button");
 			let discardChangesBtn = document.createElement("button");
 			tableCellModName.innerText = await availableAPIs.lookupLocale("MODNAME_CELL");
+			tableCellTrustedBy.innerText = await availableAPIs.lookupLocale("MODTRUST_CELL");
 			tableCellModVersion.innerText = await availableAPIs.lookupLocale("MODVER_CELL");
 			tableCellTargeting.innerText = await availableAPIs.lookupLocale("MODTGT_CELL");
 			applyChangesBtn.innerText = await availableAPIs.lookupLocale("APPLY_CHANGES");
@@ -212,19 +215,23 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				let tableRow = document.createElement("tr");
 				let tableCellInstalled = document.createElement("td");
 				let tableCellModName = document.createElement("td");
+				let tableCellTrustedBy = document.createElement("td");
 				let tableCellModVersion = document.createElement("td");
 				let tableCellTargeting = document.createElement("td");
 				let checkboxInstalled = document.createElement("input");
 				checkboxInstalled.type = "checkbox";
 				checkboxInstalled.checked = true;
 				checkboxInstalled.disabled = true;
-				let friendlyName = await findFriendlyName(moduleConfig.local[module]);
+				let friendlyName = await findModuleFriendlyName(moduleConfig.local[module]);
+				let signFriendlyName = await findModKeyFriendlyName(moduleConfig.local[module]);
 				tableCellModName.innerText = friendlyName ? (friendlyName + " (" + module + ")") : module;
+				tableCellTrustedBy.innerText = signFriendlyName;
 				tableCellModVersion.innerText = moduleConfig.local[module].version;
 				tableCellTargeting.innerText = moduleConfig.local[module].for;
 				tableCellInstalled.appendChild(checkboxInstalled);
 				tableRow.appendChild(tableCellInstalled);
 				tableRow.appendChild(tableCellModName);
+				tableRow.appendChild(tableCellTrustedBy);
 				tableRow.appendChild(tableCellModVersion);
 				tableRow.appendChild(tableCellTargeting);
 				tableBody.appendChild(tableRow);
@@ -233,6 +240,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				let tableRow = document.createElement("tr");
 				let tableCellInstalled = document.createElement("td");
 				let tableCellModName = document.createElement("td");
+				let tableCellTrustedBy = document.createElement("td");
 				let tableCellModVersion = document.createElement("td");
 				let tableCellTargeting = document.createElement("td");
 				let checkboxInstalled = document.createElement("input");
@@ -252,14 +260,21 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					else toInstall.push(module);
 				};
 
-				let localFriendlyName = await findFriendlyName(moduleConfig.local[module]);
-				let remoteFriendlyName = await findFriendlyName(moduleConfig.remote[module]);
+				let localFriendlyName = await findModuleFriendlyName(moduleConfig.local[module]);
+				let remoteFriendlyName = await findModuleFriendlyName(moduleConfig.remote[module]);
 				tableCellModName.innerText = module;
 				if ((localFriendlyName == remoteFriendlyName || !localFriendlyName) && remoteFriendlyName)
 					tableCellModName.innerText = remoteFriendlyName + " (" + module + ")";
 				else if (remoteFriendlyName)
 					tableCellModName.innerText = localFriendlyName + " -> " + remoteFriendlyName + " (" + module + ")";
 
+				let localSignFriendlyName = await findModKeyFriendlyName(moduleConfig.local[module]);
+				let remoteSignFriendlyName = await findModKeyFriendlyName(moduleConfig.remote[module]);
+				if (localSignFriendlyName == remoteSignFriendlyName || !isInstalled)
+					tableCellTrustedBy.innerText = remoteSignFriendlyName;
+				else if (remoteSignFriendlyName)
+					tableCellTrustedBy.innerText = localSignFriendlyName + " -> " + remoteSignFriendlyName + " (" + module + ")";
+				
 				tableCellModVersion.innerText = moduleConfig.remote[module].version;
 				if (isInstalled && moduleConfig.remote[module].version > moduleConfig.local[module].version)
 					tableCellModVersion.innerText = moduleConfig.local[module].version + " -> " + tableCellModVersion.innerText;
@@ -272,12 +287,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				tableCellInstalled.appendChild(checkboxInstalled);
 				tableRow.appendChild(tableCellInstalled);
 				tableRow.appendChild(tableCellModName);
+				tableRow.appendChild(tableCellTrustedBy);
 				tableRow.appendChild(tableCellModVersion);
 				tableRow.appendChild(tableCellTargeting);
 				tableBody.appendChild(tableRow);
 			}
 			tableHeadRow.appendChild(tableCellInstalled);
 			tableHeadRow.appendChild(tableCellModName);
+			tableHeadRow.appendChild(tableCellTrustedBy);
 			tableHeadRow.appendChild(tableCellModVersion);
 			tableHeadRow.appendChild(tableCellTargeting);
 			tableHead.appendChild(tableHeadRow);
@@ -348,12 +365,14 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 			let tableHeadRow = document.createElement("tr");
 			let tableCellInstalled = document.createElement("th");
 			let tableCellModName = document.createElement("th");
-			let tableCellModVersion = document.createElement("th");
 			let tableCellTargeting = document.createElement("th");
+			let tableCellModVersion = document.createElement("th");
+			let tableCellTrustedBy = document.createElement("th");
 			let tableBody = document.createElement("tbody");
 			let applyChangesBtn = document.createElement("button");
 			let discardChangesBtn = document.createElement("button");
 			tableCellModName.innerText = await availableAPIs.lookupLocale("MODNAME_CELL");
+			tableCellTrustedBy.innerText = await availableAPIs.lookupLocale("MODTRUST_CELL");
 			tableCellModVersion.innerText = await availableAPIs.lookupLocale("MODVER_CELL");
 			tableCellTargeting.innerText = await availableAPIs.lookupLocale("MODTGT_CELL");
 			applyChangesBtn.innerText = await availableAPIs.lookupLocale("APPLY_CHANGES");
@@ -365,6 +384,7 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 				let tableRow = document.createElement("tr");
 				let tableCellInstalled = document.createElement("td");
 				let tableCellModName = document.createElement("td");
+				let tableCellTrustedBy = document.createElement("td");
 				let tableCellModVersion = document.createElement("td");
 				let tableCellTargeting = document.createElement("td");
 				let checkboxInstalled = document.createElement("input");
@@ -377,20 +397,24 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					else toRemove.push(module);
 				};
 
-				let friendlyName = await findFriendlyName(moduleConfig.local[module]);
+				let friendlyName = await findModuleFriendlyName(moduleConfig.local[module]);
+				let signFriendlyName = await findModKeyFriendlyName(moduleConfig.local[module]);
 				tableCellModName.innerText = friendlyName ? (friendlyName + " (" + module + ")") : module;
+				tableCellTrustedBy.innerText = signFriendlyName;
 				tableCellModVersion.innerText = moduleConfig.local[module].version;
 				tableCellTargeting.innerText = moduleConfig.local[module].for;
 
 				tableCellInstalled.appendChild(checkboxInstalled);
 				tableRow.appendChild(tableCellInstalled);
 				tableRow.appendChild(tableCellModName);
+				tableRow.appendChild(tableCellTrustedBy);
 				tableRow.appendChild(tableCellModVersion);
 				tableRow.appendChild(tableCellTargeting);
 				tableBody.appendChild(tableRow);
 			}
 			tableHeadRow.appendChild(tableCellInstalled);
 			tableHeadRow.appendChild(tableCellModName);
+			tableHeadRow.appendChild(tableCellTrustedBy);
 			tableHeadRow.appendChild(tableCellModVersion);
 			tableHeadRow.appendChild(tableCellTargeting);
 			tableHead.appendChild(tableHeadRow);
@@ -681,10 +705,28 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
 })();
-async function findFriendlyName(moduleConfig) {
+async function findModuleFriendlyName(moduleConfig) {
 	if (moduleConfig?.friendlyNameDB) return moduleConfig.friendlyNameDB[await availableAPIs.lookupLocale("OS_LOCALE")];
 	if (moduleConfig?.friendlyNameRef) return await availableAPIs.lookupLocale(moduleConfig.friendlyNameRef);
 	return moduleConfig?.friendlyName;
+}
+async function findModKeyFriendlyName(moduleConfig) {
+	if (!moduleConfig?.signer) {
+		if (moduleConfig?.commonName == "keys" && moduleConfig?.bootOrder == "00")
+			return await availableAPIs.lookupLocale("ROOT_KEY_CELL");
+		return await availableAPIs.lookupLocale("UNSIGNED_CELL");
+	}
+	if (!cachedKeys[moduleConfig.signer]) try {
+		cachedKeys[moduleConfig.signer] = JSON.parse(await availableAPIs.fs_read({
+			path: (await availableAPIs.getSystemMount()) + "/etc/keys/" + moduleConfig.signer
+		}));
+	} catch { cachedKeys[moduleConfig.signer] = {}; }
+	if (!cachedKeys.hasOwnProperty(moduleConfig.signer)) return moduleConfig.signer;
+	let signatureKey = cachedKeys[moduleConfig.signer]?.keyInfo;
+	console.log(signatureKey);
+	if (signatureKey?.friendlyNameDB) return signatureKey.friendlyNameDB[await availableAPIs.lookupLocale("OS_LOCALE")] + " (" + moduleConfig.signer + ")";
+	if (signatureKey?.friendlyName) return signatureKey.friendlyName + " (" + moduleConfig.signer + ")";
+	return moduleConfig.signer;
 }
 async function recursiveKeyVerify(mnt, key, khrl) {
 	if (!key) throw new Error("NO_KEY");

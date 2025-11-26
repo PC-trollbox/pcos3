@@ -12,6 +12,10 @@ let serverTrustInfo = {
 	dates: {
 		since: Date.now(),
 		until: Date.now() + 90 * 86400000
+	},
+	friendlyNameDB: {
+		en: "PCsoft system servicing",
+		ru: "Обслуживание систем PCsoft"
 	}
 };
 

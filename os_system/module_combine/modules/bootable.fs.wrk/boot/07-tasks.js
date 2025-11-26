@@ -122,6 +122,7 @@ function loadTasks() {
 				return true;
 			}
 
+			let friendlyName;
 			if ((execSignature.signer || appHardening.requireSignature || execSignature.selfContainedSigner) && !disableHarden) {
 				try {
 					let khrlFiles = await this.fs.ls(modules.defaultSystem + "/etc/keys/khrl", token);
@@ -136,6 +137,7 @@ function loadTasks() {
 					}
 					let signingKey = JSON.parse(execSignature.selfContainedSigner || "null");
 					if (!signingKey || appHardening.disableASCK) signingKey = JSON.parse(await this.fs.read(modules.defaultSystem + "/etc/keys/" + execSignature.signer, token));
+					friendlyName = (signingKey.keyInfo.friendlyNameDB || {})[modules.locales.get("OS_LOCALE", language)] || signingKey.keyInfo.friendlyName;
 					await recursiveKeyVerify(signingKey, khrlSignatures);
 					if (signingKey.keyInfo) if (!signingKey.keyInfo.usages.includes("appTrust")) throw new Error("NOT_APP_SIGNING_KEY");
 					let importSigningKey = await crypto.subtle.importKey("jwk", signingKey.keyInfo.key, { name: "Ed25519" }, false, ["verify"]);
@@ -143,7 +145,7 @@ function loadTasks() {
 				} catch (e) {
 					console.error("Failed to verify app signature:", e);
 					windowObject.title.innerText = modules.locales.get("PERMISSION_DENIED", language);
-					windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED", language).replace("%s", execSignature.signer || modules.locales.get("UNKNOWN_PLACEHOLDER", language));
+					windowObject.content.innerText = modules.locales.get("SIGNATURE_VERIFICATION_FAILED", language).replace("%s", (friendlyName ? (friendlyName + " (") : "") + (execSignature.signer || modules.locales.get("UNSIGNED_CELL", language)) + (friendlyName ? ")" : ""));
 					windowObject.content.style.padding = "8px";
 					windowObject.closeButton.disabled = false;
 					windowObject.closeButton.onclick = (e) => windowObject.windowDiv.remove() && e.stopPropagation();
