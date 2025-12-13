@@ -540,5 +540,11 @@ modules.locales.ru = {
 	"REINVENTORIZING_MODULES": "Повторная инвенторизация модулей...",
 	"MODTRUST_CELL": "Кем доверено",
 	"UNSIGNED_CELL": "НИКЕМ",
-	"ROOT_KEY_CELL": "Корневой центр доверия PCsoft"
+	"ROOT_KEY_CELL": "Корневой центр доверия PCsoft",
+	"USER_PREFERENCES": "Мои предпочтения",
+	"USER_PREFS_ERROR": "Вам нельзя изменять предпочтения.",
+	"WALLPAPER_PATH": "Путь к обоям: ",
+	"UPDATE_PREFERENCES": "Обновить предпочтения",
+	"USER_PREFS_UPDATED": "Обновления применены. Войдите ещё раз, чтобы их увидеть.",
+	"PREF_UPDATE_FAILED": "Не все обновления были применены."
 };

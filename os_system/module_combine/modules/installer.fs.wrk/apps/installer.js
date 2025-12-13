@@ -101,7 +101,7 @@ let onClose = () => availableAPIs.terminate();
 			localeSelect.appendChild(option);
 		}
 		localeSelect.addEventListener("change", async function() {
-			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value) + "; modules.session.attrib(modules.session.active, \"locale\", " + JSON.stringify(localeSelect.value) + ");");
+			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value) + "; modules.session.attrib(modules.session.active, \"language\", " + JSON.stringify(localeSelect.value) + ");");
 			installed_modules.push("50-locale-" + localeSelect.value + ".fs");
 			await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
 			localeSelect.remove();

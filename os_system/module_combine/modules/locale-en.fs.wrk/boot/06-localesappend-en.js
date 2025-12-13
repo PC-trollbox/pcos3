@@ -541,5 +541,11 @@ modules.locales.en = {
 	"REINVENTORIZING_MODULES": "Reinventorizing modules...",
 	"MODTRUST_CELL": "Trusted by",
 	"UNSIGNED_CELL": "NOBODY",
-	"ROOT_KEY_CELL": "PCsoft root trust authority"
+	"ROOT_KEY_CELL": "PCsoft root trust authority",
+	"USER_PREFERENCES": "My preferences",
+	"USER_PREFS_ERROR": "You can't change your preferences.",
+	"WALLPAPER_PATH": "Wallpaper path: ",
+	"UPDATE_PREFERENCES": "Update preferences",
+	"USER_PREFS_UPDATED": "Preferences were updated. Log in again to see the changes.",
+	"PREF_UPDATE_FAILED": "Not all preferences could be updated."
 };

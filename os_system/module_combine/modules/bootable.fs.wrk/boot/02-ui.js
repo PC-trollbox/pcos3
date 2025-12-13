@@ -309,7 +309,7 @@ function loadUi() {
 		mksession: function() {
 			if (modules.shuttingDown) throw new Error("SYSTEM_SHUTDOWN_REQUESTED");
 			let identifier = crypto.getRandomValues(new Uint8Array(64)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");
-			let session = document.createElement("div");
+			let sessionDiv = document.createElement("div");
 			let desktop = document.createElement("div");
 			let taskbar = document.createElement("div");
 			let startButton = document.createElement("button");
@@ -318,7 +318,7 @@ function loadUi() {
 			let icons = document.createElement("div");
 			let clock = document.createElement("div");
 
-			session.className = "session hidden";
+			sessionDiv.className = "session hidden";
 			desktop.className = "desktop";
 			taskbar.className = "taskbar";
 			icons.className = "tbicons";
@@ -326,14 +326,14 @@ function loadUi() {
 			startButton.disabled = true;
 
 			taskbar.append(startButton, taskList, filler, icons, clock);
-			session.append(desktop, taskbar);
-			document.body.appendChild(session);
+			sessionDiv.append(desktop, taskbar);
+			document.body.appendChild(sessionDiv);
 
 			let clockToggled = false;
 			clock.addEventListener("click", _ => clockToggled = !clockToggled);
 			let updateTaskbar = () => {
-				if (!session.parentElement) return;
-				let locale = this.tracker[identifier].attrib.locale || modules.locales?.defaultLocale || "en";
+				if (!sessionDiv.parentElement) return;
+				let locale = session.tracker[identifier].attrib.language || modules.locales?.defaultLocale || "en";
 				let clockLocale = modules.locales?.get("OS_LOCALE", locale)?.replace("OS_LOCALE", "") || undefined;
 				startButton.innerText = modules.locales?.get("START_MENU_BTN", locale);
 				clock.innerText = Intl.DateTimeFormat(clockLocale, { timeStyle: clockToggled ? undefined : "medium" }).format();
@@ -347,11 +347,11 @@ function loadUi() {
 					warning.innerText = modules.locales?.get("INSECURE_MODE_MSG") || "Reduced security!";
 					warning.style.background = "#7f0000";
 				} else if (modules.core.bootMode == "safe") warning.innerText = modules.locales?.get("SAFE_MODE_MSG") || "Safe mode";
-				session.appendChild(warning);
+				sessionDiv.appendChild(warning);
 			}
 
 			this.tracker[identifier] = {
-				html: session,
+				html: sessionDiv,
 				extendedHTML: { desktop, taskbar, startButton, taskList, filler, icons, clock },
 				attrib: {}
 			};
