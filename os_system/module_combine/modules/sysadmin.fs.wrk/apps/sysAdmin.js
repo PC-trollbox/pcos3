@@ -201,7 +201,7 @@
 			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value));
 			await availableAPIs.fs_write({
 				path: (await availableAPIs.getSystemMount()) + "/boot/06-localeset.js", 
-				data: "modules.locales.defaultLocale = " + JSON.stringify(await availableAPIs.osLocale()) + ";\n"
+				data: "modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value) + ";\n"
 			});
 			try {
 				extraActivities.innerText = await availableAPIs.lookupLocale("GENERATING_KERNEL");
