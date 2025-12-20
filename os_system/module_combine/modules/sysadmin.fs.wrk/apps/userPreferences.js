@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, START_TASK, IPC_CREATE_PIPE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, GET_USER_INFO, IPC_LISTEN_PIPE
+// allow: GET_LOCALE, GET_THEME, START_TASK, IPC_CREATE_PIPE, FS_READ, FS_WRITE, FS_LIST_PARTITIONS, IPC_SEND_PIPE, GET_USER_INFO, IPC_LISTEN_PIPE, GRAB_ATTENTION
 // =====END MANIFEST=====
 (async function() {
 	// @pcos-app-mode isolatable
@@ -91,10 +91,21 @@
 
 	updatePreferences.onclick = async function() {
 		try {
-			await availableAPIs.fs_write({ path: homedir + "/.wallpaper", data: await availableAPIs.fs_read({ path: wallpaperInput.value }) });
+			let wallpaper = await availableAPIs.fs_read({ path: wallpaperInput.value });
+			await availableAPIs.fs_write({ path: homedir + "/.wallpaper", data: wallpaper });
 			await availableAPIs.fs_write({ path: homedir + "/.darkmode", data: JSON.stringify(darkModeInput.checked) });
 			await availableAPIs.fs_write({ path: homedir + "/.locale", data: localeInput.value });
-			htmlAlert(await availableAPIs.lookupLocale("USER_PREFS_UPDATED"));
+			try {
+				await availableAPIs.windowDark(darkModeInput.checked);
+				document.body.style.color = darkModeInput.checked ? "white" : "";
+				await availableAPIs.setWinLocale(localeInput.value);
+				await availableAPIs.desktopDark(darkModeInput.checked);
+				await availableAPIs.setUILocale(localeInput.value);
+				await availableAPIs.setWallpaper(wallpaper);
+				htmlAlert(await availableAPIs.lookupLocale("USER_PREFS_UPDATED"));
+			} catch {
+				htmlAlert(await availableAPIs.lookupLocale("USER_PREFS_UPDATED_PARTIAL"));
+			}
 		} catch (e) {
 			console.error(e);
 			htmlAlert(await availableAPIs.lookupLocale("PREF_UPDATE_FAILED"));

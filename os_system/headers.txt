@@ -152,7 +152,7 @@ lookupOtherLocale({
 }) -> String // GET_LOCALE
 ufTimeInc([ Number ms, Boolean majorUnitsOnly, Boolean displayMs ]) -> String // GET_LOCALE
 ufInfoUnits([ Number bytes, Boolean majorUnitsOnly ]) -> String // GET_LOCALE
-isDarkThemed() -> Boolean // GET_THEME
+isDesktopDarkThemed() -> Boolean // GET_THEME
 fetchSend({
 	url: String,
 	init: Object /* fetch() init + non-standard Boolean noArrayBuffer */
@@ -349,6 +349,10 @@ batteryStatus() -> {
 } // GET_BATTERY_STATUS
 getUpdateService() -> String // GET_UPDATE_SERVICE
 getRootKey() -> Object // GET_ROOT_KEY
+desktopDark(Boolean desiredMode) // GRAB_ATTENTION
+setWallpaper(String wallpaperString) // GRAB_ATTENTION
+setWinLocale(String desiredLanguage) // GET_LOCALE
+setUILocale(String desiredLanguage) // GRAB_ATTENTION
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()
@@ -365,5 +369,7 @@ windowSize() -> {
 windowRelocate([ Number x, Number y ]) // GRAB_ATTENTION
 windowFullscreen(Boolean fullscreen) // GRAB_ATTENTION
 windowFocus() // GRAB_ATTENTION
+isDarkThemed() -> Boolean // GET_THEME
+windowDark(Boolean dark)
 closeability(Boolean closeable)
 critical(Boolean critical) // SYSTEM_STABILITY

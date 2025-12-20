@@ -85,6 +85,7 @@ async function requireLogon() {
 		}
 		modules.session.attrib(session, "dark", isDark);
 		dom.style.background = bgPic ? "url(" + JSON.stringify(bgPic) + ")" : "black";
+		if (!dom.style.background) dom.style.background = "black";
 		dom.style.backgroundSize = "100% 100%";
 		if (!wasLiuLoaded) {
 			let autoRunNecessities = [];
@@ -461,6 +462,7 @@ async function requireLogon() {
 			lockWallpaper = "";
 		}
 		sysDom.style.background = lockWallpaper ? "url(" + JSON.stringify(lockWallpaper) + ")" : "black";
+		if (!sysDom.style.background) sysDom.style.background = "black";
 		sysDom.style.backgroundSize = "100% 100%";
 		modules.session.attrib(modules.session.systemSession, "dark", lockIsDark);
 		let logon, resolvedLogon;

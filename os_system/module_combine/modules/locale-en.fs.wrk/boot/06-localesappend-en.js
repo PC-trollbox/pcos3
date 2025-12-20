@@ -546,6 +546,7 @@ modules.locales.en = {
 	"USER_PREFS_ERROR": "You can't change your preferences.",
 	"WALLPAPER_PATH": "Wallpaper path: ",
 	"UPDATE_PREFERENCES": "Update preferences",
-	"USER_PREFS_UPDATED": "Preferences were updated. Log in again to see the changes.",
+	"USER_PREFS_UPDATED": "Preferences were updated. Some programs might not update right away.",
+	"USER_PREFS_UPDATED_PARTIAL": "Not all preferences could be updated right away. Log in again to see the changes.",
 	"PREF_UPDATE_FAILED": "Not all preferences could be updated."
 };

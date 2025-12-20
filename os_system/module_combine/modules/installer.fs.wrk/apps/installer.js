@@ -1,6 +1,6 @@
 // =====BEGIN MANIFEST=====
 // signer: automaticSigner
-// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE, GET_SERVER_URL, SET_USER_INFO, SET_DEFAULT_SYSTEM, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET, RELOAD_NETWORK_CONFIG, FETCH_SEND
+// allow: GET_LOCALE, GET_THEME, GET_BUILD, RUN_KLVL_CODE, LLDISK_WRITE, LLDISK_READ, FS_READ, FS_WRITE, FS_BYPASS_PERMISSIONS, FS_REMOVE, FS_LIST_PARTITIONS, SYSTEM_SHUTDOWN, FS_CHANGE_PERMISSION, LLDISK_LIST_PARTITIONS, FS_MOUNT, CSP_OPERATIONS, LLDISK_INIT_PARTITIONS, IPC_SEND_PIPE, GET_SERVER_URL, SET_USER_INFO, SET_DEFAULT_SYSTEM, RESOLVE_NAME, CONNFUL_CONNECT, CONNFUL_DISCONNECT, CONNFUL_WRITE, CONNFUL_READ, CONNFUL_ADDRESS_GET, CONNFUL_IDENTITY_GET, RELOAD_NETWORK_CONFIG, FETCH_SEND, GRAB_ATTENTION
 // =====END MANIFEST=====
 let onClose = () => availableAPIs.terminate();
 (async function() {
@@ -101,7 +101,9 @@ let onClose = () => availableAPIs.terminate();
 			localeSelect.appendChild(option);
 		}
 		localeSelect.addEventListener("change", async function() {
-			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value) + "; modules.session.attrib(modules.session.active, \"language\", " + JSON.stringify(localeSelect.value) + ");");
+			await availableAPIs.runKlvlCode("modules.locales.defaultLocale = " + JSON.stringify(localeSelect.value) + ";");
+			await availableAPIs.setWinLocale(localeSelect.value);
+			await availableAPIs.setUILocale(localeSelect.value);
 			installed_modules.push("50-locale-" + localeSelect.value + ".fs");
 			await availableAPIs.windowTitleSet(await availableAPIs.lookupLocale("INSTALL_PCOS"));
 			localeSelect.remove();

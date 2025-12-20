@@ -728,7 +728,7 @@ function reeAPIs() {
 					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
 					return modules.userfriendliness.informationUnits(language, ...args)
 				},
-				isDarkThemed: function() {
+				isDesktopDarkThemed: function() {
 					if (!privileges.includes("GET_THEME")) throw new Error("UNAUTHORIZED_ACTION");
 					return modules.session.attrib(ses, "dark")
 				},
@@ -1019,6 +1019,7 @@ function reeAPIs() {
 					dom.appendChild(bgfx);
 					modules.session.attrib(secureSession, "dark", modules.session.attrib(ses, "dark"));
 					dom.style.background = ogDom.style.background;
+					if (!dom.style.background) dom.style.background = "black";
 					dom.style.backgroundSize = "100% 100%";
 
 					modules.session.muteAllSessions();
@@ -1478,6 +1479,25 @@ function reeAPIs() {
 				getRootKey: function() {
 					if (!privileges.includes("GET_ROOT_KEY")) throw new Error("UNAUTHORIZED_ACTION");
 					return modules.ksk;
+				},
+				desktopDark: function(desiredMode) {
+					if (!privileges.includes("GRAB_ATTENTION")) throw new Error("UNAUTHORIZED_ACTION");
+					modules.session.attrib(ses, "dark", !!desiredMode);
+				},
+				setWallpaper: function(wallpaperString) {
+					if (!privileges.includes("GRAB_ATTENTION")) throw new Error("UNAUTHORIZED_ACTION");
+					let dom = modules.session.tracker[ses].html;
+					dom.style.background = "url(" + JSON.stringify(wallpaperString) + ")";
+					if (!dom.style.background) dom.style.background = "black";
+					dom.style.backgroundSize = "100% 100%";
+				},
+				setWinLocale: function(desiredLanguage) {
+					if (!privileges.includes("GET_LOCALE")) throw new Error("UNAUTHORIZED_ACTION");
+					language = desiredLanguage;
+				},
+				setUILocale: function(desiredLanguage) {
+					if (!privileges.includes("GRAB_ATTENTION")) throw new Error("UNAUTHORIZED_ACTION");
+					modules.session.attrib(ses, "language", desiredLanguage);
 				}
 			}
 		}

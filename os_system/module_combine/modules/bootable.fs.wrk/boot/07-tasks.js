@@ -291,6 +291,13 @@ function loadTasks() {
 						modules.session.attrib(windowObject.sessionId, "openWins", openWins);
 					}
 				});
+				ree.exportAPI("isDarkThemed", function() {
+					if (!reeAPIInstance.public.getPrivileges().includes("GET_THEME")) throw new Error("UNAUTHORIZED_ACTION");
+					return windowObject.windowDiv.classList.contains("dark")
+				});
+				ree.exportAPI("windowDark", function(apiArg) {
+					windowObject.windowDiv.classList.toggle("dark", apiArg.arg);
+				});
 				ree.exportAPI("closeability", (apiArg) => windowObject.closeButton.classList.toggle("hidden", !apiArg.arg));
 				ree.exportAPI("critical", function(apiArg) {
 					if (reeAPIInstance.public.getPrivileges().includes("SYSTEM_STABILITY")) {
