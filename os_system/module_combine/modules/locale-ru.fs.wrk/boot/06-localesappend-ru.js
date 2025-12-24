@@ -524,7 +524,7 @@ modules.locales.ru = {
 	"BREAKOUT_MODULE_NAME": "Игра-пример Breakout (из MDN)",
 	"BOOTABLE_MODULE_NAME": "Основные файлы ядра",
 	"CORE_MODULE_NAME": "Важные файлы системы",
-	"DIFF_MODULE_NAME": "Библиотека вычисления разности (сделана Logan R. Kearsley)",
+	"DIFF_MODULE_NAME": "Библиотека вычисления разности (сделана Logan R. Kearsley, устаревает)",
 	"INSTFILES_MODULE_NAME": "Файлы установочного окружения",
 	"KEYS_MODULE_NAME": "Криптографические ключи PCsoft",
 	"MULTIMEDIA_MODULE_NAME": "Поддержка мультимедиа",

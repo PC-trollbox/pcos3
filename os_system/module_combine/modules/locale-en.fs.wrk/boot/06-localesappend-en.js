@@ -525,7 +525,7 @@ modules.locales.en = {
 	"BREAKOUT_MODULE_NAME": "The Breakout game example (from MDN)",
 	"BOOTABLE_MODULE_NAME": "Main kernel files",
 	"CORE_MODULE_NAME": "Core system files",
-	"DIFF_MODULE_NAME": "Difference computing library (by Logan R. Kearsley)",
+	"DIFF_MODULE_NAME": "Difference computing library (by Logan R. Kearsley, deprecated)",
 	"INSTFILES_MODULE_NAME": "Installer environment files",
 	"KEYS_MODULE_NAME": "PCsoft cryptographic keys",
 	"MULTIMEDIA_MODULE_NAME": "Multimedia support",

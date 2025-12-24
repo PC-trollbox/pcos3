@@ -51,7 +51,6 @@ let moduleFriendlyNames = {
 	"calculator": "lrn:CALC_TITLE",
 	"core": "lrn:CORE_MODULE_NAME",
 	"crypto-tools": "lrn:CRYPTO_TOOLS_TITLE",
-	"diff": "lrn:DIFF_MODULE_NAME",
 	"installer-modules": "lrn:INSTFILES_MODULE_NAME",
 	"installer": "lrn:INSTALLER_TITLE",
 	"keys": "lrn:KEYS_MODULE_NAME",

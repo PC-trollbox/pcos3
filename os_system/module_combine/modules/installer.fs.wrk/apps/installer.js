@@ -148,9 +148,7 @@ Used libraries:
 		Copyright (c) 2014-2017, SourceLair, Private Company (www.sourcelair.com) (MIT License)
 		Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
 	tweetnacl.js:
-		Public domain, https://github.com/dchest/tweetnacl-js
-	fast-myers-diff (minified and modified):
-		Copyright 2021 Logan R. Kearsley (https://github.com/gliese1337/fast-myers-diff)`;
+		Public domain, https://github.com/dchest/tweetnacl-js`;
 	let mainInstallerContent = document.createElement("div");
 	let closeContent = document.createElement("div");
 	let header = document.createElement("b");

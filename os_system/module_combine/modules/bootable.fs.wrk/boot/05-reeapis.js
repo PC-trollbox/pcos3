@@ -1444,12 +1444,6 @@ function reeAPIs() {
 					for (let part = 0; part < nameParts.length; part++) currentResolve = await resolveRecursive(nameParts.slice(0, part + 1).reverse().join("."), currentResolve);
 					return currentResolve;
 				},
-				patchDiff: function(libraryOptions) {
-					if (!privileges.includes("PATCH_DIFF")) throw new Error("UNAUTHORIZED_ACTION");
-					if (!window.diff) throw new Error("MODULE_REQUIRED");
-					let operations = { diff_core, diff, lcs, calcPatch, applyPatch, calcSlices };
-					return [ ...operations[libraryOptions.operation](...libraryOptions.args) ];
-				},
 				setFirmware: async function(new_flash) {
 					if (!privileges.includes("SET_FIRMWARE")) throw new Error("UNAUTHORIZED_ACTION");
 					if (modules.core.setFW) {

@@ -335,10 +335,6 @@ connfulIdentityGet(String connectionID) -> Object // CONNFUL_IDENTITY_GET
 systemUptime() -> Number // SYSTEM_UPTIME
 networkRawWrite(any data) // NETWORK_RAW_WRITE
 networkRawRead() -> any // NETWORK_RAW_READ
-patchDiff({
-	operation: String,
-	args: Array
-}) -> Array // PATCH_DIFF
 setFirmware(String new_flash) // SET_FIRMWARE
 reloadNetworkConfig() // RELOAD_NETWORK_CONFIG
 batteryStatus() -> {
