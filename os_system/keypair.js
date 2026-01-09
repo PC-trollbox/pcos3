@@ -1,7 +1,6 @@
 const fs = require("fs");
 const crypto = require("crypto");
 
-let keySigningKey = crypto.generateKeyPairSync("ed25519");
 let pcosIntermediateKey = crypto.generateKeyPairSync("ed25519");
 let automaticSigner = crypto.generateKeyPairSync("ed25519");
 let moduleSigner = crypto.generateKeyPairSync("ed25519");
@@ -48,15 +47,12 @@ let serverTrustInfo = {
 	}
 };
 
-let intermediateKeySignature = crypto.sign(undefined, JSON.stringify(intermediateKeyInfo), keySigningKey.privateKey).toString("hex");
 let automaticSignerSignature = crypto.sign(undefined, JSON.stringify(automaticSignerInfo), pcosIntermediateKey.privateKey).toString("hex");
 let moduleSignerSignature = crypto.sign(undefined, JSON.stringify(moduleSignerInfo), pcosIntermediateKey.privateKey).toString("hex");
 let serverTrustSignature = crypto.sign(undefined, JSON.stringify(serverTrustInfo), pcosIntermediateKey.privateKey).toString("hex");
 
 let keypair = {
-	ksk: keySigningKey.publicKey.export({ format: "jwk" }),
 	pcosIntermediate: {
-		signature: intermediateKeySignature,
 		keyInfo: intermediateKeyInfo
 	},
 	automaticSigner: {
@@ -72,7 +68,6 @@ let keypair = {
 		keyInfo: serverTrustInfo
 	},
 	networkID: networkID.publicKey.export({ format: "jwk" }),
-	ksk_private: keySigningKey.privateKey.export({ format: "jwk" }),
 	pcosIntermediate_private: pcosIntermediateKey.privateKey.export({ format: "jwk" }),
 	automaticSigner_private: automaticSigner.privateKey.export({ format: "jwk" }),
 	moduleSigner_private: moduleSigner.privateKey.export({ format: "jwk" }),

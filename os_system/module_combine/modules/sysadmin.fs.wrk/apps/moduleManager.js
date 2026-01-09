@@ -100,6 +100,38 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 					data: moduleContent
 				});
 				let parsedModule = JSON.parse(moduleContent);
+				if (moduleName == "keys") {
+					let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
+					let localKSK = JSON.parse(await availableAPIs.fs_read({
+						path: (await availableAPIs.getSystemMount()) + "/etc/security/ksk"
+					})).privateKey;
+					let kskHandle = await availableAPIs.cspOperation({ cspProvider: "basic", operation: "importKey", cspArgument: { format: "jwk",
+						keyData: localKSK, algorithm: "Ed25519", extractable: false, keyUsages: [ "sign" ] }});
+					let keysFiles = Object.values(parsedModule.backend.files.etc.keys).filter(a => typeof a === "string");
+					for (let keysFile of keysFiles) {
+						let keyFile = JSON.parse(parsedModule.files[keysFile]);
+						if (!keyFile.keyInfo.signedBy) {
+							keyFile.signature = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
+								cspProvider: "basic",
+								operation: "sign",
+								cspArgument: {
+									algorithm: "Ed25519",
+									key: kskHandle,
+									data: new TextEncoder().encode(JSON.stringify(keyFile.keyInfo))
+								}
+							})));
+						}
+						parsedModule.files[keysFile] = JSON.stringify(keyFile);
+					}
+					delete parsedModule.buildInfo.signature;
+					parsedModule.buildInfo.signature = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
+						cspProvider: "basic",
+						operation: "sign",
+						cspArgument: { algorithm: "Ed25519", key: kskHandle, data: new TextEncoder().encode(JSON.stringify(parsedModule)) }
+					})));
+					await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: kskHandle });
+					await availableAPIs.fs_write({ path: (await availableAPIs.getSystemMount()) + "/modules/" + remoteFileName, data: JSON.stringify(parsedModule) });
+				}
 				moduleConfig.local[moduleName] = parsedModule?.buildInfo || remoteInfo;
 				isRegenNeeded = parsedModule.backend?.files?.boot;
 			} else if (statement.type == "remove") {
@@ -134,10 +166,6 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	let removeModuleBtn = document.createElement("button");
 	let updateSystemButton = document.createElement("button");
 	let regenerateKernelBtn = document.createElement("button");
-	let repairOSBtn = document.createElement("button");
-	let mountOfflineBtn = document.createElement("button");
-	let umountOfflineBtn = document.createElement("button");
-	let swapToSystemBtn = document.createElement("button");
 	let reinventorizeBtn = document.createElement("button");
 
 	updateModCfgBtn.innerText = await availableAPIs.lookupLocale("UPDATE_MODCFG");
@@ -146,10 +174,6 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	removeModuleBtn.innerText = await availableAPIs.lookupLocale("REMOVE_MODULES");
 	updateSystemButton.innerText = await availableAPIs.lookupLocale("UPDATE_BUTTON");
 	regenerateKernelBtn.innerText = await availableAPIs.lookupLocale("REGENERATE_KERNEL");
-	repairOSBtn.innerText = await availableAPIs.lookupLocale("REPAIR_OS");
-	mountOfflineBtn.innerText = await availableAPIs.lookupLocale("MOUNT_OFFLINE_OS");
-	umountOfflineBtn.innerText = await availableAPIs.lookupLocale("UMOUNT_OFFLINE_OS");
-	swapToSystemBtn.innerText = await availableAPIs.lookupLocale("SWAP_OFFLINE_OS");
 	reinventorizeBtn.innerText = await availableAPIs.lookupLocale("REINVENTORIZE_MODULES");
 
 	updateModCfgBtn.addEventListener("click", async function() {
@@ -475,190 +499,6 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 		container.hidden = false;
 	});
 
-	repairOSBtn.addEventListener("click", async function() {
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		activityNote.innerText = await availableAPIs.lookupLocale("REPAIRING_SYSTEM");
-		try {
-			let updateService = new URL("bdp://localhost");
-			updateService.hostname = (await availableAPIs.getUpdateService()) || "pcosserver.pc";
-			let moduleConfig = JSON.parse(await availableAPIs.fs_read({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json"
-			}));
-			let toRepair = Object.keys(moduleConfig.local).filter(a => !!(moduleConfig.remote || {})[a]).sort((a, b) => a.localeCompare(b));
-			let modNum = 0;
-			for (let module of toRepair) {
-				activityNote.innerText = (await availableAPIs.lookupLocale("REPAIRING_MODULE")).replace("%s", module).replace("%s", modNum + 1).replace("%s", toRepair.length).replace("%s", (modNum / toRepair.length * 100).toFixed(2));
-				let moduleContent = (await bdpGet(new URL("/module_repository/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs", updateService))).content;
-				await availableAPIs.fs_rm({
-					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.local[module].bootOrder + "-" + module + ".fs"
-				});
-				await availableAPIs.fs_write({
-					path: (await availableAPIs.getSystemMount()) + "/modules/" + moduleConfig.remote[module].bootOrder + "-" + module + ".fs",
-					data: moduleContent
-				});
-				moduleConfig.local[module] = JSON.parse(moduleContent).buildInfo;
-				modNum++;
-			}
-			await availableAPIs.fs_write({
-				path: (await availableAPIs.getSystemMount()) + "/etc/moduleConfig.json",
-				data: JSON.stringify(moduleConfig)
-			});
-			activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
-			await reloadModules(await availableAPIs.getSystemMount());
-			await regenerateKernel();
-			await availableAPIs.shutdown({ isReboot: true });
-		} catch (e) {
-			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("REPAIR_FAILED");
-		}
-		container.hidden = false;
-		await availableAPIs.closeability(true);
-	});
-
-	mountOfflineBtn.addEventListener("click", async function() {
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		activityNote.innerText = "";
-		try {
-			let modSys = JSON.parse(await availableAPIs.fs_read({ path: "ram/run/moduleSystem.json" }));
-			let mountRelated = Object.entries(modSys).flat(Infinity);
-			await new Promise(async function(resolve, reject) {
-				let discardChangesBtn = document.createElement("button");
-				discardChangesBtn.onclick = _ => reject();
-				discardChangesBtn.innerText = await availableAPIs.lookupLocale("DISCARD_CHANGES");
-				activityNote.appendChild(discardChangesBtn);
-				let mountpoints = (await availableAPIs.fs_mounts()).filter(a => !mountRelated.includes(a));
-				for (let mountpoint of mountpoints) {
-					let mountBtn = document.createElement("button");
-					mountBtn.innerText = mountpoint;
-					mountBtn.onclick = async function() {
-						try {
-							activityNote.innerText = await availableAPIs.lookupLocale("RELOADING_MODULES");
-							await reloadModules(mountpoint, await availableAPIs.getSystemMount(), mountpoint + "-sys");
-							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-							resolve();
-						} catch (e) {
-							reject(e);
-						}
-					};
-					activityNote.appendChild(mountBtn);
-				}
-			});
-		} catch (e) {
-			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
-		}
-		container.hidden = false;
-		await availableAPIs.closeability(true);
-	});
-
-	umountOfflineBtn.addEventListener("click", async function() {
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		activityNote.innerText = "";
-		try {
-			let modSys = JSON.parse(await availableAPIs.fs_read({ path: "ram/run/moduleSystem.json" }));
-			let systemMount = await availableAPIs.getSystemMount();
-			await new Promise(async function(resolve, reject) {
-				let discardChangesBtn = document.createElement("button");
-				discardChangesBtn.onclick = _ => reject();
-				discardChangesBtn.innerText = await availableAPIs.lookupLocale("DISCARD_CHANGES");
-				activityNote.appendChild(discardChangesBtn);
-				let mountpoints = (await availableAPIs.fs_mounts()).filter(a => modSys.hasOwnProperty(a) && a != systemMount);
-				for (let mountpoint of mountpoints) {
-					let mountBtn = document.createElement("button");
-					mountBtn.innerText = mountpoint;
-					mountBtn.onclick = async function() {
-						try {
-							activityNote.innerText = await availableAPIs.lookupLocale("UNMOUNTING_MOUNTS");
-							await availableAPIs.fs_unmount({ mount: mountpoint });
-							for (let mount of modSys[mountpoint].slice(1))
-								await availableAPIs.fs_unmount({ mount });
-							delete modSys[mountpoint];
-							await availableAPIs.fs_write({
-								path: "ram/run/moduleSystem.json",
-								data: JSON.stringify(modSys)
-							});
-							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-							resolve();
-						} catch (e) {
-							reject(e);
-						}
-					};
-					activityNote.appendChild(mountBtn);
-				}
-			});
-		} catch (e) {
-			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
-		}
-		container.hidden = false;
-		await availableAPIs.closeability(true);
-	});
-
-	swapToSystemBtn.addEventListener("click", async function() {
-		await availableAPIs.closeability(false);
-		container.hidden = true;
-		activityNote.innerText = "";
-		try {
-			let modSys = JSON.parse(await availableAPIs.fs_read({ path: "ram/run/moduleSystem.json" }));
-			let systemMount = await availableAPIs.getSystemMount();
-			await new Promise(async function(resolve, reject) {
-				let discardChangesBtn = document.createElement("button");
-				discardChangesBtn.onclick = _ => reject();
-				discardChangesBtn.innerText = await availableAPIs.lookupLocale("DISCARD_CHANGES");
-				activityNote.appendChild(discardChangesBtn);
-				let mountpoints = (await availableAPIs.fs_mounts()).filter(a => modSys.hasOwnProperty(a) && a != systemMount);
-				for (let mountpoint of mountpoints) {
-					let mountBtn = document.createElement("button");
-					mountBtn.innerText = mountpoint;
-					mountBtn.onclick = async function() {
-						try {
-							activityNote.innerText = await availableAPIs.lookupLocale("SWAPPING_SYSTEMS");
-							let oldSysName = await availableAPIs.getSystemMount();
-							let newOldSysName = await availableAPIs.getSystemMount();
-							while (modSys[newOldSysName]) newOldSysName = newOldSysName + "~";
-							modSys[newOldSysName] = modSys[oldSysName];
-							modSys[oldSysName] = modSys[mountpoint];
-							delete modSys[mountpoint];
-							await availableAPIs.fs_unmount({ mount: oldSysName });
-							await availableAPIs.fs_mount({
-								mountpoint: newOldSysName,
-								filesystem: "overlayMount",
-								filesystemOptions: {
-									mounts: modSys[newOldSysName]
-								}
-							});
-							await availableAPIs.fs_unmount({ mount: mountpoint });
-							await availableAPIs.fs_mount({
-								mountpoint: oldSysName,
-								filesystem: "overlayMount",
-								filesystemOptions: {
-									mounts: modSys[oldSysName]
-								}
-							});
-							await availableAPIs.fs_write({
-								path: "ram/run/moduleSystem.json",
-								data: JSON.stringify(modSys)
-							});
-							activityNote.innerText = await availableAPIs.lookupLocale("SUCCESSFUL_OP");
-							resolve();
-						} catch (e) {
-							reject(e);
-						}
-					};
-					activityNote.appendChild(mountBtn);
-				}
-			});
-		} catch (e) {
-			console.error(e);
-			activityNote.innerText = await availableAPIs.lookupLocale("FAILED_OP");
-		}
-		container.hidden = false;
-		await availableAPIs.closeability(true);
-	});
-
 	reinventorizeBtn.addEventListener("click", async function() {
 		await availableAPIs.closeability(false);
 		container.hidden = true;
@@ -697,10 +537,6 @@ let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a
 	container.appendChild(removeModuleBtn);
 	container.appendChild(updateSystemButton);
 	container.appendChild(regenerateKernelBtn);
-	container.appendChild(repairOSBtn);
-	container.appendChild(mountOfflineBtn);
-	container.appendChild(umountOfflineBtn);
-	container.appendChild(swapToSystemBtn);
 	container.appendChild(reinventorizeBtn);
 	document.body.appendChild(container);
 	document.body.appendChild(activityNote);
@@ -723,7 +559,6 @@ async function findModKeyFriendlyName(moduleConfig) {
 	} catch { cachedKeys[moduleConfig.signer] = {}; }
 	if (!cachedKeys.hasOwnProperty(moduleConfig.signer)) return moduleConfig.signer;
 	let signatureKey = cachedKeys[moduleConfig.signer]?.keyInfo;
-	console.log(signatureKey);
 	if (signatureKey?.friendlyNameDB) return signatureKey.friendlyNameDB[await availableAPIs.lookupLocale("OS_LOCALE")] + " (" + moduleConfig.signer + ")";
 	if (signatureKey?.friendlyName) return signatureKey.friendlyName + " (" + moduleConfig.signer + ")";
 	return moduleConfig.signer;
@@ -777,8 +612,8 @@ async function recursiveKeyVerify(mnt, key, khrl) {
 	if (!verify) throw new Error("KEY_SIGNATURE_VERIFICATION_FAILED");
 	return true;
 }
-async function reloadModules(mnt, getKeysFrom, newName) {
-	let khrlFiles = await availableAPIs.fs_ls({ path: (getKeysFrom || mnt) + "/etc/keys/khrl" });
+async function reloadModules(mnt) {
+	let khrlFiles = await availableAPIs.fs_ls({ path: mnt + "/etc/keys/khrl" });
 	let khrl = [];
 	let rootKeyImport = await availableAPIs.cspOperation({
 		cspProvider: "basic",
@@ -792,7 +627,7 @@ async function reloadModules(mnt, getKeysFrom, newName) {
 		}
 	});
 	for (let file of khrlFiles) {
-		let khrlFile = JSON.parse(await availableAPIs.fs_read({ path: (getKeysFrom || mnt) + "/etc/keys/khrl/" + file }));
+		let khrlFile = JSON.parse(await availableAPIs.fs_read({ path: mnt + "/etc/keys/khrl/" + file }));
 		if (await availableAPIs.cspOperation({
 			cspProvider: "basic",
 			operation: "verify",
@@ -828,9 +663,9 @@ async function reloadModules(mnt, getKeysFrom, newName) {
 				try {
 					let signingKey;
 					if (moduleName != "00-keys.fs") {
-						signingKey = JSON.parse(await availableAPIs.fs_read({ path: (getKeysFrom || mnt) + "/etc/keys/" + fullModuleFile.buildInfo.signer }));
+						signingKey = JSON.parse(await availableAPIs.fs_read({ path: mnt + "/etc/keys/" + fullModuleFile.buildInfo.signer }));
 						if (!signingKey.keyInfo.usages.includes("moduleTrust")) throw new Error("NOT_MODULE_SIGNING_KEY");
-						await recursiveKeyVerify(getKeysFrom || mnt, signingKey, khrl);
+						await recursiveKeyVerify(mnt, signingKey, khrl);
 					} else {
 						signingKey = { keyInfo: { key: await availableAPIs.getRootKey() } };
 					}
@@ -886,17 +721,15 @@ async function reloadModules(mnt, getKeysFrom, newName) {
 			throw e;
 		}
 	}
-	if (!newName) {
-		await availableAPIs.fs_unmount({ mount: mnt });
-		for (let mount of modSys[mnt].slice(1))
-			await availableAPIs.fs_unmount({ mount });
-	}
-	modSys[newName || mnt] = [ prevMnt || mnt, ...mntList ];
+	await availableAPIs.fs_unmount({ mount: mnt });
+	for (let mount of modSys[mnt].slice(1))
+		await availableAPIs.fs_unmount({ mount });
+	modSys[mnt] = [ prevMnt || mnt, ...mntList ];
 	await availableAPIs.fs_mount({
-		mountpoint: newName || mnt,
+		mountpoint: mnt,
 		filesystem: "overlayMount",
 		filesystemOptions: {
-			mounts: modSys[newName || mnt]
+			mounts: modSys[mnt]
 		}
 	});
 	await availableAPIs.fs_write({

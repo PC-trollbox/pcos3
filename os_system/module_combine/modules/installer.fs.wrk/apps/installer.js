@@ -328,12 +328,53 @@ Used libraries:
 					}
 					throw e;
 				}
+				description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_DIRECTORY_STRUCTURE"));
+				try {
+					await availableAPIs.fs_mkdir({ path: "target/apps" });
+					await availableAPIs.fs_mkdir({ path: "target/apps/associations" });
+					await availableAPIs.fs_mkdir({ path: "target/apps/links" });
+					await availableAPIs.fs_mkdir({ path: "target/etc" });
+					await availableAPIs.fs_mkdir({ path: "target/etc/wallpapers" });
+					await availableAPIs.fs_mkdir({ path: "target/etc/icons" });
+					await availableAPIs.fs_mkdir({ path: "target/etc/sounds" });
+					await availableAPIs.fs_mkdir({ path: "target/etc/keys" });
+					await availableAPIs.fs_mkdir({ path: "target/etc/keys/khrl" });
+					await availableAPIs.fs_mkdir({ path: "target/etc/security" });
+					await availableAPIs.fs_chmod({
+						path: "target/etc/security",
+						newPermissions: ""
+					});
+					await availableAPIs.fs_mkdir({ path: "target/root" });
+					await availableAPIs.fs_mkdir({ path: "target/home" });
+				} catch {}
 				button.hidden = false;
 				let newInstall = true;
+				let internalKSK = {};
 				try {
 					await availableAPIs.fs_read({ path: "target/etc/security/users" });
 					newInstall = false;
 				} catch {}
+				try {
+					internalKSK = JSON.parse(await availableAPIs.fs_read({ path: "target/etc/security/ksk" }));
+				} catch {
+					let kskHandle = await availableAPIs.cspOperation({ cspProvider: "basic", operation: "generateKey", cspArgument: {
+						algorithm: "Ed25519",
+						extractable: true,
+						keyUsages: [ "sign", "verify" ]
+					}});
+					internalKSK.publicKey = await availableAPIs.cspOperation({ cspProvider: "basic", operation: "exportKey", cspArgument: {
+						format: "jwk",
+						key: kskHandle.publicKey
+					}});
+					internalKSK.privateKey = await availableAPIs.cspOperation({ cspProvider: "basic", operation: "exportKey", cspArgument: {
+						format: "jwk",
+						key: kskHandle.privateKey
+					}});
+					await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: kskHandle.privateKey });
+					await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: kskHandle.publicKey });
+					await availableAPIs.fs_write({ path: "target/etc/security/ksk", data: JSON.stringify(internalKSK, null, "\t") });
+					await availableAPIs.fs_chmod({ path: "target/etc/security/ksk", newPermissions: "" });
+				}
 				try {
 					await availableAPIs.fs_read({ path: "target/.migration" });
 					isMigrated = true;
@@ -417,9 +458,11 @@ Used libraries:
 							recursiveRemove("target/modules");
 						} catch {}
 						try {
+							await availableAPIs.fs_mkdir({ path: "target/boot" });
 							await availableAPIs.fs_mkdir({ path: "target/modules" });
 						} catch {}
 						let modules = await availableAPIs.fs_ls({ path: (await availableAPIs.getSystemMount()) + "/modules" });
+						let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 						moduleStatus.max = installed_modules.length;
 						for (let moduleIndex in installed_modules) {
 							let module = installed_modules[moduleIndex];
@@ -443,30 +486,48 @@ Used libraries:
 								});
 								moduleStatus.value++;
 							}
+							if (module == "00-keys.fs") {
+								description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_KEYS"));
+								let kskHandle = await availableAPIs.cspOperation({ cspProvider: "basic", operation: "importKey", cspArgument: {
+									format: "jwk",
+									keyData: internalKSK.privateKey,
+									algorithm: "Ed25519",
+									extractable: false,
+									keyUsages: [ "sign" ]
+								}});
+								let newKeysModule = JSON.parse(await availableAPIs.fs_read({ path: "target/modules/00-keys.fs" }));
+								let keysFiles = Object.values(newKeysModule.backend.files.etc.keys).filter(a => typeof a === "string");
+								for (let keysFile of keysFiles) {
+									let keyFile = JSON.parse(newKeysModule.files[keysFile]);
+									if (!keyFile.keyInfo.signedBy) {
+										keyFile.signature = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
+											cspProvider: "basic",
+											operation: "sign",
+											cspArgument: {
+												algorithm: "Ed25519",
+												key: kskHandle,
+												data: new TextEncoder().encode(JSON.stringify(keyFile.keyInfo))
+											}
+										})));
+									}
+									newKeysModule.files[keysFile] = JSON.stringify(keyFile);
+								}
+								delete newKeysModule.buildInfo.signature;
+								newKeysModule.buildInfo.signature = u8aToHex(new Uint8Array(await availableAPIs.cspOperation({
+									cspProvider: "basic",
+									operation: "sign",
+									cspArgument: { algorithm: "Ed25519", key: kskHandle, data: new TextEncoder().encode(JSON.stringify(newKeysModule)) }
+								})));
+								await availableAPIs.cspOperation({ cspProvider: "basic", operation: "unloadKey", cspArgument: kskHandle });
+								await availableAPIs.fs_write({ path: "target/modules/00-keys.fs", data: JSON.stringify(newKeysModule) });
+								description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("COPYING_FOLDERS"));
+							}
 						}
-						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("CREATING_DIRECTORY_STRUCTURE"));
-						try {
-							await availableAPIs.fs_mkdir({ path: "target/apps" });
-							await availableAPIs.fs_mkdir({ path: "target/apps/associations" });
-							await availableAPIs.fs_mkdir({ path: "target/apps/links" });
-							await availableAPIs.fs_mkdir({ path: "target/boot" });
-							await availableAPIs.fs_mkdir({ path: "target/etc" });
-							await availableAPIs.fs_mkdir({ path: "target/etc/wallpapers" });
-							await availableAPIs.fs_mkdir({ path: "target/etc/icons" });
-							await availableAPIs.fs_mkdir({ path: "target/etc/sounds" });
-							await availableAPIs.fs_mkdir({ path: "target/etc/keys" });
-							await availableAPIs.fs_mkdir({ path: "target/etc/keys/khrl" });
-							await availableAPIs.fs_mkdir({ path: "target/etc/security" });
-							await availableAPIs.fs_chmod({
-								path: "target/etc/security",
-								newPermissions: ""
-							});
-							await availableAPIs.fs_mkdir({ path: "target/root" });
-							await availableAPIs.fs_mkdir({ path: "target/home" });
-						} catch {}
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_FS"));
 						let systemCode = "let localSystemMount = \".storage\";\nlet mountOptions = {\n\tpartition: " + JSON.stringify(diskDataPartition) + "\n};\ntry {\n\tmodules.fs.mounts[localSystemMount] = await modules.mounts.PCFSiDBMount(mountOptions);\n\tmodules.defaultSystem = localSystemMount;\n} catch (e) {\n\tawait panic(\"SYSTEM_PARTITION_MOUNTING_FAILED\", { underlyingJS: e, name: \"fs.mounts\", params: [localSystemMount, mountOptions]});\n}\n";
 						await availableAPIs.fs_write({ path: "target/boot/01-fsboot.js", data: systemCode });
+						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("PATCHING_KEYS"));
+						await availableAPIs.fs_write({ path: "target/boot/00-pcosksk.js", data: `modules.ksk = ${JSON.stringify(internalKSK.publicKey)};\ntry {\n\tmodules.ksk_imported = await crypto.subtle.importKey("jwk", modules.ksk, { name: "Ed25519" }, false, ["verify"]);\n} catch (e) {\n\tpanic("KEY_SIGNING_KEY_IMPORT_FAILED", { underlyingJS: e });\n\tthrow e;\n}` });
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("SETTING_LOCALE_PREFERENCE"));
 						await availableAPIs.fs_write({ path: "target/boot/06-localeset.js", data: "modules.locales.defaultLocale = " + JSON.stringify(await availableAPIs.osLocale()) + ";\n" });
 						description.innerHTML = (await availableAPIs.lookupLocale("INSTALLING_PCOS")).replace("%s", await availableAPIs.lookupLocale("GENERATING_KERNEL"));
@@ -531,7 +592,6 @@ Used libraries:
 								operation: "random",
 								cspArgument: new Uint8Array(64)
 							});
-							let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 							let key = await availableAPIs.cspOperation({
 								cspProvider: "basic",
 								operation: "importKey",
