@@ -211,7 +211,7 @@ for (let archivedModule of archivedModules) {
 if (args.values["only-modules"]) return process.exit();
 
 let installerCode = "// This is a generated file. Please modify the corresponding files, not this file directly.\n" +
-	"// (c) Copyright 2025 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
+	"// (c) Copyright 2026 PCsoft. MIT license: https://spdx.org/licenses/MIT.html\n";
 let installerModuleBundle = JSON.stringify(Object.fromEntries(installerModules.map(a => getModuleOrder(a) + "-" + a + ".fs").map(a => [
 	a, JSON.parse(fs.readFileSync(__dirname + "/modules/" + a).toString())
 ])));

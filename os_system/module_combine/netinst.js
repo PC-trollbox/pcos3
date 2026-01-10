@@ -40,6 +40,6 @@ input = JSON.stringify(Object.fromEntries(input));
 let sizeReducionCharCounterB = input.length;
 console.log(sizeReducionCharCounterA - sizeReducionCharCounterB, "characters were reduced");
 fs.writeFileSync(args.values.output, `// This is a generated file after netinst transform. Please modify the corresponding files, not this file directly.
-// (c) Copyright 2025 PCsoft. MIT license: https://spdx.org/licenses/MIT.html
+// (c) Copyright 2026 PCsoft. MIT license: https://spdx.org/licenses/MIT.html
 let installerModuleBundle = ${input};
 ` + fullInputFile.slice(3).join("\n"));
