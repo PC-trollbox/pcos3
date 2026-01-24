@@ -97,8 +97,6 @@ try {
 	console.error("no keypair.json file found, run node ../keypair.js");
 	process.exit(1);
 }
-let keySigningKey = crypto.generateKeyPairSync("ed25519");
-let kskJSON = keySigningKey.publicKey.export({ format: "jwk" });
 let pcosHeader = fs.readFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js").toString().split("\n");
 let version = pcosHeader[1].match(/\d+/)[0];
 version = parseInt(version);
@@ -109,6 +107,16 @@ pcosHeader[2] = "const build_time = " + Date.now() + ";";
 pcosHeader = pcosHeader.join("\n");
 fs.writeFileSync(__dirname + "/modules/bootable.fs.wrk/boot/00-pcos.js", pcosHeader);
 let moduleConfig = {};
+function moduleHash(directory) {
+	let listing = fs.readdirSync(directory);
+	let hash = crypto.createHash("sha256").update(directory);
+	for (let file of listing) {
+		let stats = fs.statSync(directory + "/" + file);
+		if (stats.isDirectory()) hash = hash.update(moduleHash(directory + "/" + file));
+		if (stats.isFile()) hash = hash.update(directory + "/" + file).update(fs.readFileSync(directory + "/" + file));
+	}
+	return hash.digest();
+}
 function createModule(directory, permissionsPrefixed = "") {
 	let listing = fs.readdirSync(directory);
 	let module = { backend: { files: {}, permissions: {} }, files: {} };
@@ -160,7 +168,10 @@ function createModule(directory, permissionsPrefixed = "") {
 			} else if (permissionsPrefixed == "etc/keys/") {
 				let keyScan = JSON.parse(fileContents);
 				if (!keyScan.keyInfo.signedBy) {
-					keyScan.signature = crypto.sign(undefined, JSON.stringify(keyScan.keyInfo), keySigningKey.privateKey).toString("hex");
+					keyScan.signature = crypto.sign(undefined, JSON.stringify(keyScan.keyInfo), {
+						key: keypair.ksk_private,
+						format: "jwk"
+					}).toString("hex");
 				}
 				fileContents = JSON.stringify(keyScan);
 			}
@@ -185,7 +196,7 @@ function createModule(directory, permissionsPrefixed = "") {
 		};
 		let signingKey = keypair.moduleSigner_private;
 		if (path.basename(directory) == "keys.fs.wrk") {
-			signingKey = keySigningKey.privateKey.export({ format: "jwk" });
+			signingKey = keypair.ksk_private;
 			delete module.buildInfo.signer;
 		}
 		module.buildInfo.signature = crypto.sign(undefined, JSON.stringify(module), {
@@ -197,7 +208,16 @@ function createModule(directory, permissionsPrefixed = "") {
 	return module;
 }
 
+let previousHashes = {};
+try {
+	previousHashes = require(__dirname + "/previousHashes.json");
+} catch {};
 let moduleFolders = fs.readdirSync(__dirname + "/modules").filter(a => a.endsWith(".wrk"));
+for (let moduleFolder of moduleFolders) try {
+	moduleConfig[moduleFolder.slice(0, -7)] = JSON.parse(fs.readFileSync(__dirname + "/modules/" + getModuleOrder(moduleFolder.slice(0, -7)) + "-" + moduleFolder.slice(0, -4)).toString()).buildInfo;
+} catch {}
+let moduleHashes = Object.fromEntries(moduleFolders.map(a => [ a, moduleHash(__dirname + "/modules/" + a).toString("hex") ]));
+moduleFolders = moduleFolders.filter(a => moduleHashes[a] != previousHashes[a]);
 for (let moduleFolder of moduleFolders)
 	fs.writeFileSync(__dirname + "/modules/" + getModuleOrder(moduleFolder.slice(0, -7)) + "-" + moduleFolder.slice(0, -4), JSON.stringify(createModule(__dirname + "/modules/" + moduleFolder)));
 fs.mkdirSync(__dirname + "/../history/build" + version, {
@@ -208,6 +228,7 @@ for (let archivedModule of archivedModules) {
 	fs.copyFileSync(__dirname + "/modules/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs",
 		__dirname + "/../history/build" + version + "/" + getModuleOrder(archivedModule) + "-" + archivedModule + ".fs");
 }
+fs.writeFileSync(__dirname + "/previousHashes.json", JSON.stringify(moduleHashes));
 if (args.values["only-modules"]) return process.exit();
 
 let installerCode = "// This is a generated file. Please modify the corresponding files, not this file directly.\n" +
@@ -227,7 +248,7 @@ for (let installerModule in installerModuleBundle) {
 		}
 	}
 }
-entireBoot.push(["00-pcosksk.js", 'modules.ksk = ${JSON.stringify(kskJSON)}; try { modules.ksk_imported = await crypto.subtle.importKey("jwk", modules.ksk, { name: "Ed25519" }, false, ["verify"]); } catch (e) { panic("KEY_SIGNING_KEY_IMPORT_FAILED", { underlyingJS: e }); throw e; }']);
+entireBoot.push(["00-pcosksk.js", 'modules.ksk = ${JSON.stringify(keypair.ksk)}; try { modules.ksk_imported = await crypto.subtle.importKey("jwk", modules.ksk, { name: "Ed25519" }, false, ["verify"]); } catch (e) { panic("KEY_SIGNING_KEY_IMPORT_FAILED", { underlyingJS: e }); throw e; }']);
 entireBoot.push(["01-fsmodule-pre.js", 'modules.fs.mounts[".installer"]=modules.mounts.ramMount({});modules.defaultSystem=".installer";modules.fs.mkdir(".installer/modules");modules.fs.mkdir(".installer/etc");let networkDefaultURL=new URL(location.origin);networkDefaultURL.protocol="ws"+(networkDefaultURL.protocol=="https:"?"s":"")+":";networkDefaultURL.pathname="";modules.fs.write(".installer/etc/network.json",JSON.stringify({url:networkDefaultURL.toString(),ucBits:1,updates:"pcosserver.pc"}));']);
 entireBoot.push(["01-fsmodule-start.js", 'let installerModuleBundle = ' + JSON.stringify(installerModuleBundle) + '; for (let installerModule in installerModuleBundle) { await modules.fs.write(".installer/modules/" + installerModule, JSON.stringify(installerModuleBundle[installerModule])); }; modules.fs.write(".installer/etc/moduleConfig.json", JSON.stringify({ local: Object.fromEntries(Object.entries(installerModuleBundle).map(a => [a[0].split("-").slice(1).join("-").split(".").slice(0, -1).join("."), a[1].buildInfo])) }));']);
 entireBoot = entireBoot.sort((a, b) => a[0].localeCompare(b[0])).map(a => a[1]).join("\\n");
