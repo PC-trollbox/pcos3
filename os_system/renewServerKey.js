@@ -19,7 +19,7 @@ let serverTrustInfo = {
 	}
 };
 
-let serverTrustSignature = crypto.sign(undefined, JSON.stringify(serverTrustInfo), { key: keypair.intermediateKey_signature, format: "jwk" }).toString("hex");
+let serverTrustSignature = crypto.sign(undefined, JSON.stringify(serverTrustInfo), { key: keypair.pcosIntermediate_private, format: "jwk" }).toString("hex");
 
 keypair.serverKey = {
 	signature: serverTrustSignature,
