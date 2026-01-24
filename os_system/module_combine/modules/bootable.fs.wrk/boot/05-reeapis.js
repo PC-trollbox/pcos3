@@ -176,9 +176,9 @@ function reeAPIs() {
 							}
 						}
 						if (!verifyKeySignature || (!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address) &&
-							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain)) &&
+							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain) &&
 							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + address + ":" + string_gate) &&
-							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain + ":" + string_gate)) {
+							!theirMainKeyDecrypt.keyInfo.usages.includes("connfulSecureServer:" + verifyByDomain + ":" + string_gate))) {
 							_rejectPromise(new Error("SERVER_SIGNATURE_VERIFICATION_FAILED"));
 							websocket.removeEventListener("message", eventListener);
 							delete connections[packetConnectionID + ":client"];
