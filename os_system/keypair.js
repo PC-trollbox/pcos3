@@ -7,6 +7,9 @@ let automaticSigner = crypto.generateKeyPairSync("ed25519");
 let moduleSigner = crypto.generateKeyPairSync("ed25519");
 let serverTrust = crypto.generateKeyPairSync("ed25519");
 let networkID = crypto.generateKeyPairSync("ed25519");
+let networkIDHash = crypto.createHash("sha256").update(Buffer.from(networkID.publicKey.export({
+	format: "jwk"
+}).x, "base64url")).digest().subarray(0, 6).toString("hex");
 
 let intermediateKeyInfo = {
 	key: pcosIntermediateKey.publicKey.export({ format: "jwk" }),
@@ -36,7 +39,7 @@ let moduleSignerInfo = {
 };
 let serverTrustInfo = {
 	key: serverTrust.publicKey.export({ format: "jwk" }),
-	usages: [ "connfulSecureServer:7f00000150434f53334e6574776f726b", "connfulSecureServer:pcosserver.pc" ],
+	usages: [ "connfulSecureServer:" + networkIDHash.repeat(2) + "00000001", "connfulSecureServer:pcosserver.pc" ],
 	signedBy: "pcosIntermediate",
 	dates: {
 		since: Date.now(),
@@ -86,7 +89,6 @@ fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/pcosI
 fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/automaticSigner", JSON.stringify(keypair.automaticSigner));
 fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/moduleSigner", JSON.stringify(keypair.moduleSigner));
 
-let networkIDHash = crypto.createHash("sha256").update(Buffer.from(keypair.networkID.x, "base64url")).digest().subarray(0, 6).toString("hex");
 let tlds = JSON.parse(fs.readFileSync(__dirname + "/module_combine/modules/core.fs.wrk/etc/tlds.json"));
 for (let tld in tlds) tlds[tld] = networkIDHash.repeat(2) + "00000001";
 fs.writeFileSync(__dirname + "/module_combine/modules/core.fs.wrk/etc/tlds.json", JSON.stringify(tlds));
