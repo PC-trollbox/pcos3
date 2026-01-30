@@ -31,18 +31,18 @@ const args = util.parseArgs({
 	}
 });
 let installerModules = [ // List of modules included in the installer
-	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "tweetnacl", "xterm", "installer",
+	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "tweetnacl", "xterm", "installer", "network",
 	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal", "blogBrowser", "calculator", "crypto-tools", "multimedia",
 	"installer-modules" /* Must be present! */
 ];
 let specialOrdering = { // keys must always be the first module loaded.
 	"keys": 0
 };
-let criticalModules = [ "bootable", "core", "keys", "tweetnacl", "sysadmin", "terminal" ];
+let criticalModules = [ "bootable", "core", "keys", "tweetnacl", "sysadmin", "terminal", "network" ];
 let archivedModules = [
-	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "tweetnacl", "xterm", "installer",
+	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "tweetnacl", "xterm", "installer", "network",
 	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal", "blogBrowser", "calculator", "crypto-tools", "legacy-terminal",
-	"arcadeBreakout", "multimedia"
+	"arcadeBreakout", "multimedia", "network"
 ];
 let moduleFriendlyNames = {
 	"arcadeBreakout": "lrn:BREAKOUT_MODULE_NAME",
@@ -58,6 +58,7 @@ let moduleFriendlyNames = {
 	"locale-en": "English language support",
 	"locale-ru": "Поддержка Русского языка (Russian language support)",
 	"multimedia": "lrn:MULTIMEDIA_MODULE_NAME",
+	"network": "lrn:NETWORK_MODULE_NAME",
 	"pcos-icons": "lrn:ICONS_MODULE_NAME",
 	"pcos-sounds": "lrn:SOUNDS_MODULE_NAME",
 	"pcos-wallpapers": "lrn:WP_MODULE_NAME",

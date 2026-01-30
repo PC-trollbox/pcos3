@@ -27,11 +27,10 @@ let sizeReducionModuleCounterA = input.length;
 let versions = [];
 input.map(a => versions.push(a[1].buildInfo.for));
 versions = new Set(versions);
-if (versions.size > 1) console.warn("Mixed targets!", versions);
 console.log("Making netinst for PCOS 3 build", versions.size == 1 ? [ ...versions ][0] : versions);
 let netinst = [
 	"00-keys.fs", "50-bootable.fs", "50-core.fs", "50-installer-modules.fs", "50-installer.fs", "50-locale-en.fs", "50-locale-ru.fs",
-	"50-pcos-wallpapers.fs"
+	"50-pcos-wallpapers.fs", "50-network.fs"
 ];
 input = input.filter(a => netinst.includes(a[0]));
 let sizeReducionModuleCounterB = input.length;

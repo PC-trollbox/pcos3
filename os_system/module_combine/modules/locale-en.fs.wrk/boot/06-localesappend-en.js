@@ -541,5 +541,6 @@ modules.locales.en = {
 	"USER_PREFS_UPDATED": "Preferences were updated. Some programs might not update right away.",
 	"USER_PREFS_UPDATED_PARTIAL": "Not all preferences could be updated right away. Log in again to see the changes.",
 	"PREF_UPDATE_FAILED": "Not all preferences could be updated.",
-	"PATCHING_KEYS": "Patching for public keys"
+	"PATCHING_KEYS": "Patching for public keys",
+	"NETWORK_MODULE_NAME": "The PCOS Network stack"
 };

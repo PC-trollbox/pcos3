@@ -8,7 +8,6 @@ Not all modules are shown in the list below, to avoid redundancy.
  - calculator: Calculations with fraction support
  - core: The basics: authentication, file exploring, file picking, the start menu and the text editor
  - crypto-tools: Perform basic cryptographic tasks
- - diff: Find the difference between files (not human-readable)
  - installer: Fast installation and set up
  - keys: Ensures cryptographic integrity of PCOS 3
  - locale-ru: PCOS speaks Russian (PCOS говорит по-русски)
