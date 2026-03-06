@@ -1,4 +1,5 @@
 async function networkd() {
+	// @pcos-app-mode native
 	let u8aToHex = (u8a) => Array.from(u8a).map(a => a.toString(16).padStart(2, "0")).join("");
 	modules.network = { connected: false, address: null, ws: null, runOnClose: Promise.resolve(), _runOnClose: _ => 1 };
 	try {

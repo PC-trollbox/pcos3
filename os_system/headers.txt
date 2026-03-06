@@ -245,7 +245,7 @@ fs_mount({
 	}
 }) // FS_MOUNT
 supportedFilesystems() -> String[] // GET_FILESYSTEMS
-installedLocales() -> String[] // GET_LOCALES
+installedLocales() -> String[] // GET_LOCALE
 runningServer() -> String // GET_SERVER_URL
 fs_isDirectory({
 	path: String,

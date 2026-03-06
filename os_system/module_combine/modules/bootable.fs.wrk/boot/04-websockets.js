@@ -1,4 +1,5 @@
 function loadWebsocketSupport() {
+	// @pcos-app-mode native
 	let websocketAPI = {
 		getHandle: function(url) {
 			let handle = Array.from(crypto.getRandomValues(new Uint8Array(64))).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "");

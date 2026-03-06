@@ -1,4 +1,5 @@
 function tweetnacl() {
+  // @pcos-app-mode native
     (function(nacl) {
         'use strict';
         

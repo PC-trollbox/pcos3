@@ -585,3 +585,5 @@ async function hookButtonClick(button) {
 		button.onclick = (e) => resolve(e);
 	});
 }
+
+requireLogon();

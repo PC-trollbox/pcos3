@@ -38,11 +38,11 @@ let installerModules = [ // List of modules included in the installer
 let specialOrdering = { // keys must always be the first module loaded.
 	"keys": 0
 };
-let criticalModules = [ "bootable", "core", "keys", "tweetnacl", "sysadmin", "terminal", "network" ];
+let criticalModules = [ "bootable", "core", "crypto-fs", "ipc-fs", "keys", "network", "sfsp", "sysadmin", "terminal", "tweetnacl" ];
 let archivedModules = [
-	"keys", "bootable", "core", "locale-en", "locale-ru", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "tweetnacl", "xterm", "installer", "network",
-	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal", "blogBrowser", "calculator", "crypto-tools", "legacy-terminal",
-	"arcadeBreakout", "multimedia", "network"
+	"arcadeBreakout", "blogBrowser", "bootable", "calculator", "core", "crypto-fs", "crypto-tools", "ipc-fs", "installer-modules", "installer", "keys",
+	"legacy-terminal", "locale-en", "locale-ru", "multimedia", "network", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "sfsp", "sysadmin",
+	"terminal-disks", "terminal-network", "terminal-users", "terminal", "tweetnacl", "xterm"
 ];
 let moduleFriendlyNames = {
 	"arcadeBreakout": "lrn:BREAKOUT_MODULE_NAME",
@@ -50,9 +50,11 @@ let moduleFriendlyNames = {
 	"bootable": "lrn:BOOTABLE_MODULE_NAME",
 	"calculator": "lrn:CALC_TITLE",
 	"core": "lrn:CORE_MODULE_NAME",
+	"crypto-fs": "lrn:CRYPTOFS_MODULE_NAME",
 	"crypto-tools": "lrn:CRYPTO_TOOLS_TITLE",
 	"installer-modules": "lrn:INSTFILES_MODULE_NAME",
 	"installer": "lrn:INSTALLER_TITLE",
+	"ipc-fs": "lrn:IPCFS_MODULE_NAME",
 	"keys": "lrn:KEYS_MODULE_NAME",
 	"legacy-terminal": "lrn:API_TEST_TERM",
 	"locale-en": "English language support",
@@ -62,6 +64,7 @@ let moduleFriendlyNames = {
 	"pcos-icons": "lrn:ICONS_MODULE_NAME",
 	"pcos-sounds": "lrn:SOUNDS_MODULE_NAME",
 	"pcos-wallpapers": "lrn:WP_MODULE_NAME",
+	"sfsp": "lrn:SFSP_MODULE_NAME",
 	"sysadmin": "lrn:SYSADMIN_TOOLS_TITLE",
 	"terminal-disks": "lrn:TERMDISK_MODULE_NAME",
 	"terminal-network": "lrn:TERMNET_MODULE_NAME",

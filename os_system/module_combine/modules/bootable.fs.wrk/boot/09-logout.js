@@ -1,4 +1,5 @@
 async function logOut(target) {
+	// @pcos-app-mode native
 	let liu = modules.liu;
 	if (!liu.hasOwnProperty(target)) throw new Error("USER_NOT_LOGGED_IN");
 	let session = liu[target].session;

@@ -1,4 +1,5 @@
 function loadLull() {
+	// @pcos-app-mode native
 	let lullSession;
 	modules.lull = function() {
 		if (lullSession) return;

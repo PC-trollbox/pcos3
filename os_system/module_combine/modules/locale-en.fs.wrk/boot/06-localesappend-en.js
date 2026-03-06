@@ -1,3 +1,4 @@
+// @pcos-app-mode native
 modules.locales.en = {
 	"UNTITLED_APP": "Untitled program",
 	"PERMISSION_DENIED": "Permission denied",
@@ -542,5 +543,8 @@ modules.locales.en = {
 	"USER_PREFS_UPDATED_PARTIAL": "Not all preferences could be updated right away. Log in again to see the changes.",
 	"PREF_UPDATE_FAILED": "Not all preferences could be updated.",
 	"PATCHING_KEYS": "Patching for public keys",
-	"NETWORK_MODULE_NAME": "The PCOS Network stack"
+	"NETWORK_MODULE_NAME": "The PCOS Network stack",
+	"CRYPTOFS_MODULE_NAME": "Cryptographic filesystems",
+	"SFSP_MODULE_NAME": "Shared file system protocol support",
+	"IPCFS_MODULE_NAME": "IPC-based filesystem (by LLM)"
 };

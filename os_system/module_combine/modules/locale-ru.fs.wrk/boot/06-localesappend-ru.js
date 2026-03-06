@@ -1,3 +1,4 @@
+// @pcos-app-mode native
 modules.locales.ru = {
 	"UNTITLED_APP": "Безымянная программа",
 	"PERMISSION_DENIED": "Отказано в доступе",
@@ -541,5 +542,8 @@ modules.locales.ru = {
 	"USER_PREFS_UPDATED_PARTIAL": "Не все обновления были применены сразу же. Войдите ещё раз, чтобы их увидеть.",
 	"PREF_UPDATE_FAILED": "Не все обновления были применены.",
 	"PATCHING_KEYS": "Изменение для открытых ключей",
-	"NETWORK_MODULE_NAME": "Сетевой стек PCOS Network"
+	"NETWORK_MODULE_NAME": "Сетевой стек PCOS Network",
+	"CRYPTOFS_MODULE_NAME": "Криптографические файловые системы",
+	"SFSP_MODULE_NAME": "Поддержка протокола общей файловой системы",
+	"IPCFS_MODULE_NAME": "Файловая система на основе IPC (сделана БЯМ)"
 };

@@ -1,4 +1,5 @@
 async function loadModules() {
+	// @pcos-app-mode native
 	let hexToU8A = (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map(a => parseInt(a, 16)));
 	let khrlSignatures = [];
 	let mountpointList = [];
