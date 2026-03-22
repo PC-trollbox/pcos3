@@ -32,6 +32,20 @@ function loadUi() {
 	.taskbar .tbicons {
 		display: flex;
 	}
+	
+	.taskbar .filler {
+		overflow: auto;
+		white-space: nowrap;
+	}
+	
+	.task {
+		background: rgba(192, 192, 192, 0.85);
+		padding: 0 4px;
+		margin: 0 0 0 4px;
+		border-radius: 4px;
+		display: inline-block;
+		user-select: none;
+	}
 
 	.filler {
 		flex: 1;
@@ -92,7 +106,6 @@ function loadUi() {
 
 	.window .button {
 		cursor: pointer;
-		padding: 4px;
 		border: none;
 		flex: 1;
 		margin: 0 0 0 2px;
@@ -170,6 +183,10 @@ function loadUi() {
 		display: none;
 	}
 	
+	.user-hidden {
+		display: none;
+	}
+	
 	@keyframes fade-in {
 		0% {
 			opacity: 0;
@@ -219,12 +236,17 @@ function loadUi() {
 		title.className = 'title-displayer';
 		let closeButton = document.createElement('button');
 		closeButton.className = 'button close-button';
-		closeButton.innerHTML = '&#10005;';
+		closeButton.innerHTML = '&#x1F5D9;';
 		titleBar.appendChild(title);
+		let minimizeButton = document.createElement("button");
+		minimizeButton.className = 'button';
+		minimizeButton.innerHTML = '&#x1F5D5;';
+		minimizeButton.onclick = () => windowDiv.classList.add("user-hidden");
+		if (!asIconWindow) titleBar.appendChild(minimizeButton);
 		if (!fullscreen && !asIconWindow) {
 			let fullscreenButton = document.createElement('button');
 			fullscreenButton.className = 'button';
-			fullscreenButton.innerHTML = '&#x25a1;';
+			fullscreenButton.innerHTML = '&#x1F5D6;';
 			fullscreenButton.onclick = function() {
 				windowDiv.classList.toggle("fullscreen");
 			}
@@ -238,13 +260,28 @@ function loadUi() {
 		session.tracker[sessionId].extendedHTML.desktop.appendChild(windowDiv);
 		if (!asIconWindow) {
 			let openWins = session.attrib(sessionId, "openWins") || [];
+			let openWinsIndependent = session.attrib(sessionId, "openWinsIndependent") || [];
+
 			openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
+			openWinsIndependent = openWinsIndependent.filter(a => a.parentElement);
+
 			openWins.map((a, i) => a.style.zIndex = i);
 			windowDiv.style.zIndex = openWins.length;
+
 			openWins.push(windowDiv);
+			openWinsIndependent.push(windowDiv);
+
 			session.attrib(sessionId, "openWins", openWins);
+			session.attrib(sessionId, "openWinsIndependent", openWinsIndependent);
 		} else windowDiv.style.zIndex = "0";
-		if (!fullscreen) makeDraggable(windowDiv, titleBar, reportMovement, asIconWindow ? false : sessionId);
+		if (!fullscreen) makeDraggable(windowDiv, titleBar, reportMovement);
+		if (!asIconWindow) titleBar.onclick = function() {
+			let openWins = session.attrib(sessionId, "openWins") || [];
+			windowDiv.style.zIndex = openWins.length;
+			openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
+			openWins.map((a, i) => a.style.zIndex = i);
+			session.attrib(sessionId, "openWins", openWins);
+		};
 		return {
 			windowDiv,
 			title,
@@ -254,7 +291,7 @@ function loadUi() {
 		};
 	}
 
-	function makeDraggable(windowDiv, titleBar, reportMovement, sessionId) {
+	function makeDraggable(windowDiv, titleBar, reportMovement) {
 		let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
 		titleBar.onmousedown = dragMouseDown;
@@ -265,15 +302,7 @@ function loadUi() {
 			if (e.type == "touchstart") e = e.touches[0];
 			pos3 = e.clientX;
 			pos4 = e.clientY;
-
-			if (sessionId) {
-				let openWins = session.attrib(sessionId, "openWins") || [];
-				windowDiv.style.zIndex = openWins.length;
-				openWins = openWins.filter(a => a.parentElement).sort((a, b) => a.style.zIndex - b.style.zIndex);
-				openWins.map((a, i) => a.style.zIndex = i);
-				session.attrib(sessionId, "openWins", openWins);
-			}
-
+			titleBar.click();
 			document.onmouseup = closeDragElement;
 			document.ontouchend = closeDragElement;
 			document.ontouchcancel = closeDragElement;
@@ -337,6 +366,20 @@ function loadUi() {
 				let clockLocale = modules.locales?.get("OS_LOCALE", locale)?.replace("OS_LOCALE", "") || undefined;
 				startButton.innerText = modules.locales?.get("START_MENU_BTN", locale);
 				clock.innerText = Intl.DateTimeFormat(clockLocale, { timeStyle: clockToggled ? undefined : "medium" }).format();
+				let pastFilled = Array.from(filler.children);
+				for (let window of (session.tracker[identifier].attrib.openWinsIndependent || [])) {
+					if (!window.parentElement) continue;
+					if (window.classList.contains("hidden")) continue;
+					let taskItem = document.createElement("span");
+					taskItem.className = "task";
+					taskItem.innerText = window.getElementsByClassName("title-displayer")[0].innerText;
+					taskItem.onclick = function() {
+						window.classList.remove("user-hidden");
+						window.getElementsByClassName("title-bar")[0].click();
+					}
+					filler.appendChild(taskItem);
+				}
+				for (let taskItem of pastFilled) taskItem.remove();
 				setTimeout(updateTaskbar, 500);
 			};
 

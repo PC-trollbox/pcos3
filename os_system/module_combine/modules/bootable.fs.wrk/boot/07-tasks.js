@@ -258,7 +258,10 @@ function loadTasks() {
 					ree.iframe.hidden = false;
 					return true;
 				});
-				ree.exportAPI("windowVisibility", (apiArg) => windowObject.windowDiv.classList.toggle("hidden", !apiArg.arg));
+				ree.exportAPI("windowVisibility", function(apiArg) {
+					windowObject.windowDiv.classList.toggle("hidden", !apiArg.arg);
+					windowObject.windowDiv.classList.remove("user-hidden");
+				});
 				ree.exportAPI("windowTitleSet", (apiArg) => windowObject.title.innerText = apiArg.arg);
 				ree.exportAPI("windowResize", function(apiArg) {
 					if (reeAPIInstance.public.getPrivileges().includes("GRAB_ATTENTION")) {
