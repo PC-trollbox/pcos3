@@ -190,10 +190,9 @@ server.on("connection", function(socket, req) {
 				}
 			}
 		} else {
-			if (!verified || !socketList.hasOwnProperty(message.subarray(16, 32).toString("hex")) /*|| !spoofers.hasOwnProperty(message.subarray(16, 22).toString("hex"))*/) return socket.send(Buffer.concat([ serverAddress, message.subarray(0, 16), message.subarray(32, 49), codes.CONTROL, codes.ADDRESS_UNREACHABLE ]));
-			//if (message.subarray(16, 22).equals(networkPrefix))
-			socketList[message.subarray(16, 32).toString("hex")].send(message);
-			//else spoofers[message.subarray(16, 22).toString("hex")].send(message);
+			if (!verified || (!socketList.hasOwnProperty(message.subarray(16, 32).toString("hex")) && !spoofers.hasOwnProperty(message.subarray(16, 22).toString("hex")))) return socket.send(Buffer.concat([ serverAddress, message.subarray(0, 16), message.subarray(32, 48), codes.CONTROL, codes.ADDRESS_UNREACHABLE ]));
+			if (socketList.hasOwnProperty(message.subarray(16, 32).toString("hex"))) socketList[message.subarray(16, 32).toString("hex")].send(message);
+			else spoofers[message.subarray(16, 22).toString("hex")].send(message);
 		}
 	});
 	let pingCycle = setInterval(function() {

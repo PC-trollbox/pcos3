@@ -545,5 +545,12 @@ modules.locales.ru = {
 	"NETWORK_MODULE_NAME": "Сетевой стек PCOS Network",
 	"CRYPTOFS_MODULE_NAME": "Криптографические файловые системы",
 	"SFSP_MODULE_NAME": "Поддержка протокола общей файловой системы",
-	"IPCFS_MODULE_NAME": "Файловая система на основе IPC (сделана БЯМ)"
+	"IPCFS_MODULE_NAME": "Файловая система на основе IPC (сделана БЯМ)",
+	"PERMISSION_EXPLORER": "Исследование разрешений",
+	"LAUNCH_PROGRAM": "Запустить программу",
+	"PROGRAM_IS_RUNNING": "Программа работает.",
+	"PERMISSION_GRANTED": "Доступ предоставлен",
+	"PERM_EXP_INTENT": "Помочь исследовать разрешения, необходимые программам",
+	"DEVELOPER_MODE_PACKAGE": "Набор программ Режима разработчика",
+	"PERM_EXP_DENIED": "Запрещено исследовать разрешения, необходимые программам."
 };

@@ -312,7 +312,7 @@ function reeAPIs() {
 			} catch {}
 			for (let networkListen in networkListens) networkListens[networkListen].ws.removeEventListener("message", networkListens[networkListen].fn);
 			for (let websocket of websockets) modules.websocket.close(websocket);
-			await modules.tokens.revoke(token);
+			modules.tokens.revoke(token);
 			for (let i in modules.csps) if (modules.csps[i].hasOwnProperty("removeSameGroupKeys")) modules.csps[i].removeSameGroupKeys(null, taskId);
 		});
 		let apis = {
@@ -1492,6 +1492,10 @@ function reeAPIs() {
 				setUILocale: function(desiredLanguage) {
 					if (!privileges.includes("GRAB_ATTENTION")) throw new Error("UNAUTHORIZED_ACTION");
 					modules.session.attrib(ses, "language", desiredLanguage);
+				},
+				getTokenInfo: function(dt) {
+					if (!privileges.includes("MANAGE_TOKENS")) throw new Error("UNAUTHORIZED_ACTION");
+					return modules.tokens.info(dt || processToken);
 				}
 			}
 		}

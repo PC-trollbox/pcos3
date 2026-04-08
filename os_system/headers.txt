@@ -349,6 +349,11 @@ desktopDark(Boolean desiredMode) // GRAB_ATTENTION
 setWallpaper(String wallpaperString) // GRAB_ATTENTION
 setWinLocale(String desiredLanguage) // GET_LOCALE
 setUILocale(String desiredLanguage) // GRAB_ATTENTION
+getTokenInfo(String desiredToken) -> {
+	user: String,
+	groups: String[],
+	privileges: String[]
+} // MANAGE_TOKENS
 attachCLI()
 toMyCLI(String data)
 fromMyCLI()

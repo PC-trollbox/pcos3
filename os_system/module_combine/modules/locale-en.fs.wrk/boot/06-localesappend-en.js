@@ -546,5 +546,12 @@ modules.locales.en = {
 	"NETWORK_MODULE_NAME": "The PCOS Network stack",
 	"CRYPTOFS_MODULE_NAME": "Cryptographic filesystems",
 	"SFSP_MODULE_NAME": "Shared file system protocol support",
-	"IPCFS_MODULE_NAME": "IPC-based filesystem (by LLM)"
+	"IPCFS_MODULE_NAME": "IPC-based filesystem (by LLM)",
+	"PERMISSION_EXPLORER": "Permission Explorer",
+	"LAUNCH_PROGRAM": "Launch program",
+	"PROGRAM_IS_RUNNING": "The program is running.",
+	"PERMISSION_GRANTED": "Permission granted",
+	"PERM_EXP_INTENT": "Help you explore permissions needed for programs",
+	"DEVELOPER_MODE_PACKAGE": "The Developer Mode Package",
+	"PERM_EXP_DENIED": "You can't explore permissions needed for programs."
 };

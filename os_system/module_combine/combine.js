@@ -52,6 +52,7 @@ let moduleFriendlyNames = {
 	"core": "lrn:CORE_MODULE_NAME",
 	"crypto-fs": "lrn:CRYPTOFS_MODULE_NAME",
 	"crypto-tools": "lrn:CRYPTO_TOOLS_TITLE",
+	"devmode": "lrn:DEVELOPER_MODE_PACKAGE",
 	"installer-modules": "lrn:INSTFILES_MODULE_NAME",
 	"installer": "lrn:INSTALLER_TITLE",
 	"ipc-fs": "lrn:IPCFS_MODULE_NAME",
