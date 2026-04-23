@@ -89,6 +89,6 @@ fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/pcosI
 fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/automaticSigner", JSON.stringify(keypair.automaticSigner));
 fs.writeFileSync(__dirname + "/module_combine/modules/keys.fs.wrk/etc/keys/moduleSigner", JSON.stringify(keypair.moduleSigner));
 
-let tlds = JSON.parse(fs.readFileSync(__dirname + "/module_combine/modules/core.fs.wrk/etc/tlds.json"));
+let tlds = JSON.parse(fs.readFileSync(__dirname + "/module_combine/modules/network.fs.wrk/etc/tlds.json"));
 for (let tld in tlds) tlds[tld] = networkIDHash.repeat(2) + "00000001";
-fs.writeFileSync(__dirname + "/module_combine/modules/core.fs.wrk/etc/tlds.json", JSON.stringify(tlds));
+fs.writeFileSync(__dirname + "/module_combine/modules/network.fs.wrk/etc/tlds.json", JSON.stringify(tlds));
