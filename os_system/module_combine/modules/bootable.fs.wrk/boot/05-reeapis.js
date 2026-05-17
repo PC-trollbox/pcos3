@@ -1073,12 +1073,13 @@ function reeAPIs() {
 						let networkListenID = Array.from(crypto.getRandomValues(new Uint8Array(64))).map(a => a.toString(16).padStart(2, "0")).join("");
 						let packetId = crypto.getRandomValues(new Uint8Array(16));
 						let resend = crypto.getRandomValues(new Uint8Array(64));
+						let startTime = performance.now();
 						function eventListener(e) {
 							try {
 								let packet = new Uint8Array(e.data);
 								if (u8aToHex(packet.slice(32, 48)) == u8aToHex(packetId)) {
 									if (u8aToHex(packet.slice(0, 16)) == address && packet[48] == 1 && // Ping Protocol
-										u8aToHex(packet.slice(50, 114)) == u8aToHex(resend)) resolve("success");
+										u8aToHex(packet.slice(50, 114)) == u8aToHex(resend)) resolve(performance.now() - startTime);
 									else reject(new Error("ADDRESS_UNREACHABLE"));
 									delete networkListens[networkListenID];
 									websocket.removeEventListener("message", eventListener);

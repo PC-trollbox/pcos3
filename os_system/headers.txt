@@ -290,7 +290,7 @@ consentGetToken({
 	intent: String,
 	name: String
 }) -> String // ELEVATE_PRIVILEGES
-networkPing(String address) // NETWORK_PING
+networkPing(String address) -> Number // NETWORK_PING
 logOut(String user) // LOGOUT (may require also LOGOUT_OTHERS)
 lock() // LOGOUT (may require also LOGOUT_OTHERS)
 getPrivateData() -> any

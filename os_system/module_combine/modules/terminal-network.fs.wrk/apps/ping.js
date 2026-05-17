@@ -60,15 +60,12 @@
 	await availableAPIs.toMyCLI("Pinging " + exec_args[0] + " (" + pingedAddress.match(/.{1,4}/g).join(":") + ") via PCOS Network...\r\n");
 	for (let i = 1; i <= 4; i++) {
 		await new Promise((resolve) => setTimeout(() => resolve("ping"), 500));
-		let time = performance.now();
 		try {
 			let race = await Promise.race([availableAPIs.networkPing(pingedAddress), new Promise((resolve) => setTimeout(() => resolve("timeout"), 30000))]);
 			if (race == "timeout") throw new Error("Response timed out");
-			time = performance.now() - time;
-			await availableAPIs.toMyCLI("count=" + i + " time=" + time.toFixed(2) + " ms\r\n");
+			await availableAPIs.toMyCLI("count=" + i + " time=" + race.toFixed(2) + " ms\r\n");
 		} catch (e) {
-			time = performance.now() - time;
-			await availableAPIs.toMyCLI("count=" + i + " time=" + time.toFixed(2) + " ms err=" + e.name + ": " + e.message + "\r\n");
+			await availableAPIs.toMyCLI("count=" + i + " err=" + e.name + ": " + e.message + "\r\n");
 		}
 	}
 	await availableAPIs.terminate();
