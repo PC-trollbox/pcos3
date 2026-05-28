@@ -553,5 +553,6 @@ modules.locales.en = {
 	"PERMISSION_GRANTED": "Permission granted",
 	"PERM_EXP_INTENT": "Help you explore permissions needed for programs",
 	"DEVELOPER_MODE_PACKAGE": "The Developer Mode Package",
-	"PERM_EXP_DENIED": "You can't explore permissions needed for programs."
+	"PERM_EXP_DENIED": "You can't explore permissions needed for programs.",
+	"SIMPLE_GAMES_NAME": "Simple Games (LLM)"
 };

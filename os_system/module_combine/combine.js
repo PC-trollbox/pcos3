@@ -41,8 +41,8 @@ let specialOrdering = { // keys must always be the first module loaded.
 let criticalModules = [ "bootable", "core", "crypto-fs", "ipc-fs", "keys", "network", "sfsp", "sysadmin", "terminal", "tweetnacl" ];
 let archivedModules = [
 	"arcadeBreakout", "blogBrowser", "bootable", "calculator", "core", "crypto-fs", "crypto-tools", "ipc-fs", "installer-modules", "installer", "keys",
-	"legacy-terminal", "locale-en", "locale-ru", "multimedia", "network", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "sfsp", "sysadmin",
-	"terminal-disks", "terminal-network", "terminal-users", "terminal", "tweetnacl", "xterm"
+	"legacy-terminal", "locale-en", "locale-ru", "multimedia", "network", "pcos-icons", "pcos-sounds", "pcos-wallpapers", "sfsp", "simple-games",
+	"sysadmin", "terminal-disks", "terminal-network", "terminal-users", "terminal", "tweetnacl", "xterm"
 ];
 let moduleFriendlyNames = {
 	"arcadeBreakout": "lrn:BREAKOUT_MODULE_NAME",
@@ -66,6 +66,7 @@ let moduleFriendlyNames = {
 	"pcos-sounds": "lrn:SOUNDS_MODULE_NAME",
 	"pcos-wallpapers": "lrn:WP_MODULE_NAME",
 	"sfsp": "lrn:SFSP_MODULE_NAME",
+	"simple-games": "lrn:SIMPLE_GAMES_NAME",
 	"sysadmin": "lrn:SYSADMIN_TOOLS_TITLE",
 	"terminal-disks": "lrn:TERMDISK_MODULE_NAME",
 	"terminal-network": "lrn:TERMNET_MODULE_NAME",
