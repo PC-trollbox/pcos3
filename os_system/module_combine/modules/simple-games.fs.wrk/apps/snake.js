@@ -237,7 +237,7 @@
 	// ---------- CONFIGURATION ----------
 	const BOARD_SIZE = 20;       // 20x20 grid
 	const CELL_SIZE = 500 / BOARD_SIZE; // 25px logical, canvas is 500x500
-	const BASE_SPEED_MS = 150;   // milliseconds per tick
+	const BASE_SPEED_MS = 250;   // milliseconds per tick
 
 	// DOM elements
 	const canvas = document.getElementById('snakeCanvas');

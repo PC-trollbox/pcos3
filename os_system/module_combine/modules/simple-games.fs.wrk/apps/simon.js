@@ -666,13 +666,6 @@
 	initUI();
 	bindEvents();
 	setupMobileFriendly();
-
-	// ensure that when game is reset by strict fail we don't double fire
-	function onStrictFailReset() {
-		// same as gameOverReset but already implemented
-	}
-
-	// expose optional reset for strict handler
 })();
 addEventListener("signal", async function(e) {
 	if (e.detail == 15) await window.availableAPIs.terminate();
