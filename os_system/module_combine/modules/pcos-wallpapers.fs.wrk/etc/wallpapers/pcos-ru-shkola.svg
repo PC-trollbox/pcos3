@@ -1,0 +1,57 @@
+<svg width="1920" height="1080" version="1.1" xmlns="http://www.w3.org/2000/svg">
+	<defs>
+		<linearGradient id="BgGradient" x1="0" x2="0" y1="0" y2="1">
+			<stop offset="0%" stop-color="#00bfff" />
+			<stop offset="100%" stop-color="#a700ff" />
+		</linearGradient>
+	</defs>
+	<g>
+		<rect x="0" y="0" width="1920" height="1080" fill="url(#BgGradient)" />
+		<text x="35" y="150" class="segoefont" fill="#ffffff">PCOS 3</text>
+		<text x="1300" y="1030" class="segoefont" fill="#303030">C Днём знаний!</text>
+	</g>
+	<g transform="translate(768, 300)">
+		<rect x="0" y="0" width="340" height="410" fill="#508050" />
+		<text x="120" y="120" class="notefont" fill="#000000">ТЕТРАДЬ</text>
+		<text x="50" y="152" class="notefont" fill="#000000">для</text>
+		<line x1="100" y1="152" x2="280" y2="152" stroke="#000000" />
+		
+		<line x1="50" y1="184" x2="280" y2="184" stroke="#000000" />
+		
+		<text x="50" y="216" class="notefont" fill="#000000">учени</text>
+		<line x1="120" y1="216" x2="155" y2="216" stroke="#000000" />
+		<text x="160" y="216" class="notefont" fill="#000000">класса</text>
+		<line x1="240" y1="216" x2="280" y2="216" stroke="#000000" />
+		
+		<line x1="50" y1="248" x2="155" y2="248" stroke="#000000" />
+		<text x="160" y="248" class="notefont" fill="#000000">школы</text>
+		<line x1="245" y1="248" x2="280" y2="248" stroke="#000000" />
+		
+		<line x1="50" y1="280" x2="280" y2="280" stroke="#000000" />
+		<line x1="50" y1="312" x2="280" y2="312" stroke="#000000" />
+		
+		<text x="100" y="152" class="writefont" fill="#000000">модульных работ по</text>
+		<text x="120" y="184" class="writefont" fill="#000000">PCOS 3</text>
+		<text x="120" y="216" class="writefont" fill="#000000">ка 3</text>
+		<text x="240" y="216" class="writefont" fill="#000000">К</text>
+		<text x="70" y="248" class="writefont" fill="#000000">цифровой</text>
+		<text x="250" y="248" class="writefont" fill="#000000">№5</text>
+		<text x="80" y="280" class="writefont" fill="#000000">г. Интернетово</text>
+		<text x="110" y="312" class="writefont" fill="#000000">Почемучкина Байта</text>
+	</g>
+	<style>
+		.segoefont {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			font-size: 64px;
+			font-weight: bold;
+		}
+		.notefont {
+			font-family: sans-serif;
+			font-size: 24px;
+		}
+		.writefont {
+			font-family: monospace;
+			font-size: 16px;
+		}
+	</style>
+</svg>
