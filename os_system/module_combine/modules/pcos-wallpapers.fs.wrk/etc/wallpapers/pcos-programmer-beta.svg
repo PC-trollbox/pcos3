@@ -1,0 +1,21 @@
+<svg width="1920" height="1080" version="1.1" xmlns="http://www.w3.org/2000/svg">
+	<g>
+		<rect x="0" y="0" width="1920" height="1080" fill="#000000" />
+		<text x="35" y="150" class="monofont" fill="#ff00ff">PCOS 3</text>
+		<text x="1500" y="1030" class="monofont" fill="#ffffff">test build</text>
+	</g>
+	<g transform="translate(860, 412)">
+		<text x="16" y="0" class="monofont" fill="#7f7f7f">push!</text>
+		<rect x="16" y="16" width="192" height="256" fill="#ffffff" />
+		<circle cx="112" cy="112" r="64" fill="#7f7f7f" />
+		<rect x="24" y="192" width="176" height="64" fill="#000000" />
+		<rect x="32" y="200" width="160" height="48" fill="#00ff00" />
+		<rect x="192" y="16" width="72" height="16" transform="rotate(45)" fill="#000000" />
+	</g>
+	<style>
+		.monofont {
+			font-family: monospace;
+			font-size: 64px;
+		}
+	</style>
+</svg>
