@@ -71,7 +71,7 @@ server.on("connection", function(socket, req) {
 				let querySize = message[58 + replyGateSize];
 				let query = message.subarray(59 + replyGateSize, 59 + replyGateSize + querySize);
 				let reply = dnsTable.hasOwnProperty(query) ? Buffer.from(dnsTable[query], "hex") : Buffer.from("");
-				socket.send(Buffer.concat([ serverAddress, message.subarray(0, 16), message.subarray(32, 49), Buffer.from(replyGateSize.toString(16), "hex"), replyGate, reply ]));
+				socket.send(Buffer.concat([ serverAddress, message.subarray(0, 16), message.subarray(32, 49), message.subarray(57, 58), replyGate, reply ]));
 			} else if (message.subarray(48, 49).equals(codes.CONTROL)) {
 				if (message.subarray(49, 50).equals(codes.PUBKEY_SEND) && verified == false) {
 					try {

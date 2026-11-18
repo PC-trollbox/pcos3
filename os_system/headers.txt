@@ -335,6 +335,8 @@ connfulIdentityGet(String connectionID) -> Object // CONNFUL_IDENTITY_GET
 systemUptime() -> Number // SYSTEM_UPTIME
 networkRawWrite(any data) // NETWORK_RAW_WRITE
 networkRawRead() -> any // NETWORK_RAW_READ
+getHostname() -> String // GET_HOSTNAME
+resolve(String name) -> String // RESOLVE_NAME
 setFirmware(String new_flash) // SET_FIRMWARE
 reloadNetworkConfig() // RELOAD_NETWORK_CONFIG
 batteryStatus() -> {
